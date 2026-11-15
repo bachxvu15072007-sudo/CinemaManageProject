@@ -60,7 +60,7 @@ public sealed class MainViewModel : ViewModelBase
         };
 
         SelectMenuCommand = new RelayCommand(OnSelectMenu);
-        RefreshCommand = new RelayCommand(RefreshCurrentDashboard);
+        RefreshCommand = new RelayCommand(() => CurrentDashboard?.LoadData());
         ToggleThemeCommand = new RelayCommand(() => ThemeManager.ToggleTheme());
         LogoutCommand = new RelayCommand(() => ((App)Application.Current).Logout());
 
@@ -136,22 +136,6 @@ public sealed class MainViewModel : ViewModelBase
         };
     }
 
-    private void RefreshCurrentDashboard()
-    {
-        switch (CurrentDashboard)
-        {
-            case AdminDashboardViewModel adminVm:
-                adminVm.LoadData();
-                break;
-            case StaffDashboardViewModel staffVm:
-                staffVm.LoadData();
-                break;
-            case CustomerDashboardViewModel custVm:
-                custVm.LoadData();
-                break;
-        }
-    }
-
     private void OnSelectMenu(object? param)
     {
         if (param is not SidebarMenuItem item)
@@ -175,6 +159,7 @@ public sealed class MainViewModel : ViewModelBase
         }
 
         PageTitle = item.Label;
+        CurrentDashboard?.LoadData();
     }
 
     private void OnThemeChanged(object? sender, AppTheme e) => UpdateThemeText();

@@ -1,5 +1,4 @@
 using System.Collections.ObjectModel;
-using System.Globalization;
 using Microsoft.Data.Sqlite;
 
 namespace CinemaManageProject.ViewModels.Dashboards;
@@ -46,7 +45,7 @@ public sealed class StaffDashboardViewModel : ViewModelBase
     public ObservableCollection<StaffShowtimeRow> OpenShowtimes { get; } = [];
     public ObservableCollection<StaffOrderRow> MyRecentOrders { get; } = [];
 
-    public void LoadData()
+    public override void LoadData()
     {
         int staffId = App.CurrentUser?.UserId ?? 0;
         StaffGreeting = $"Ca làm việc của {App.CurrentUser?.FullName ?? "Nhân viên"}";
@@ -68,7 +67,7 @@ public sealed class StaffDashboardViewModel : ViewModelBase
             if (r.Read())
             {
                 MyTicketsText = $"{r.GetInt32(0)} vé";
-                MyRevenueText = FormatVnd(Convert.ToDecimal(r.GetValue(1), CultureInfo.InvariantCulture));
+                MyRevenueText = FormatVnd(ReadDecimal(r, 1));
                 OpenShowtimesText = $"{r.GetInt32(2)} suất";
                 PendingCheckInText = $"{r.GetInt32(3)} vé chờ soát";
             }
@@ -93,20 +92,15 @@ public sealed class StaffDashboardViewModel : ViewModelBase
             using SqliteDataReader r = st.ExecuteReader();
             while (r.Read())
             {
-                string timeText = DateTime.TryParse(r.GetString(3), CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out DateTime dt)
-                    ? dt.ToString("dd/MM HH:mm")
-                    : r.GetString(3);
                 int avail = Math.Max(0, r.GetInt32(5));
-                int total = r.GetInt32(6);
-
                 OpenShowtimes.Add(new StaffShowtimeRow(
                     r.GetString(0),
                     r.GetString(1),
                     r.GetString(2),
-                    timeText,
+                    FormatSqlDateTime(r.GetString(3)),
                     r.GetString(4),
-                    $"{avail} / {total} trống",
-                    FormatVnd(Convert.ToDecimal(r.GetValue(7), CultureInfo.InvariantCulture))));
+                    $"{avail} / {r.GetInt32(6)} trống",
+                    FormatVnd(ReadDecimal(r, 7))));
             }
         }
 
@@ -127,25 +121,13 @@ public sealed class StaffDashboardViewModel : ViewModelBase
             using SqliteDataReader r = ord.ExecuteReader();
             while (r.Read())
             {
-                string payment = r.GetString(3) switch
-                {
-                    "Cash" => "Tiền mặt",
-                    "BankTransfer" => "Chuyển khoản",
-                    "Card" => "Thẻ",
-                    "EWallet" => "Ví điện tử",
-                    var p => p
-                };
-                string created = DateTime.TryParse(r.GetString(5), CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out DateTime dt)
-                    ? dt.ToString("dd/MM HH:mm")
-                    : r.GetString(5);
-
                 MyRecentOrders.Add(new StaffOrderRow(
                     r.GetString(0),
                     r.GetString(1),
                     r.GetInt32(2),
-                    payment,
-                    FormatVnd(Convert.ToDecimal(r.GetValue(4), CultureInfo.InvariantCulture)),
-                    created));
+                    FormatPaymentMethod(r.GetString(3)),
+                    FormatVnd(ReadDecimal(r, 4)),
+                    FormatSqlDateTime(r.GetString(5))));
             }
         }
     }

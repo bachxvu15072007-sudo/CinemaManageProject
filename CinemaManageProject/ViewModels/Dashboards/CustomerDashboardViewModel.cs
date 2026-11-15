@@ -1,5 +1,4 @@
 using System.Collections.ObjectModel;
-using System.Globalization;
 using CinemaManageProject.Models;
 using Microsoft.Data.Sqlite;
 
@@ -68,9 +67,18 @@ public sealed class CustomerDashboardViewModel : ViewModelBase
 
     public RelayCommand FilterCommand { get; }
 
-    public void LoadData()
+    public override void LoadData()
     {
-        Customer? profile = App.CurrentUser?.CustomerProfile;
+        using SqliteConnection conn = App.OpenDbConnection();
+
+        Customer? profile = App.CurrentUser is not null
+            ? LoadCustomerProfile(conn, App.CurrentUser.UserId) ?? App.CurrentUser.CustomerProfile
+            : null;
+        if (App.CurrentUser is not null && profile is not null)
+        {
+            App.CurrentUser.CustomerProfile = profile;
+        }
+
         MemberName = profile?.FullName ?? App.CurrentUser?.FullName ?? "Khách hàng";
         MemberPhone = profile?.Phone ?? App.CurrentUser?.Phone ?? "Chưa cập nhật";
         TierDisplay = (profile?.Tier ?? CustomerTier.Member) switch
@@ -82,8 +90,6 @@ public sealed class CustomerDashboardViewModel : ViewModelBase
         };
         PointsText = $"{profile?.LoyaltyPoints ?? 0} điểm";
         TotalSpentText = FormatVnd(profile?.TotalSpent ?? 0m);
-
-        using SqliteConnection conn = App.OpenDbConnection();
 
         _allMovies.Clear();
         using (SqliteCommand mov = conn.CreateCommand())
@@ -105,7 +111,7 @@ public sealed class CustomerDashboardViewModel : ViewModelBase
                 bool nowShowing = r.GetString(5) == "NowShowing";
                 string priceText = r.IsDBNull(6)
                     ? "Chưa mở bán"
-                    : $"Từ {FormatVnd(Convert.ToDecimal(r.GetValue(6), CultureInfo.InvariantCulture))}";
+                    : $"Từ {FormatVnd(ReadDecimal(r, 6))}";
 
                 _allMovies.Add(new CustomerMovieRow(
                     r.GetString(0),
@@ -147,25 +153,13 @@ public sealed class CustomerDashboardViewModel : ViewModelBase
                     bookedCount++;
                 }
 
-                string statusDisplay = rawStatus switch
-                {
-                    "Booked" => "Chờ soát vé",
-                    "CheckedIn" => "Đã check-in",
-                    "Cancelled" => "Đã hủy",
-                    var s => s
-                };
-
-                string timeText = DateTime.TryParse(r.GetString(4), CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out DateTime dt)
-                    ? dt.ToString("dd/MM/yyyy HH:mm")
-                    : r.GetString(4);
-
                 MyTickets.Add(new CustomerTicketRow(
                     r.GetString(0),
                     r.GetString(1),
                     $"{r.GetString(2)} • Ghế {r.GetString(3)}",
-                    timeText,
-                    FormatVnd(Convert.ToDecimal(r.GetValue(5), CultureInfo.InvariantCulture)),
-                    statusDisplay));
+                    FormatSqlDateTime(r.GetString(4), "dd/MM/yyyy HH:mm"),
+                    FormatVnd(ReadDecimal(r, 5)),
+                    FormatStatusLabel(rawStatus)));
             }
         }
 

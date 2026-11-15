@@ -1,4 +1,3 @@
-using System.Globalization;
 using CinemaManageProject.Models;
 using CinemaManageProject.Themes;
 using Microsoft.Data.Sqlite;
@@ -262,36 +261,6 @@ public sealed class LoginViewModel : ViewModelBase
         cmd.CommandText = sql;
         cmd.Parameters.AddWithValue("@v", val);
         return cmd.ExecuteScalar() is not null;
-    }
-
-    private static Customer? LoadCustomerProfile(SqliteConnection conn, int userId)
-    {
-        using SqliteCommand cmd = conn.CreateCommand();
-        cmd.CommandText = """
-            SELECT CustomerId, FullName, Phone, Email, LoyaltyPoints, TotalSpent, Tier
-            FROM Customers
-            WHERE UserId = @uid
-            LIMIT 1;
-            """;
-        cmd.Parameters.AddWithValue("@uid", userId);
-
-        using SqliteDataReader r = cmd.ExecuteReader();
-        if (!r.Read())
-        {
-            return null;
-        }
-
-        return new Customer
-        {
-            CustomerId = r.GetInt32(0),
-            UserId = userId,
-            FullName = r.GetString(1),
-            Phone = r.GetString(2),
-            Email = r.IsDBNull(3) ? null : r.GetString(3),
-            LoyaltyPoints = r.GetInt32(4),
-            TotalSpent = Convert.ToDecimal(r.GetValue(5), CultureInfo.InvariantCulture),
-            Tier = Enum.TryParse(r.GetString(6), true, out CustomerTier tier) ? tier : CustomerTier.Member
-        };
     }
 
     private void FillDemo(object? param)
