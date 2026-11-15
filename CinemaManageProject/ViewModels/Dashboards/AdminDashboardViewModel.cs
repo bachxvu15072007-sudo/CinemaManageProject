@@ -1,5 +1,4 @@
 using System.Collections.ObjectModel;
-using System.Globalization;
 using Microsoft.Data.Sqlite;
 
 namespace CinemaManageProject.ViewModels.Dashboards;
@@ -52,7 +51,7 @@ public sealed class AdminDashboardViewModel : ViewModelBase
     public ObservableCollection<AdminShowtimeRow> Showtimes { get; } = [];
     public ObservableCollection<AdminOrderRow> RecentOrders { get; } = [];
 
-    public void LoadData()
+    public override void LoadData()
     {
         using SqliteConnection conn = App.OpenDbConnection();
 
@@ -73,8 +72,8 @@ public sealed class AdminDashboardViewModel : ViewModelBase
             using SqliteDataReader r = kpi.ExecuteReader();
             if (r.Read())
             {
-                TotalRevenueText = FormatVnd(Convert.ToDecimal(r.GetValue(0), CultureInfo.InvariantCulture));
-                TodayRevenueText = $"Hôm nay: {FormatVnd(Convert.ToDecimal(r.GetValue(1), CultureInfo.InvariantCulture))}";
+                TotalRevenueText = FormatVnd(ReadDecimal(r, 0));
+                TodayRevenueText = $"Hôm nay: {FormatVnd(ReadDecimal(r, 1))}";
                 TotalTicketsText = $"{r.GetInt32(2)} vé";
                 CheckedInSubText = $"{r.GetInt32(3)} vé đã check-in";
                 MoviesCountText = $"{r.GetInt32(4)} đang chiếu";
@@ -101,27 +100,14 @@ public sealed class AdminDashboardViewModel : ViewModelBase
             using SqliteDataReader r = st.ExecuteReader();
             while (r.Read())
             {
-                string timeText = DateTime.TryParse(r.GetString(2), CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out DateTime dt)
-                    ? dt.ToString("dd/MM HH:mm")
-                    : r.GetString(2);
-                decimal price = Convert.ToDecimal(r.GetValue(6), CultureInfo.InvariantCulture);
-                string statusDisplay = r.GetString(7) switch
-                {
-                    "OpenForSale" => "Đang mở bán",
-                    "Scheduled" => "Đã lên lịch",
-                    "Completed" => "Đã chiếu",
-                    "Cancelled" => "Đã hủy",
-                    var s => s
-                };
-
                 Showtimes.Add(new AdminShowtimeRow(
                     r.GetString(0),
                     r.GetString(1),
-                    timeText,
+                    FormatSqlDateTime(r.GetString(2)),
                     r.GetString(3),
                     $"{r.GetInt32(4)} / {r.GetInt32(5)}",
-                    FormatVnd(price),
-                    statusDisplay));
+                    FormatVnd(ReadDecimal(r, 6)),
+                    FormatStatusLabel(r.GetString(7))));
             }
         }
 
@@ -140,29 +126,13 @@ public sealed class AdminDashboardViewModel : ViewModelBase
             while (r.Read())
             {
                 string channel = r.GetString(2) == "SelfService" ? "Tự đặt" : "Tại quầy";
-                string payment = r.GetString(3) switch
-                {
-                    "Cash" => "Tiền mặt",
-                    "BankTransfer" => "Chuyển khoản",
-                    "Card" => "Thẻ",
-                    "EWallet" => "Ví điện tử",
-                    var p => p
-                };
-                string status = r.GetString(5) switch
-                {
-                    "Paid" => "Đã thanh toán",
-                    "Cancelled" => "Đã hủy",
-                    "PartiallyRefunded" => "Hoàn một phần",
-                    var s => s
-                };
-
                 RecentOrders.Add(new AdminOrderRow(
                     r.GetString(0),
                     r.GetString(1),
                     channel,
-                    payment,
-                    FormatVnd(Convert.ToDecimal(r.GetValue(4), CultureInfo.InvariantCulture)),
-                    status));
+                    FormatPaymentMethod(r.GetString(3)),
+                    FormatVnd(ReadDecimal(r, 4)),
+                    FormatStatusLabel(r.GetString(5))));
             }
         }
     }
