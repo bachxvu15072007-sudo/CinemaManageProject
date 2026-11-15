@@ -3,10 +3,218 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:local="clr-namespace:CinemaManageProject"
         mc:Ignorable="d"
-        Title="MainWindow" Height="450" Width="800">
-    <Grid>
+        Style="{StaticResource CinemaWindowStyle}"
+        Title="CINEVERSE CINEMA — Zinc Theme"
+        Width="1240" Height="780"
+        MinWidth="1080" MinHeight="660"
+        WindowStartupLocation="CenterScreen">
 
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <!-- ==================== TOP HEADER BAR ==================== -->
+        <Border Grid.Row="0"
+                Background="{DynamicResource BgSecondaryBrush}"
+                BorderBrush="{DynamicResource BorderSubtleBrush}"
+                BorderThickness="0,0,0,1"
+                Padding="24,14">
+            <DockPanel LastChildFill="False">
+                <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Border Background="{DynamicResource AccentPrimaryBrush}"
+                            Width="36" Height="36"
+                            CornerRadius="{StaticResource RadiusMd}"
+                            Margin="0,0,12,0">
+                        <TextBlock Text="CV"
+                                   FontWeight="Bold"
+                                   FontSize="15"
+                                   Foreground="{DynamicResource TextOnAccentBrush}"
+                                   HorizontalAlignment="Center"
+                                   VerticalAlignment="Center" />
+                    </Border>
+                    <StackPanel VerticalAlignment="Center">
+                        <TextBlock Text="CINEVERSE CINEMA"
+                                   FontSize="{StaticResource FontSizeLg}"
+                                   FontWeight="Bold" />
+                        <TextBlock x:Name="ThemeStatusText"
+                                   Text="Zinc Obsidian (Dark)"
+                                   Style="{StaticResource MutedCaptionTextStyle}" />
+                    </StackPanel>
+                </StackPanel>
+
+                <Button x:Name="ToggleThemeButton"
+                        DockPanel.Dock="Right"
+                        Content="☀ Light Mode"
+                        Style="{StaticResource PrimaryButtonStyle}"
+                        VerticalAlignment="Center"
+                        Click="OnToggleThemeClick" />
+            </DockPanel>
+        </Border>
+
+        <!-- ==================== MAIN CONTENT (ZINC UI PREVIEW) ==================== -->
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="24">
+            <StackPanel MaxWidth="1160">
+                <TextBlock Text="Hệ thống Resource &amp; Theme Zinc Tối giản"
+                           Style="{StaticResource PageTitleTextStyle}"
+                           Margin="0,0,0,4" />
+                <TextBlock Text="Bộ màu Zinc Obsidian (Dark) &amp; Zinc Daylight (Light) trung tính, gọn nhẹ, sẵn sàng làm nền tảng cho các màn hình nghiệp vụ."
+                           Style="{StaticResource MutedCaptionTextStyle}"
+                           Margin="0,0,0,20" />
+
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="18" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+
+                    <!-- CỘT TRÁI: BUTTONS, BADGES & INPUTS -->
+                    <StackPanel Grid.Column="0">
+                        <Border Style="{StaticResource CardBorderStyle}" Margin="0,0,0,18">
+                            <StackPanel>
+                                <TextBlock Text="Nút bấm &amp; Trạng thái (Buttons &amp; Badges)"
+                                           Style="{StaticResource SectionTitleTextStyle}"
+                                           Margin="0,0,0,14" />
+
+                                <WrapPanel Margin="0,0,0,14">
+                                    <Button Content="Đặt vé ngay" Style="{StaticResource PrimaryButtonStyle}" Margin="0,0,10,8" />
+                                    <Button Content="Chi tiết" Style="{StaticResource SecondaryButtonStyle}" Margin="0,0,10,8" />
+                                    <Button Content="Hủy vé" Style="{StaticResource DangerButtonStyle}" Margin="0,0,10,8" />
+                                    <Button Content="Bỏ qua" Style="{StaticResource GhostButtonStyle}" Margin="0,0,10,8" />
+                                    <Button Content="Khóa" Style="{StaticResource PrimaryButtonStyle}" IsEnabled="False" Margin="0,0,10,8" />
+                                </WrapPanel>
+
+                                <WrapPanel>
+                                    <Border Style="{StaticResource BadgeBorderStyle}" Background="{DynamicResource StatusSuccessSoftBrush}" Margin="0,0,8,4">
+                                        <TextBlock Text="Đã thanh toán" FontSize="{StaticResource FontSizeSm}" FontWeight="SemiBold" Foreground="{DynamicResource StatusSuccessBrush}" />
+                                    </Border>
+                                    <Border Style="{StaticResource BadgeBorderStyle}" Background="{DynamicResource StatusInfoSoftBrush}" Margin="0,0,8,4">
+                                        <TextBlock Text="Sắp chiếu" FontSize="{StaticResource FontSizeSm}" FontWeight="SemiBold" Foreground="{DynamicResource StatusInfoBrush}" />
+                                    </Border>
+                                    <Border Style="{StaticResource BadgeBorderStyle}" Background="{DynamicResource StatusWarningSoftBrush}" Margin="0,0,8,4">
+                                        <TextBlock Text="Chờ soát vé" FontSize="{StaticResource FontSizeSm}" FontWeight="SemiBold" Foreground="{DynamicResource StatusWarningBrush}" />
+                                    </Border>
+                                    <Border Style="{StaticResource BadgeBorderStyle}" Background="{DynamicResource StatusErrorSoftBrush}" Margin="0,0,8,4">
+                                        <TextBlock Text="Đã hủy" FontSize="{StaticResource FontSizeSm}" FontWeight="SemiBold" Foreground="{DynamicResource StatusErrorBrush}" />
+                                    </Border>
+                                </WrapPanel>
+                            </StackPanel>
+                        </Border>
+
+                        <Border Style="{StaticResource CardBorderStyle}">
+                            <StackPanel>
+                                <TextBlock Text="Ô nhập &amp; Điều khiển Form (Inputs)"
+                                           Style="{StaticResource SectionTitleTextStyle}"
+                                           Margin="0,0,0,14" />
+
+                                <TextBlock Text="Tên đăng nhập" Style="{StaticResource MutedCaptionTextStyle}" Margin="0,0,0,6" />
+                                <TextBox Style="{StaticResource ModernTextBoxStyle}" Text="khach1" Margin="0,0,0,12" />
+
+                                <TextBlock Text="Mật khẩu" Style="{StaticResource MutedCaptionTextStyle}" Margin="0,0,0,6" />
+                                <PasswordBox Style="{StaticResource ModernPasswordBoxStyle}" Password="Khach@123" Margin="0,0,0,12" />
+
+                                <TextBlock Text="Phương thức thanh toán" Style="{StaticResource MutedCaptionTextStyle}" Margin="0,0,0,6" />
+                                <ComboBox Style="{StaticResource ModernComboBoxStyle}" SelectedIndex="0" Margin="0,0,0,14">
+                                    <ComboBoxItem Content="Chuyển khoản ngân hàng" />
+                                    <ComboBoxItem Content="Tiền mặt tại quầy" />
+                                    <ComboBoxItem Content="Thẻ thanh toán" />
+                                    <ComboBoxItem Content="Ví điện tử" />
+                                </ComboBox>
+
+                                <CheckBox Style="{StaticResource ModernCheckBoxStyle}" IsChecked="True" Content="Dùng điểm thành viên giảm giá hóa đơn" />
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+
+                    <!-- CỘT PHẢI: SƠ ĐỒ GHẾ & DATAGRID -->
+                    <StackPanel Grid.Column="2">
+                        <Border Style="{StaticResource CardBorderStyle}" Margin="0,0,0,18">
+                            <StackPanel>
+                                <TextBlock Text="Thử nghiệm Ghế rạp &amp; Màn hình (Seat Tokens)"
+                                           Style="{StaticResource SectionTitleTextStyle}"
+                                           Margin="0,0,0,12" />
+
+                                <Border Height="6"
+                                        CornerRadius="3"
+                                        Background="{DynamicResource ScreenCurveBrush}"
+                                        Margin="40,4,40,6" />
+                                <TextBlock Text="MÀN HÌNH CHIẾU"
+                                           HorizontalAlignment="Center"
+                                           Style="{StaticResource MutedCaptionTextStyle}"
+                                           Margin="0,0,0,12" />
+
+                                <StackPanel HorizontalAlignment="Center" Margin="0,0,0,14">
+                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                        <ToggleButton Content="C1" Style="{StaticResource SeatToggleButtonStyle}" />
+                                        <ToggleButton Content="C2" Style="{StaticResource SeatToggleButtonStyle}" />
+                                        <ToggleButton Content="C3" Style="{StaticResource SeatToggleButtonStyle}" IsEnabled="False" />
+                                        <ToggleButton Content="C4" Style="{StaticResource SeatToggleButtonStyle}" IsChecked="True" />
+                                        <ToggleButton Content="C5" Style="{StaticResource SeatToggleButtonStyle}" />
+                                    </StackPanel>
+                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                        <ToggleButton Content="E1" Style="{StaticResource SeatToggleButtonStyle}"
+                                                      Background="{DynamicResource SeatVipBrush}"
+                                                      BorderBrush="{DynamicResource SeatVipBorderBrush}" />
+                                        <ToggleButton Content="E2" Style="{StaticResource SeatToggleButtonStyle}"
+                                                      Background="{DynamicResource SeatVipBrush}"
+                                                      BorderBrush="{DynamicResource SeatVipBorderBrush}" IsChecked="True" />
+                                        <ToggleButton Content="H1" Width="92" Style="{StaticResource SeatToggleButtonStyle}"
+                                                      Background="{DynamicResource SeatCoupleBrush}"
+                                                      BorderBrush="{DynamicResource SeatCoupleBorderBrush}" />
+                                        <ToggleButton Content="E3" Style="{StaticResource SeatToggleButtonStyle}"
+                                                      Background="{DynamicResource SeatVipBrush}"
+                                                      BorderBrush="{DynamicResource SeatVipBorderBrush}" />
+                                    </StackPanel>
+                                </StackPanel>
+
+                                <WrapPanel HorizontalAlignment="Center">
+                                    <StackPanel Orientation="Horizontal" Margin="8,4">
+                                        <Border Width="14" Height="14" CornerRadius="3" Background="{DynamicResource SeatStandardBrush}" BorderBrush="{DynamicResource SeatStandardBorderBrush}" BorderThickness="1" Margin="0,0,6,0" />
+                                        <TextBlock Text="Thường" Style="{StaticResource MutedCaptionTextStyle}" />
+                                    </StackPanel>
+                                    <StackPanel Orientation="Horizontal" Margin="8,4">
+                                        <Border Width="14" Height="14" CornerRadius="3" Background="{DynamicResource SeatVipBrush}" BorderBrush="{DynamicResource SeatVipBorderBrush}" BorderThickness="1" Margin="0,0,6,0" />
+                                        <TextBlock Text="VIP" Style="{StaticResource MutedCaptionTextStyle}" />
+                                    </StackPanel>
+                                    <StackPanel Orientation="Horizontal" Margin="8,4">
+                                        <Border Width="14" Height="14" CornerRadius="3" Background="{DynamicResource SeatCoupleBrush}" BorderBrush="{DynamicResource SeatCoupleBorderBrush}" BorderThickness="1" Margin="0,0,6,0" />
+                                        <TextBlock Text="Couple" Style="{StaticResource MutedCaptionTextStyle}" />
+                                    </StackPanel>
+                                    <StackPanel Orientation="Horizontal" Margin="8,4">
+                                        <Border Width="14" Height="14" CornerRadius="3" Background="{DynamicResource SeatSelectedBrush}" Margin="0,0,6,0" />
+                                        <TextBlock Text="Đang chọn" Style="{StaticResource MutedCaptionTextStyle}" />
+                                    </StackPanel>
+                                    <StackPanel Orientation="Horizontal" Margin="8,4">
+                                        <Border Width="14" Height="14" CornerRadius="3" Background="{DynamicResource SeatUnavailableBrush}" Margin="0,0,6,0" />
+                                        <TextBlock Text="Đã bán" Style="{StaticResource MutedCaptionTextStyle}" />
+                                    </StackPanel>
+                                </WrapPanel>
+                            </StackPanel>
+                        </Border>
+
+                        <Border Style="{StaticResource CardBorderStyle}">
+                            <StackPanel>
+                                <TextBlock Text="Bảng dữ liệu chuẩn (DataGrid)"
+                                           Style="{StaticResource SectionTitleTextStyle}"
+                                           Margin="0,0,0,12" />
+                                <DataGrid x:Name="SampleShowtimesGrid"
+                                          Style="{StaticResource ModernDataGridStyle}"
+                                          Height="210">
+                                    <DataGrid.Columns>
+                                        <DataGridTextColumn Header="Phim" Binding="{Binding Title}" Width="*" />
+                                        <DataGridTextColumn Header="Phòng" Binding="{Binding Room}" Width="115" />
+                                        <DataGridTextColumn Header="Giờ chiếu" Binding="{Binding Time}" Width="85" />
+                                        <DataGridTextColumn Header="Giá vé" Binding="{Binding Price}" Width="95" />
+                                    </DataGrid.Columns>
+                                </DataGrid>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </Grid>
+            </StackPanel>
+        </ScrollViewer>
     </Grid>
 </Window>

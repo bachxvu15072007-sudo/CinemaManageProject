@@ -1,9 +1,16 @@
 ﻿<Application x:Class="CinemaManageProject.App"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:local="clr-namespace:CinemaManageProject"
              StartupUri="MainWindow.xaml">
     <Application.Resources>
-         
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <!-- Index 0: Theme hiện tại (ThemeManager swap nóng giữa DarkTheme.xaml & LightTheme.xaml) -->
+                <ResourceDictionary Source="Themes/DarkTheme.xaml" />
+                <!-- Index 1+: Design Tokens & Controls Styles dùng chung toàn app -->
+                <ResourceDictionary Source="Themes/SharedTokens.xaml" />
+                <ResourceDictionary Source="Themes/Controls.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
     </Application.Resources>
 </Application>

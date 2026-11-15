@@ -1,0 +1,32 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:sys="clr-namespace:System;assembly=System.Runtime">
+
+    <!-- ==================== SHARED DESIGN TOKENS ==================== -->
+
+    <!-- Font -->
+    <FontFamily x:Key="AppFontFamily">Segoe UI</FontFamily>
+    <sys:Double x:Key="FontSizeXs">11</sys:Double>
+    <sys:Double x:Key="FontSizeSm">12</sys:Double>
+    <sys:Double x:Key="FontSizeBase">14</sys:Double>
+    <sys:Double x:Key="FontSizeLg">16</sys:Double>
+    <sys:Double x:Key="FontSizeXl">20</sys:Double>
+    <sys:Double x:Key="FontSize2Xl">26</sys:Double>
+
+    <!-- Corner Radius -->
+    <CornerRadius x:Key="RadiusSm">6</CornerRadius>
+    <CornerRadius x:Key="RadiusMd">8</CornerRadius>
+    <CornerRadius x:Key="RadiusLg">12</CornerRadius>
+    <CornerRadius x:Key="RadiusPill">999</CornerRadius>
+
+    <!-- Spacing & Padding -->
+    <sys:Double x:Key="SpaceXs">4</sys:Double>
+    <sys:Double x:Key="SpaceSm">8</sys:Double>
+    <sys:Double x:Key="SpaceMd">14</sys:Double>
+    <sys:Double x:Key="SpaceLg">20</sys:Double>
+    <Thickness x:Key="CardPadding">18</Thickness>
+    <Thickness x:Key="InputPadding">12,8</Thickness>
+    <Thickness x:Key="ButtonPadding">16,9</Thickness>
+    <Thickness x:Key="BadgePadding">10,4</Thickness>
+
+</ResourceDictionary>
