@@ -1,6 +1,6 @@
 # CINEVERSE CINEMA (`CinemaManageProject`)
 
-Ứng dụng desktop quản lý rạp chiếu phim và đặt vé xây dựng bằng **WPF (.NET 10 Windows)**, **SQLite (`Microsoft.Data.Sqlite`)**, kiến trúc **MVVM gọn nhẹ** và hệ thống giao diện **Zinc Minimalist (Dark / Light)**.
+Ứng dụng desktop quản lý rạp chiếu phim và đặt vé xây dựng bằng **WPF (.NET 10 Windows)**, **SQLite (`Microsoft.Data.Sqlite`)**, kiến trúc **MVVM gọn nhẹ** và giao diện **Dark Theme** tối giản.
 
 ---
 
@@ -30,19 +30,17 @@ Hệ thống hỗ trợ quản lý vận hành rạp phim và đặt vé tập t
 * **`CinemaEnums.cs`:** Định nghĩa 11 enum (`UserRole`, `CustomerTier`, `MovieStatus`, `AgeRating`, `RoomType`, `SeatType`, `ShowtimeStatus`, `OrderStatus`, `PaymentMethod`, `BookingChannel`, `TicketStatus`).
 * **10 lớp Entity:** Ánh xạ đầy đủ các bảng SQLite (`User`, `Customer`, `Movie`, `Genre`, `MovieGenre`, `Room`, `Seat`, `Showtime`, `Order`, `Ticket`).
 
-### 2.3. Hệ thống Theme Zinc Tối giản (`CinemaManageProject/Themes/`)
-* **`DarkTheme.xaml` (`Zinc Obsidian`) & `LightTheme.xaml` (`Zinc Daylight`):** 66 brush key đối xứng hoàn toàn (nền Zinc, chữ, viền hairline, màu nhấn Indigo, trạng thái Success/Warning/Error/Info, màu sơ đồ ghế rạp).
-* **`SharedTokens.xaml` & `Controls.xaml`:** Bộ style thống nhất cho Window, Card, Badge, Button (`Primary`, `Secondary`, `Danger`, `Ghost`, `NavMenuButtonStyle` có trạng thái `Tag="Active"`), `TextBox`, `PasswordBox`, `ComboBox`, `CheckBox`, `SeatToggleButtonStyle`, `DataGrid` và `ScrollBar`.
-* **`ThemeManager.cs`:** Chuyển đổi nóng Dark ↔ Light không cần khởi động lại ứng dụng.
+### 2.3. Giao diện Dark Theme & Resource Tập trung (`CinemaManageProject/Themes/Controls.xaml`)
+* **`Controls.xaml`:** Chứa toàn bộ tài nguyên dùng chung (`BoolToVis` converter và các `Style` chuẩn với bảng màu Dark Theme ghi trực tiếp: `CinemaWindowStyle`, `CardBorderStyle`, `BadgeBorderStyle`, `PrimaryButtonStyle`, `SecondaryButtonStyle`, `DangerButtonStyle`, `GhostButtonStyle`, `NavMenuButtonStyle`, `ModernTextBoxStyle`, `ModernPasswordBoxStyle`, `ModernDataGridStyle`). Các màn hình View giữ gọn chỉ viết bố cục giao diện và xử lý sự kiện `Click` gọi method ViewModel (không dùng `Command`/`RelayCommand`).
 
 ### 2.4. Đăng nhập, Khung Shell & 3 Dashboard Theo Vai trò (`Views/`, `ViewModels/`)
 * **Vòng đời cửa sổ (`App.xaml` / `App.xaml.cs`):**
   * Dùng `ShutdownMode="OnExplicitShutdown"`, khởi chạy với `LoginWindow`, chuyển sang `Views.MainWindow` sau khi xác thực (`CompleteLogin()`) và quay lại `LoginWindow` khi đăng xuất (`Logout()`).
   * Mở kết nối tới `Database/cinema.db` trực tiếp qua `App.OpenDbConnection()`.
 * **Màn hình Đăng nhập (`Views/LoginWindow.xaml`, `ViewModels/LoginViewModel.cs`):**
-  * Xác thực trực tiếp với bảng `Users` (nạp thêm `CustomerProfile` nếu vai trò là `Customer`), hỗ trợ chuyển sang form **Đăng ký hội viên mới**, đổi Dark/Light theme và 3 nút điền nhanh tài khoản mẫu `Admin` / `Staff` / `Customer`.
+  * Xác thực trực tiếp với bảng `Users` (nạp thêm `CustomerProfile` nếu vai trò là `Customer`), hỗ trợ chuyển sang form **Đăng ký hội viên mới** và 3 nút điền nhanh tài khoản mẫu `Admin` / `Staff` / `Customer`.
 * **Khung chính (`Views/MainWindow.xaml`, `ViewModels/MainViewModel.cs`):**
-  * Sidebar điều hướng phân quyền tự động theo `UserRole`, Topbar làm mới dữ liệu & chuyển theme, nút Đăng xuất và vùng `ContentControl` nạp động Dashboard theo vai trò.
+  * Sidebar điều hướng phân quyền tự động theo `UserRole`, Topbar làm mới dữ liệu, nút Đăng xuất và vùng `ContentControl` nạp động Dashboard theo vai trò.
 * **3 Dashboard riêng biệt (`Views/Dashboards/`, `ViewModels/Dashboards/`):**
   * **`AdminDashboardView`:** 4 thẻ KPI toàn rạp (tổng doanh thu & hôm nay, vé phát hành & đã check-in, số phim đang/sắp chiếu, phòng hoạt động & ghế bảo trì), bảng *Lịch chiếu & Tỷ lệ lấp đầy* và *Hóa đơn gần đây*.
   * **`StaffDashboardView`:** 4 thẻ KPI ca quầy cá nhân (vé đã bán, doanh thu quầy của nhân viên, suất đang mở bán, vé chờ soát check-in), bảng *Suất chiếu mở bán & Ghế trống* và *Giao dịch quầy gần đây*.
