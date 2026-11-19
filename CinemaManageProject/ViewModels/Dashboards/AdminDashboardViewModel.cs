@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using CinemaManageProject.Helpers;
 using Microsoft.Data.Sqlite;
 
 namespace CinemaManageProject.ViewModels.Dashboards;

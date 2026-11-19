@@ -1,0 +1,404 @@
+<UserControl x:Class="CinemaManageProject.Views.Admin.AdminMoviesView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             d:DesignWidth="988"
+             d:DesignHeight="860"
+             d:Background="#09090B">
+
+    <StackPanel>
+        <!-- ==================== HEADER ==================== -->
+        <DockPanel Margin="0,0,0,18" LastChildFill="False">
+            <StackPanel DockPanel.Dock="Left" VerticalAlignment="Center">
+                <TextBlock Text="Quản lý Phim &amp; Thể loại"
+                           Style="{StaticResource PageTitleTextStyle}"
+                           Margin="0,0,0,4" />
+                <TextBlock Text="Thêm, cập nhật hồ sơ phim, gán thể loại, ảnh poster và trạng thái phát hành."
+                           Style="{StaticResource MutedCaptionTextStyle}" />
+            </StackPanel>
+
+            <Button DockPanel.Dock="Right"
+                    Content="+ Thêm phim mới"
+                    Style="{StaticResource PrimaryButtonStyle}"
+                    VerticalAlignment="Center"
+                    Click="OnNewMovieClick" />
+        </DockPanel>
+
+        <!-- ==================== THANH TÌM KIẾM & BỘ LỌC THEO TỪNG MỤC ==================== -->
+        <Border Style="{StaticResource CardBorderStyle}" Padding="16" Margin="0,0,0,18">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" MinWidth="180" />
+                    <ColumnDefinition Width="12" />
+                    <ColumnDefinition Width="175" />
+                    <ColumnDefinition Width="12" />
+                    <ColumnDefinition Width="130" />
+                    <ColumnDefinition Width="12" />
+                    <ColumnDefinition Width="155" />
+                    <ColumnDefinition Width="12" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0">
+                    <TextBlock Text="Tìm kiếm" Style="{StaticResource FieldLabelTextStyle}" />
+                    <TextBox Style="{StaticResource ModernTextBoxStyle}"
+                             MinHeight="36"
+                             ToolTip="Tìm theo tên phim, tên gốc, đạo diễn hoặc diễn viên"
+                             Text="{Binding SearchKeyword, UpdateSourceTrigger=PropertyChanged}" />
+                </StackPanel>
+
+                <StackPanel Grid.Column="2">
+                    <TextBlock Text="Thể loại" Style="{StaticResource FieldLabelTextStyle}" />
+                    <ComboBox Style="{StaticResource ModernComboBoxStyle}"
+                              ItemsSource="{Binding GenreFilterOptions}"
+                              SelectedItem="{Binding SelectedGenreFilter, Mode=TwoWay}"
+                              DisplayMemberPath="Name" />
+                </StackPanel>
+
+                <StackPanel Grid.Column="4">
+                    <TextBlock Text="Độ tuổi" Style="{StaticResource FieldLabelTextStyle}" />
+                    <ComboBox Style="{StaticResource ModernComboBoxStyle}"
+                              ItemsSource="{Binding AgeRatingFilterOptions}"
+                              SelectedItem="{Binding SelectedAgeRatingFilter, Mode=TwoWay}" />
+                </StackPanel>
+
+                <StackPanel Grid.Column="6">
+                    <TextBlock Text="Trạng thái" Style="{StaticResource FieldLabelTextStyle}" />
+                    <ComboBox Style="{StaticResource ModernComboBoxStyle}"
+                              ItemsSource="{Binding StatusFilterOptions}"
+                              SelectedItem="{Binding SelectedStatusFilterOption, Mode=TwoWay}"
+                              DisplayMemberPath="Label" />
+                </StackPanel>
+
+                <Button Grid.Column="8"
+                        Content="Đặt lại"
+                        Style="{StaticResource SecondaryButtonStyle}"
+                        MinHeight="36"
+                        Padding="14,8"
+                        VerticalAlignment="Bottom"
+                        Click="OnResetFiltersClick" />
+            </Grid>
+        </Border>
+
+        <!-- ==================== NỘI DUNG CHÍNH 2 CỘT ==================== -->
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="1.15*" />
+                <ColumnDefinition Width="16" />
+                <ColumnDefinition Width="*" MinWidth="410" />
+            </Grid.ColumnDefinitions>
+
+            <!-- CỘT TRÁI: BẢNG DANH SÁCH PHIM -->
+            <Border Grid.Column="0" Style="{StaticResource CardBorderStyle}" VerticalAlignment="Top">
+                <StackPanel>
+                    <DockPanel Margin="0,0,0,14" LastChildFill="False">
+                        <TextBlock DockPanel.Dock="Left"
+                                   Text="Danh sách Phim"
+                                   Style="{StaticResource SectionTitleTextStyle}"
+                                   VerticalAlignment="Center" />
+                        <TextBlock DockPanel.Dock="Right"
+                                   Text="{Binding ResultCountText, FallbackValue='0 phim'}"
+                                   Style="{StaticResource MutedCaptionTextStyle}"
+                                   VerticalAlignment="Center" />
+                    </DockPanel>
+
+                    <DataGrid Style="{StaticResource ModernDataGridStyle}"
+                              ItemsSource="{Binding Movies}"
+                              SelectedItem="{Binding SelectedMovie, Mode=TwoWay}"
+                              MinHeight="460"
+                              MaxHeight="660">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Tên phim" Binding="{Binding Title}" Width="*" MinWidth="140" />
+                            <DataGridTextColumn Header="Thể loại" Binding="{Binding GenresText}" Width="125" />
+                            <DataGridTextColumn Header="Thời lượng" Binding="{Binding DurationText}" Width="82" />
+                            <DataGridTextColumn Header="Tuổi" Binding="{Binding AgeRatingText}" Width="54" />
+                            <DataGridTextColumn Header="Trạng thái" Binding="{Binding StatusDisplay}" Width="105" />
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </StackPanel>
+            </Border>
+
+            <!-- CỘT PHẢI: FORM CHI TIẾT PHIM -->
+            <Border Grid.Column="2" Style="{StaticResource CardBorderStyle}" VerticalAlignment="Top">
+                <StackPanel>
+                    <!-- TIÊU ĐỀ FORM & CHẾ ĐỘ -->
+                    <DockPanel Margin="0,0,0,14" LastChildFill="False">
+                        <TextBlock DockPanel.Dock="Left"
+                                   Text="{Binding FormHeaderText, FallbackValue='Thêm phim mới'}"
+                                   Style="{StaticResource SectionTitleTextStyle}"
+                                   VerticalAlignment="Center" />
+                        <Border DockPanel.Dock="Right" Style="{StaticResource BadgeBorderStyle}">
+                            <TextBlock Text="{Binding FormModeBadge, FallbackValue='THÊM MỚI'}"
+                                       FontSize="11"
+                                       FontWeight="Bold"
+                                       Foreground="#5E6AD2" />
+                        </Border>
+                    </DockPanel>
+
+                    <!-- THÔNG BÁO LỖI / THÀNH CÔNG -->
+                    <Border Visibility="{Binding HasError, Converter={StaticResource BoolToVis}, FallbackValue=Collapsed}"
+                            Background="#24C10007"
+                            BorderBrush="#FFC9C9"
+                            BorderThickness="1"
+                            CornerRadius="8"
+                            Padding="12,10"
+                            Margin="0,0,0,14">
+                        <TextBlock Text="{Binding ErrorMessage}"
+                                   Foreground="#FFC9C9"
+                                   FontSize="12"
+                                   TextWrapping="Wrap" />
+                    </Border>
+
+                    <Border Visibility="{Binding HasSuccess, Converter={StaticResource BoolToVis}, FallbackValue=Collapsed}"
+                            Background="#22166534"
+                            BorderBrush="#A4F4CF"
+                            BorderThickness="1"
+                            CornerRadius="8"
+                            Padding="12,10"
+                            Margin="0,0,0,14">
+                        <TextBlock Text="{Binding SuccessMessage}"
+                                   Foreground="#A4F4CF"
+                                   FontSize="12"
+                                   TextWrapping="Wrap" />
+                    </Border>
+
+                    <!-- POSTER XEM TRƯỚC -->
+                    <Grid Margin="0,0,0,14">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="92" />
+                            <ColumnDefinition Width="14" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+
+                        <Border Grid.Column="0"
+                                Height="130"
+                                Background="#18181B"
+                                BorderBrush="#3F3F46"
+                                BorderThickness="1"
+                                CornerRadius="8"
+                                ClipToBounds="True">
+                            <Grid>
+                                <TextBlock Text="Chưa có poster"
+                                           FontSize="11"
+                                           Foreground="#71717A"
+                                           TextWrapping="Wrap"
+                                           TextAlignment="Center"
+                                           HorizontalAlignment="Center"
+                                           VerticalAlignment="Center"
+                                           Margin="8" />
+                                <Image Source="{Binding PosterPreview}"
+                                       Stretch="UniformToFill" />
+                            </Grid>
+                        </Border>
+
+                        <StackPanel Grid.Column="2" VerticalAlignment="Center">
+                            <TextBlock Text="Ảnh Poster" Style="{StaticResource FieldLabelTextStyle}" />
+                            <TextBlock Text="{Binding PosterFileName, FallbackValue='Chưa chọn ảnh (JPG, PNG)'}"
+                                       Style="{StaticResource MutedCaptionTextStyle}"
+                                       TextTrimming="CharacterEllipsis"
+                                       Margin="0,0,0,10" />
+                            <StackPanel Orientation="Horizontal">
+                                <Button Content="Chọn ảnh..."
+                                        Style="{StaticResource SecondaryButtonStyle}"
+                                        Padding="12,7"
+                                        FontSize="12"
+                                        Margin="0,0,8,0"
+                                        Click="OnChoosePosterClick" />
+                                <Button Content="Gỡ ảnh"
+                                        Style="{StaticResource GhostButtonStyle}"
+                                        Padding="10,7"
+                                        FontSize="12"
+                                        IsEnabled="{Binding HasPoster, FallbackValue=False}"
+                                        Click="OnClearPosterClick" />
+                            </StackPanel>
+                        </StackPanel>
+                    </Grid>
+
+                    <!-- TÊN PHIM -->
+                    <TextBlock Text="Tên phim *" Style="{StaticResource FieldLabelTextStyle}" />
+                    <TextBox Style="{StaticResource ModernTextBoxStyle}"
+                             Text="{Binding Title, UpdateSourceTrigger=PropertyChanged}"
+                             Margin="0,0,0,12" />
+
+                    <!-- TÊN GỐC & ĐẠO DIỄN -->
+                    <Grid Margin="0,0,0,12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="12" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Grid.Column="0">
+                            <TextBlock Text="Tên gốc" Style="{StaticResource FieldLabelTextStyle}" />
+                            <TextBox Style="{StaticResource ModernTextBoxStyle}"
+                                     Text="{Binding OriginalTitle, UpdateSourceTrigger=PropertyChanged}" />
+                        </StackPanel>
+
+                        <StackPanel Grid.Column="2">
+                            <TextBlock Text="Đạo diễn" Style="{StaticResource FieldLabelTextStyle}" />
+                            <TextBox Style="{StaticResource ModernTextBoxStyle}"
+                                     Text="{Binding Director, UpdateSourceTrigger=PropertyChanged}" />
+                        </StackPanel>
+                    </Grid>
+
+                    <!-- DIỄN VIÊN -->
+                    <TextBlock Text="Diễn viên" Style="{StaticResource FieldLabelTextStyle}" />
+                    <TextBox Style="{StaticResource ModernTextBoxStyle}"
+                             Text="{Binding Cast, UpdateSourceTrigger=PropertyChanged}"
+                             Margin="0,0,0,12" />
+
+                    <!-- THỜI LƯỢNG & NGÔN NGỮ -->
+                    <Grid Margin="0,0,0,12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="140" />
+                            <ColumnDefinition Width="12" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Grid.Column="0">
+                            <TextBlock Text="Thời lượng (phút) *" Style="{StaticResource FieldLabelTextStyle}" />
+                            <TextBox Style="{StaticResource ModernTextBoxStyle}"
+                                     Text="{Binding DurationText, UpdateSourceTrigger=PropertyChanged}" />
+                        </StackPanel>
+
+                        <StackPanel Grid.Column="2">
+                            <TextBlock Text="Ngôn ngữ *" Style="{StaticResource FieldLabelTextStyle}" />
+                            <TextBox Style="{StaticResource ModernTextBoxStyle}"
+                                     Text="{Binding Language, UpdateSourceTrigger=PropertyChanged}" />
+                        </StackPanel>
+                    </Grid>
+
+                    <!-- NGÀY KHỞI CHIẾU & NGÀY KẾT THÚC -->
+                    <Grid Margin="0,0,0,12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="12" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Grid.Column="0">
+                            <TextBlock Text="Khởi chiếu (dd/MM/yyyy) *" Style="{StaticResource FieldLabelTextStyle}" />
+                            <TextBox Style="{StaticResource ModernTextBoxStyle}"
+                                     Text="{Binding ReleaseDateText, UpdateSourceTrigger=PropertyChanged}" />
+                        </StackPanel>
+
+                        <StackPanel Grid.Column="2">
+                            <TextBlock Text="Kết thúc (dd/MM/yyyy)" Style="{StaticResource FieldLabelTextStyle}" />
+                            <TextBox Style="{StaticResource ModernTextBoxStyle}"
+                                     Text="{Binding EndDateText, UpdateSourceTrigger=PropertyChanged}" />
+                        </StackPanel>
+                    </Grid>
+
+                    <!-- GIỚI HẠN TUỔI & TRẠNG THÁI -->
+                    <Grid Margin="0,0,0,12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="12" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Grid.Column="0">
+                            <TextBlock Text="Giới hạn tuổi *" Style="{StaticResource FieldLabelTextStyle}" />
+                            <ComboBox Style="{StaticResource ModernComboBoxStyle}"
+                                      ItemsSource="{Binding AgeRatingOptions}"
+                                      SelectedItem="{Binding SelectedAgeRating, Mode=TwoWay}" />
+                        </StackPanel>
+
+                        <StackPanel Grid.Column="2">
+                            <TextBlock Text="Trạng thái *" Style="{StaticResource FieldLabelTextStyle}" />
+                            <ComboBox Style="{StaticResource ModernComboBoxStyle}"
+                                      ItemsSource="{Binding StatusOptions}"
+                                      SelectedItem="{Binding SelectedStatusOption, Mode=TwoWay}"
+                                      DisplayMemberPath="Label"/>
+                        </StackPanel>
+                    </Grid>
+
+                    <!-- THỂ LOẠI PHIM -->
+                    <TextBlock Text="Thể loại *" Style="{StaticResource FieldLabelTextStyle}" />
+                    <Border Background="#18181B"
+                            BorderBrush="#3F3F46"
+                            BorderThickness="1"
+                            CornerRadius="8"
+                            Padding="10,8"
+                            Margin="0,0,0,12">
+                        <StackPanel>
+                            <ItemsControl ItemsSource="{Binding GenreOptions}" Margin="0,0,0,8">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <WrapPanel />
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <CheckBox Content="{Binding Name}"
+                                                  IsChecked="{Binding IsSelected, Mode=TwoWay}"
+                                                  Style="{StaticResource ModernCheckBoxStyle}"
+                                                  Margin="0,4,14,4" />
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="8" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+
+                                <TextBox Grid.Column="0"
+                                         Style="{StaticResource ModernTextBoxStyle}"
+                                         Padding="10,6"
+                                         FontSize="12"
+                                         ToolTip="Nhập tên thể loại mới"
+                                         Text="{Binding NewGenreName, UpdateSourceTrigger=PropertyChanged}" />
+                                <Button Grid.Column="2"
+                                        Content="+ Thêm thể loại"
+                                        Style="{StaticResource SecondaryButtonStyle}"
+                                        Padding="10,6"
+                                        FontSize="12"
+                                        Click="OnAddGenreClick" />
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- MÔ TẢ NỘI DUNG -->
+                    <TextBlock Text="Mô tả nội dung" Style="{StaticResource FieldLabelTextStyle}" />
+                    <TextBox Style="{StaticResource ModernTextBoxStyle}"
+                             Text="{Binding Description, UpdateSourceTrigger=PropertyChanged}"
+                             AcceptsReturn="True"
+                             TextWrapping="Wrap"
+                             VerticalContentAlignment="Top"
+                             Height="82"
+                             Margin="0,0,0,16" />
+
+                    <!-- CỤM NÚT HÀNH ĐỘNG -->
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="8" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="8" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+
+                        <Button Grid.Column="0"
+                                Content="Lưu phim"
+                                Style="{StaticResource PrimaryButtonStyle}"
+                                Click="OnSaveMovieClick" />
+                        <Button Grid.Column="2"
+                                Content="Làm mới"
+                                Style="{StaticResource SecondaryButtonStyle}"
+                                Click="OnResetFormClick" />
+                        <Button Grid.Column="4"
+                                Content="Xóa"
+                                Style="{StaticResource DangerButtonStyle}"
+                                IsEnabled="{Binding IsEditMode, FallbackValue=False}"
+                                Click="OnDeleteMovieClick" />
+                    </Grid>
+                </StackPanel>
+            </Border>
+        </Grid>
+    </StackPanel>
+</UserControl>

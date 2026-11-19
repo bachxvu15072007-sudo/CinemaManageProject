@@ -1,3 +1,4 @@
+using CinemaManageProject.Helpers;
 using CinemaManageProject.Models;
 using Microsoft.Data.Sqlite;
 

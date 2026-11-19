@@ -1,11 +1,14 @@
 using System.Globalization;
+using System.IO;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
 using CinemaManageProject.Models;
 using Microsoft.Data.Sqlite;
 
-namespace CinemaManageProject.ViewModels;
+namespace CinemaManageProject.Helpers;
 
 /// <summary>
-/// Các hàm tĩnh phụ trợ đọc SQLite và định dạng dữ liệu hiển thị cho toàn bộ ViewModel.
+/// Các hàm tĩnh phụ trợ đọc SQLite, xử lý ảnh poster và định dạng dữ liệu hiển thị dùng chung.
 /// </summary>
 public static class CinemaHelper
 {
@@ -43,10 +46,13 @@ public static class CinemaHelper
     };
 
     /// <summary>
-    /// Dịch trạng thái suất chiếu, hóa đơn và vé sang tiếng Việt.
+    /// Dịch trạng thái phim, suất chiếu, hóa đơn và vé sang tiếng Việt.
     /// </summary>
     public static string FormatStatusLabel(string raw) => raw switch
     {
+        "ComingSoon" => "Sắp chiếu",
+        "NowShowing" => "Đang chiếu",
+        "Ended" => "Ngừng chiếu",
         "OpenForSale" => "Đang mở bán",
         "Scheduled" => "Đã lên lịch",
         "Completed" => "Đã chiếu",
@@ -89,5 +95,42 @@ public static class CinemaHelper
             TotalSpent = ReadDecimal(r, 5),
             Tier = Enum.TryParse(r.GetString(6), true, out CustomerTier tier) ? tier : CustomerTier.Member
         };
+    }
+
+    /// <summary>
+    /// Chuyển đường dẫn poster tương đối thành đường dẫn tuyệt đối dựa trên thư mục chạy ứng dụng.
+    /// </summary>
+    public static string ResolvePosterFullPath(string storedPath)
+        => Path.IsPathRooted(storedPath)
+            ? storedPath
+            : Path.Combine(AppContext.BaseDirectory, storedPath);
+
+    /// <summary>
+    /// Nạp ảnh poster ở chế độ OnLoad + Freeze để xem trước và không khóa file trên ổ đĩa.
+    /// </summary>
+    public static ImageSource LoadPosterBitmap(string fullPath)
+    {
+        var bitmap = new BitmapImage();
+        bitmap.BeginInit();
+        bitmap.CacheOption = BitmapCacheOption.OnLoad;
+        bitmap.UriSource = new Uri(fullPath, UriKind.Absolute);
+        bitmap.EndInit();
+        bitmap.Freeze();
+        return bitmap;
+    }
+
+    /// <summary>
+    /// Copy file ảnh poster vào thư mục Posters cạnh ứng dụng và trả về đường dẫn tương đối để lưu DB.
+    /// </summary>
+    public static string SavePosterFile(string sourcePath)
+    {
+        string postersDir = Path.Combine(AppContext.BaseDirectory, "Posters");
+        Directory.CreateDirectory(postersDir);
+
+        string fileName = $"poster_{DateTime.Now:yyyyMMdd_HHmmss_fff}{Path.GetExtension(sourcePath)}";
+        string destPath = Path.Combine(postersDir, fileName);
+        File.Copy(sourcePath, destPath, overwrite: true);
+
+        return Path.Combine("Posters", fileName);
     }
 }

@@ -1,7 +1,9 @@
 using System.Windows;
 using System.Windows.Controls;
 using CinemaManageProject.ViewModels;
+using CinemaManageProject.ViewModels.Admin;
 using CinemaManageProject.ViewModels.Dashboards;
+using CinemaManageProject.Views.Admin;
 using CinemaManageProject.Views.Dashboards;
 
 namespace CinemaManageProject.Views;
@@ -33,6 +35,7 @@ public partial class MainWindow : Window
         UserControl view = _viewModel.CurrentDashboard switch
         {
             AdminDashboardViewModel => new AdminDashboardView(),
+            AdminMoviesViewModel => new AdminMoviesView(),
             StaffDashboardViewModel => new StaffDashboardView(),
             _ => new CustomerDashboardView()
         };
