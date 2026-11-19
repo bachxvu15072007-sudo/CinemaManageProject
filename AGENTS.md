@@ -14,6 +14,8 @@ Tài liệu này quy định các nguyên tắc bắt buộc khi làm việc tr�
 * **Vị trí file:**
   * Toàn bộ màn hình Window và UserControl đặt trong `CinemaManageProject/Views/` (không đặt file `.xaml` màn hình ở thư mục gốc project).
   * Toàn bộ ViewModel đặt trong `CinemaManageProject/ViewModels/`, kế thừa `ViewModelBase`.
+  * Các lớp truy cập dữ liệu SQLite dùng lại đặt trong `CinemaManageProject/Data/` (như `MovieData`), giữ gọn bằng static method + parameterized query.
+  * Các hàm phụ trợ dùng chung (định dạng tiền/ngày/trạng thái, xử lý ảnh poster...) đặt trong `CinemaManageProject/Helpers/` (`CinemaHelper`).
   * Entity và Enum dùng lại trực tiếp từ `CinemaManageProject/Models/` (`CinemaEnums.cs` và 10 class model).
 * **Tránh over-engineering:**
   * Không tạo thêm các lớp trung gian, framework MVVM rườm rà, converter thừa hoặc service tách nhỏ không cần thiết khi code hiện tại xử lý gọn ngay trong ViewModel/helper nhẹ.
