@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using System.Windows;
 using CinemaManageProject.Models;
+using CinemaManageProject.ViewModels.Admin;
 using CinemaManageProject.ViewModels.Dashboards;
 
 namespace CinemaManageProject.ViewModels;
@@ -87,7 +88,7 @@ public sealed class MainViewModel : ViewModelBase
             case UserRole.Admin:
                 PageTitle = "Dashboard Quản trị";
                 MenuItems.Add(new SidebarMenuItem("dashboard", "Dashboard Quản trị", true) { IsSelected = true });
-                MenuItems.Add(new SidebarMenuItem("movies", "Quản lý Phim", false));
+                MenuItems.Add(new SidebarMenuItem("movies", "Quản lý Phim", true));
                 MenuItems.Add(new SidebarMenuItem("rooms", "Phòng & Sơ đồ ghế", false));
                 MenuItems.Add(new SidebarMenuItem("showtimes", "Quản lý Lịch chiếu", false));
                 MenuItems.Add(new SidebarMenuItem("orders", "Hóa đơn & Doanh thu", false));
@@ -148,6 +149,33 @@ public sealed class MainViewModel : ViewModelBase
         }
 
         PageTitle = item.Label;
-        CurrentDashboard?.LoadData();
+        switch (item.Key)
+        {
+            case "dashboard":
+                if (CurrentDashboard is AdminDashboardViewModel or StaffDashboardViewModel or CustomerDashboardViewModel)
+                {
+                    CurrentDashboard.LoadData();
+                }
+                else
+                {
+                    LoadRoleDashboard(App.CurrentUser?.Role ?? UserRole.Customer);
+                }
+                break;
+
+            case "movies":
+                if (CurrentDashboard is AdminMoviesViewModel)
+                {
+                    CurrentDashboard.LoadData();
+                }
+                else
+                {
+                    CurrentDashboard = new AdminMoviesViewModel();
+                }
+                break;
+
+            default:
+                CurrentDashboard?.LoadData();
+                break;
+        }
     }
 }
