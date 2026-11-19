@@ -27,32 +27,32 @@
 
             <Border Grid.Column="0" Style="{StaticResource CardBorderStyle}">
                 <StackPanel>
-                    <TextBlock Text="VÉ TÔI ĐÃ BÁN" FontSize="{StaticResource FontSizeXs}" FontWeight="SemiBold" Foreground="{DynamicResource TextSecondaryBrush}" />
-                    <TextBlock Text="{Binding MyTicketsText}" FontSize="{StaticResource FontSizeXl}" FontWeight="Bold" Margin="0,8,0,4" />
+                    <TextBlock Text="VÉ TÔI ĐÃ BÁN" FontSize="11" FontWeight="SemiBold" Foreground="#A1A1AA" />
+                    <TextBlock Text="{Binding MyTicketsText}" FontSize="20" FontWeight="Bold" Margin="0,8,0,4" />
                     <TextBlock Text="Tổng vé tại quầy" Style="{StaticResource MutedCaptionTextStyle}" />
                 </StackPanel>
             </Border>
 
             <Border Grid.Column="2" Style="{StaticResource CardBorderStyle}">
                 <StackPanel>
-                    <TextBlock Text="DOANH THU QUẦY CỦA TÔI" FontSize="{StaticResource FontSizeXs}" FontWeight="SemiBold" Foreground="{DynamicResource TextSecondaryBrush}" />
-                    <TextBlock Text="{Binding MyRevenueText}" FontSize="{StaticResource FontSizeXl}" FontWeight="Bold" Foreground="{DynamicResource AccentPrimaryBrush}" Margin="0,8,0,4" />
+                    <TextBlock Text="DOANH THU QUẦY CỦA TÔI" FontSize="11" FontWeight="SemiBold" Foreground="#A1A1AA" />
+                    <TextBlock Text="{Binding MyRevenueText}" FontSize="20" FontWeight="Bold" Foreground="#5E6AD2" Margin="0,8,0,4" />
                     <TextBlock Text="Hóa đơn hợp lệ" Style="{StaticResource MutedCaptionTextStyle}" />
                 </StackPanel>
             </Border>
 
             <Border Grid.Column="4" Style="{StaticResource CardBorderStyle}">
                 <StackPanel>
-                    <TextBlock Text="SUẤT ĐANG MỞ BÁN" FontSize="{StaticResource FontSizeXs}" FontWeight="SemiBold" Foreground="{DynamicResource TextSecondaryBrush}" />
-                    <TextBlock Text="{Binding OpenShowtimesText}" FontSize="{StaticResource FontSizeXl}" FontWeight="Bold" Foreground="{DynamicResource StatusInfoBrush}" Margin="0,8,0,4" />
+                    <TextBlock Text="SUẤT ĐANG MỞ BÁN" FontSize="11" FontWeight="SemiBold" Foreground="#A1A1AA" />
+                    <TextBlock Text="{Binding OpenShowtimesText}" FontSize="20" FontWeight="Bold" Foreground="#74D4FF" Margin="0,8,0,4" />
                     <TextBlock Text="Sẵn sàng phục vụ" Style="{StaticResource MutedCaptionTextStyle}" />
                 </StackPanel>
             </Border>
 
             <Border Grid.Column="6" Style="{StaticResource CardBorderStyle}">
                 <StackPanel>
-                    <TextBlock Text="VÉ CHỜ SOÁT CHECK-IN" FontSize="{StaticResource FontSizeXs}" FontWeight="SemiBold" Foreground="{DynamicResource TextSecondaryBrush}" />
-                    <TextBlock Text="{Binding PendingCheckInText}" FontSize="{StaticResource FontSizeXl}" FontWeight="Bold" Foreground="{DynamicResource StatusWarningBrush}" Margin="0,8,0,4" />
+                    <TextBlock Text="VÉ CHỜ SOÁT CHECK-IN" FontSize="11" FontWeight="SemiBold" Foreground="#A1A1AA" />
+                    <TextBlock Text="{Binding PendingCheckInText}" FontSize="20" FontWeight="Bold" Foreground="#FEE685" Margin="0,8,0,4" />
                     <TextBlock Text="Chưa vào phòng chiếu" Style="{StaticResource MutedCaptionTextStyle}" />
                 </StackPanel>
             </Border>
@@ -94,10 +94,10 @@
                     <ItemsControl ItemsSource="{Binding MyRecentOrders}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <Border Background="{DynamicResource SurfaceElevatedBrush}"
-                                        BorderBrush="{DynamicResource BorderSubtleBrush}"
+                                <Border Background="#18181B"
+                                        BorderBrush="#23252A"
                                         BorderThickness="1"
-                                        CornerRadius="{StaticResource RadiusMd}"
+                                        CornerRadius="8"
                                         Padding="12,10"
                                         Margin="0,0,0,10">
                                     <Grid>
@@ -113,11 +113,11 @@
                                         <TextBlock Grid.Row="0" Grid.Column="0"
                                                    Text="{Binding OrderCode}"
                                                    FontWeight="SemiBold"
-                                                   FontSize="{StaticResource FontSizeSm}" />
+                                                   FontSize="12" />
                                         <TextBlock Grid.Row="0" Grid.Column="1"
                                                    Text="{Binding Amount}"
                                                    FontWeight="Bold"
-                                                   Foreground="{DynamicResource AccentPrimaryBrush}" />
+                                                   Foreground="#5E6AD2" />
 
                                         <TextBlock Grid.Row="1" Grid.Column="0"
                                                    Margin="0,4,0,0"

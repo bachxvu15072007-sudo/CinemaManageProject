@@ -37,26 +37,58 @@ public sealed class CustomerDashboardViewModel : ViewModelBase
 
     public CustomerDashboardViewModel()
     {
-        FilterCommand = new RelayCommand(param => SelectedFilter = param?.ToString() ?? "All");
         LoadData();
     }
 
-    public string MemberName { get => _memberName; private set => SetProperty(ref _memberName, value); }
-    public string MemberPhone { get => _memberPhone; private set => SetProperty(ref _memberPhone, value); }
-    public string TierDisplay { get => _tierDisplay; private set => SetProperty(ref _tierDisplay, value); }
-    public string PointsText { get => _pointsText; private set => SetProperty(ref _pointsText, value); }
-    public string TotalSpentText { get => _totalSpentText; private set => SetProperty(ref _totalSpentText, value); }
-    public string ActiveTicketsText { get => _activeTicketsText; private set => SetProperty(ref _activeTicketsText, value); }
+    public string MemberName
+    {
+        get => _memberName;
+        private set { _memberName = value; OnPropertyChanged(nameof(MemberName)); }
+    }
+
+    public string MemberPhone
+    {
+        get => _memberPhone;
+        private set { _memberPhone = value; OnPropertyChanged(nameof(MemberPhone)); }
+    }
+
+    public string TierDisplay
+    {
+        get => _tierDisplay;
+        private set { _tierDisplay = value; OnPropertyChanged(nameof(TierDisplay)); }
+    }
+
+    public string PointsText
+    {
+        get => _pointsText;
+        private set { _pointsText = value; OnPropertyChanged(nameof(PointsText)); }
+    }
+
+    public string TotalSpentText
+    {
+        get => _totalSpentText;
+        private set { _totalSpentText = value; OnPropertyChanged(nameof(TotalSpentText)); }
+    }
+
+    public string ActiveTicketsText
+    {
+        get => _activeTicketsText;
+        private set { _activeTicketsText = value; OnPropertyChanged(nameof(ActiveTicketsText)); }
+    }
 
     public string SelectedFilter
     {
         get => _selectedFilter;
         private set
         {
-            if (SetProperty(ref _selectedFilter, value))
+            if (_selectedFilter == value)
             {
-                ApplyFilter();
+                return;
             }
+
+            _selectedFilter = value;
+            OnPropertyChanged(nameof(SelectedFilter));
+            ApplyFilter();
         }
     }
 
@@ -65,14 +97,14 @@ public sealed class CustomerDashboardViewModel : ViewModelBase
     public ObservableCollection<CustomerMovieRow> Movies { get; } = [];
     public ObservableCollection<CustomerTicketRow> MyTickets { get; } = [];
 
-    public RelayCommand FilterCommand { get; }
+    public void SetFilter(string? filter) => SelectedFilter = filter ?? "All";
 
     public override void LoadData()
     {
         using SqliteConnection conn = App.OpenDbConnection();
 
         Customer? profile = App.CurrentUser is not null
-            ? LoadCustomerProfile(conn, App.CurrentUser.UserId) ?? App.CurrentUser.CustomerProfile
+            ? CinemaHelper.LoadCustomerProfile(conn, App.CurrentUser.UserId) ?? App.CurrentUser.CustomerProfile
             : null;
         if (App.CurrentUser is not null && profile is not null)
         {
@@ -89,7 +121,7 @@ public sealed class CustomerDashboardViewModel : ViewModelBase
             _ => "Thành viên (Member)"
         };
         PointsText = $"{profile?.LoyaltyPoints ?? 0} điểm";
-        TotalSpentText = FormatVnd(profile?.TotalSpent ?? 0m);
+        TotalSpentText = CinemaHelper.FormatVnd(profile?.TotalSpent ?? 0m);
 
         _allMovies.Clear();
         using (SqliteCommand mov = conn.CreateCommand())
@@ -111,7 +143,7 @@ public sealed class CustomerDashboardViewModel : ViewModelBase
                 bool nowShowing = r.GetString(5) == "NowShowing";
                 string priceText = r.IsDBNull(6)
                     ? "Chưa mở bán"
-                    : $"Từ {FormatVnd(ReadDecimal(r, 6))}";
+                    : $"Từ {CinemaHelper.FormatVnd(CinemaHelper.ReadDecimal(r, 6))}";
 
                 _allMovies.Add(new CustomerMovieRow(
                     r.GetString(0),
@@ -157,9 +189,9 @@ public sealed class CustomerDashboardViewModel : ViewModelBase
                     r.GetString(0),
                     r.GetString(1),
                     $"{r.GetString(2)} • Ghế {r.GetString(3)}",
-                    FormatSqlDateTime(r.GetString(4), "dd/MM/yyyy HH:mm"),
-                    FormatVnd(ReadDecimal(r, 5)),
-                    FormatStatusLabel(rawStatus)));
+                    CinemaHelper.FormatSqlDateTime(r.GetString(4), "dd/MM/yyyy HH:mm"),
+                    CinemaHelper.FormatVnd(CinemaHelper.ReadDecimal(r, 5)),
+                    CinemaHelper.FormatStatusLabel(rawStatus)));
             }
         }
 

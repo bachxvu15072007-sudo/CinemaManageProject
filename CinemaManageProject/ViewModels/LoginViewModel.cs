@@ -1,5 +1,4 @@
 using CinemaManageProject.Models;
-using CinemaManageProject.Themes;
 using Microsoft.Data.Sqlite;
 
 namespace CinemaManageProject.ViewModels;
@@ -16,21 +15,9 @@ public sealed class LoginViewModel : ViewModelBase
     private string _regUsername = string.Empty;
     private string _regEmail = string.Empty;
     private string? _errorMessage;
-    private string _themeButtonText = string.Empty;
 
     public LoginViewModel()
     {
-        ToggleModeCommand = new RelayCommand(() =>
-        {
-            ErrorMessage = null;
-            IsRegisterMode = !IsRegisterMode;
-            ModeSwitched?.Invoke();
-        });
-        ToggleThemeCommand = new RelayCommand(() => ThemeManager.ToggleTheme());
-        FillDemoCommand = new RelayCommand(FillDemo);
-
-        ThemeManager.ThemeChanged += OnThemeChanged;
-        UpdateThemeText();
     }
 
     public event Action? LoginSucceeded;
@@ -42,40 +29,63 @@ public sealed class LoginViewModel : ViewModelBase
         get => _isRegisterMode;
         private set
         {
-            if (SetProperty(ref _isRegisterMode, value))
-            {
-                OnPropertyChanged(nameof(IsLoginMode));
-            }
+            if(value == _isRegisterMode) return;
+            _isRegisterMode = value;
+            OnPropertyChanged(nameof(IsRegisterMode));
+            OnPropertyChanged(nameof(IsLoginMode));
         }
     }
-
     public bool IsLoginMode => !IsRegisterMode;
 
-    public string Username { get => _username; set => SetProperty(ref _username, value); }
-    public string RegFullName { get => _regFullName; set => SetProperty(ref _regFullName, value); }
-    public string RegPhone { get => _regPhone; set => SetProperty(ref _regPhone, value); }
-    public string RegUsername { get => _regUsername; set => SetProperty(ref _regUsername, value); }
-    public string RegEmail { get => _regEmail; set => SetProperty(ref _regEmail, value); }
+    public string Username
+    {
+        get => _username;
+        set { _username = value; OnPropertyChanged(nameof(Username)); }
+    }
+
+    public string RegFullName
+    {
+        get => _regFullName;
+        set { _regFullName = value; OnPropertyChanged(nameof(RegFullName)); }
+    }
+
+    public string RegPhone
+    {
+        get => _regPhone;
+        set { _regPhone = value; OnPropertyChanged(nameof(RegPhone)); }
+    }
+
+    public string RegUsername
+    {
+        get => _regUsername;
+        set { _regUsername = value; OnPropertyChanged(nameof(RegUsername)); }
+    }
+
+    public string RegEmail
+    {
+        get => _regEmail;
+        set { _regEmail = value; OnPropertyChanged(nameof(RegEmail)); }
+    }
 
     public string? ErrorMessage
     {
         get => _errorMessage;
         private set
         {
-            if (SetProperty(ref _errorMessage, value))
-            {
-                OnPropertyChanged(nameof(HasError));
-            }
+            _errorMessage = value;
+            OnPropertyChanged(nameof(ErrorMessage));
+            OnPropertyChanged(nameof(HasError));
         }
     }
 
     public bool HasError => !string.IsNullOrWhiteSpace(ErrorMessage);
 
-    public string ThemeButtonText { get => _themeButtonText; private set => SetProperty(ref _themeButtonText, value); }
-
-    public RelayCommand ToggleModeCommand { get; }
-    public RelayCommand ToggleThemeCommand { get; }
-    public RelayCommand FillDemoCommand { get; }
+    public void ToggleMode()
+    {
+        ErrorMessage = null;
+        IsRegisterMode = !IsRegisterMode;
+        ModeSwitched?.Invoke();
+    }
 
     public void Login(string password)
     {
@@ -133,7 +143,7 @@ public sealed class LoginViewModel : ViewModelBase
 
             if (user.Role == UserRole.Customer)
             {
-                user.CustomerProfile = LoadCustomerProfile(conn, user.UserId);
+                user.CustomerProfile = CinemaHelper.LoadCustomerProfile(conn, user.UserId);
             }
 
             App.CurrentUser = user;
@@ -252,8 +262,6 @@ public sealed class LoginViewModel : ViewModelBase
         }
     }
 
-    public void Detach() => ThemeManager.ThemeChanged -= OnThemeChanged;
-
     private static bool ScalarExists(SqliteConnection conn, SqliteTransaction tx, string sql, string val)
     {
         using SqliteCommand cmd = conn.CreateCommand();
@@ -263,7 +271,7 @@ public sealed class LoginViewModel : ViewModelBase
         return cmd.ExecuteScalar() is not null;
     }
 
-    private void FillDemo(object? param)
+    public void FillDemo(string? role)
     {
         if (IsRegisterMode)
         {
@@ -272,7 +280,7 @@ public sealed class LoginViewModel : ViewModelBase
         }
 
         ErrorMessage = null;
-        (string user, string pass) = param?.ToString() switch
+        (string user, string pass) = role switch
         {
             "Admin" => ("admin", "Admin@123"),
             "Staff" => ("staff1", "Staff@123"),
@@ -282,9 +290,4 @@ public sealed class LoginViewModel : ViewModelBase
         Username = user;
         DemoPasswordRequested?.Invoke(pass);
     }
-
-    private void OnThemeChanged(object? sender, AppTheme e) => UpdateThemeText();
-
-    private void UpdateThemeText() =>
-        ThemeButtonText = ThemeManager.CurrentTheme == AppTheme.Dark ? "☀ Light Mode" : "🌙 Dark Mode";
 }

@@ -12,45 +12,34 @@
         ResizeMode="CanMinimize"
         WindowStartupLocation="CenterScreen">
 
-    <Window.Resources>
-        <BooleanToVisibilityConverter x:Key="BoolToVis" />
-    </Window.Resources>
-
     <Grid Margin="24">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <!-- HEADER LOGO + ĐỔI THEME -->
+        <!-- HEADER LOGO -->
         <DockPanel Grid.Row="0" Margin="0,0,0,18" LastChildFill="False">
             <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" VerticalAlignment="Center">
-                <Border Background="{DynamicResource AccentPrimaryBrush}"
+                <Border Background="#5E6AD2"
                         Width="38" Height="38"
-                        CornerRadius="{StaticResource RadiusMd}"
+                        CornerRadius="8"
                         Margin="0,0,12,0">
                     <TextBlock Text="CV"
                                FontWeight="Bold"
                                FontSize="15"
-                               Foreground="{DynamicResource TextOnAccentBrush}"
+                               Foreground="#FFFFFF"
                                HorizontalAlignment="Center"
                                VerticalAlignment="Center" />
                 </Border>
                 <StackPanel VerticalAlignment="Center">
                     <TextBlock Text="CINEVERSE CINEMA"
-                               FontSize="{StaticResource FontSizeLg}"
+                               FontSize="16"
                                FontWeight="Bold" />
                     <TextBlock Text="Hệ thống Quản lý &amp; Đặt vé Rạp phim"
                                Style="{StaticResource MutedCaptionTextStyle}" />
                 </StackPanel>
             </StackPanel>
-
-            <Button DockPanel.Dock="Right"
-                    Content="{Binding ThemeButtonText}"
-                    Style="{StaticResource SecondaryButtonStyle}"
-                    Padding="12,7"
-                    FontSize="{StaticResource FontSizeSm}"
-                    Command="{Binding ToggleThemeCommand}" />
         </DockPanel>
 
         <!-- CARD CHÍNH -->
@@ -58,15 +47,15 @@
             <StackPanel>
                 <!-- THÔNG BÁO LỖI -->
                 <Border Visibility="{Binding HasError, Converter={StaticResource BoolToVis}}"
-                        Background="{DynamicResource StatusErrorSoftBrush}"
-                        BorderBrush="{DynamicResource StatusErrorBrush}"
+                        Background="#24C10007"
+                        BorderBrush="#FFC9C9"
                         BorderThickness="1"
-                        CornerRadius="{StaticResource RadiusMd}"
+                        CornerRadius="8"
                         Padding="12,10"
                         Margin="0,0,0,16">
                     <TextBlock Text="{Binding ErrorMessage}"
-                               Foreground="{DynamicResource StatusErrorBrush}"
-                               FontSize="{StaticResource FontSizeSm}"
+                               Foreground="#FFC9C9"
+                               FontSize="12"
                                TextWrapping="Wrap" />
                 </Border>
 
@@ -74,7 +63,7 @@
                 <StackPanel Visibility="{Binding IsLoginMode, Converter={StaticResource BoolToVis}}">
                     <TextBlock Text="Đăng nhập tài khoản"
                                Style="{StaticResource PageTitleTextStyle}"
-                               FontSize="{StaticResource FontSizeXl}"
+                               FontSize="20"
                                Margin="0,0,0,4" />
                     <TextBlock Text="Đăng nhập bằng tài khoản Admin, Staff hoặc Khách hàng để vào bảng điều khiển."
                                Style="{StaticResource MutedCaptionTextStyle}"
@@ -82,9 +71,9 @@
                                Margin="0,0,0,18" />
 
                     <TextBlock Text="Tên đăng nhập"
-                               FontSize="{StaticResource FontSizeSm}"
+                               FontSize="12"
                                FontWeight="SemiBold"
-                               Foreground="{DynamicResource TextSecondaryBrush}"
+                               Foreground="#A1A1AA"
                                Margin="0,0,0,6" />
                     <TextBox x:Name="UsernameTextBox"
                              Style="{StaticResource ModernTextBoxStyle}"
@@ -92,9 +81,9 @@
                              Margin="0,0,0,14" />
 
                     <TextBlock Text="Mật khẩu"
-                               FontSize="{StaticResource FontSizeSm}"
+                               FontSize="12"
                                FontWeight="SemiBold"
-                               Foreground="{DynamicResource TextSecondaryBrush}"
+                               Foreground="#A1A1AA"
                                Margin="0,0,0,6" />
                     <PasswordBox x:Name="LoginPasswordBox"
                                  Style="{StaticResource ModernPasswordBoxStyle}"
@@ -108,10 +97,10 @@
 
                     <Button Content="Chưa có tài khoản? Đăng ký thành viên"
                             Style="{StaticResource GhostButtonStyle}"
-                            Command="{Binding ToggleModeCommand}"
+                            Click="OnToggleModeClick"
                             Margin="0,0,0,14" />
 
-                    <Border BorderBrush="{DynamicResource BorderSubtleBrush}"
+                    <Border BorderBrush="#23252A"
                             BorderThickness="0,1,0,0"
                             Padding="0,12,0,0">
                         <StackPanel>
@@ -130,23 +119,23 @@
                                         Content="Admin"
                                         Style="{StaticResource SecondaryButtonStyle}"
                                         Padding="8,7"
-                                        FontSize="{StaticResource FontSizeSm}"
-                                        Command="{Binding FillDemoCommand}"
-                                        CommandParameter="Admin" />
+                                        FontSize="12"
+                                        Tag="Admin"
+                                        Click="OnFillDemoClick" />
                                 <Button Grid.Column="2"
                                         Content="Staff"
                                         Style="{StaticResource SecondaryButtonStyle}"
                                         Padding="8,7"
-                                        FontSize="{StaticResource FontSizeSm}"
-                                        Command="{Binding FillDemoCommand}"
-                                        CommandParameter="Staff" />
+                                        FontSize="12"
+                                        Tag="Staff"
+                                        Click="OnFillDemoClick" />
                                 <Button Grid.Column="4"
                                         Content="Customer"
                                         Style="{StaticResource SecondaryButtonStyle}"
                                         Padding="8,7"
-                                        FontSize="{StaticResource FontSizeSm}"
-                                        Command="{Binding FillDemoCommand}"
-                                        CommandParameter="Customer" />
+                                        FontSize="12"
+                                        Tag="Customer"
+                                        Click="OnFillDemoClick" />
                             </Grid>
                         </StackPanel>
                     </Border>
@@ -156,14 +145,14 @@
                 <StackPanel Visibility="{Binding IsRegisterMode, Converter={StaticResource BoolToVis}}">
                     <TextBlock Text="Đăng ký hội viên mới"
                                Style="{StaticResource PageTitleTextStyle}"
-                               FontSize="{StaticResource FontSizeXl}"
+                               FontSize="20"
                                Margin="0,0,0,4" />
                     <TextBlock Text="Tạo tài khoản Khách hàng mới để đặt vé và tích điểm thành viên."
                                Style="{StaticResource MutedCaptionTextStyle}"
                                TextWrapping="Wrap"
                                Margin="0,0,0,16" />
 
-                    <TextBlock Text="Họ và tên *" FontSize="{StaticResource FontSizeSm}" FontWeight="SemiBold" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,0,5" />
+                    <TextBlock Text="Họ và tên *" FontSize="12" FontWeight="SemiBold" Foreground="#A1A1AA" Margin="0,0,0,5" />
                     <TextBox Style="{StaticResource ModernTextBoxStyle}" Text="{Binding RegFullName, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,10" />
 
                     <Grid Margin="0,0,0,10">
@@ -173,16 +162,16 @@
                             <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
                         <StackPanel Grid.Column="0">
-                            <TextBlock Text="Số điện thoại *" FontSize="{StaticResource FontSizeSm}" FontWeight="SemiBold" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,0,5" />
+                            <TextBlock Text="Số điện thoại *" FontSize="12" FontWeight="SemiBold" Foreground="#A1A1AA" Margin="0,0,0,5" />
                             <TextBox Style="{StaticResource ModernTextBoxStyle}" Text="{Binding RegPhone, UpdateSourceTrigger=PropertyChanged}" />
                         </StackPanel>
                         <StackPanel Grid.Column="2">
-                            <TextBlock Text="Email" FontSize="{StaticResource FontSizeSm}" FontWeight="SemiBold" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,0,5" />
+                            <TextBlock Text="Email" FontSize="12" FontWeight="SemiBold" Foreground="#A1A1AA" Margin="0,0,0,5" />
                             <TextBox Style="{StaticResource ModernTextBoxStyle}" Text="{Binding RegEmail, UpdateSourceTrigger=PropertyChanged}" />
                         </StackPanel>
                     </Grid>
 
-                    <TextBlock Text="Tên đăng nhập *" FontSize="{StaticResource FontSizeSm}" FontWeight="SemiBold" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,0,5" />
+                    <TextBlock Text="Tên đăng nhập *" FontSize="12" FontWeight="SemiBold" Foreground="#A1A1AA" Margin="0,0,0,5" />
                     <TextBox Style="{StaticResource ModernTextBoxStyle}" Text="{Binding RegUsername, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,10" />
 
                     <Grid Margin="0,0,0,18">
@@ -192,11 +181,11 @@
                             <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
                         <StackPanel Grid.Column="0">
-                            <TextBlock Text="Mật khẩu *" FontSize="{StaticResource FontSizeSm}" FontWeight="SemiBold" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,0,5" />
+                            <TextBlock Text="Mật khẩu *" FontSize="12" FontWeight="SemiBold" Foreground="#A1A1AA" Margin="0,0,0,5" />
                             <PasswordBox x:Name="RegPasswordBox" Style="{StaticResource ModernPasswordBoxStyle}" />
                         </StackPanel>
                         <StackPanel Grid.Column="2">
-                            <TextBlock Text="Xác nhận *" FontSize="{StaticResource FontSizeSm}" FontWeight="SemiBold" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,0,5" />
+                            <TextBlock Text="Xác nhận *" FontSize="12" FontWeight="SemiBold" Foreground="#A1A1AA" Margin="0,0,0,5" />
                             <PasswordBox x:Name="RegConfirmPasswordBox" Style="{StaticResource ModernPasswordBoxStyle}" KeyDown="OnRegisterPasswordKeyDown" />
                         </StackPanel>
                     </Grid>
@@ -208,7 +197,7 @@
 
                     <Button Content="Đã có tài khoản? Quay lại đăng nhập"
                             Style="{StaticResource GhostButtonStyle}"
-                            Command="{Binding ToggleModeCommand}" />
+                            Click="OnToggleModeClick" />
                 </StackPanel>
             </StackPanel>
         </Border>

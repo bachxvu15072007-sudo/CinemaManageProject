@@ -1,7 +1,6 @@
 using System.Collections.ObjectModel;
 using System.Windows;
 using CinemaManageProject.Models;
-using CinemaManageProject.Themes;
 using CinemaManageProject.ViewModels.Dashboards;
 
 namespace CinemaManageProject.ViewModels;
@@ -28,10 +27,9 @@ public sealed class SidebarMenuItem : ViewModelBase
         get => _isSelected;
         set
         {
-            if (SetProperty(ref _isSelected, value))
-            {
-                OnPropertyChanged(nameof(ActiveTag));
-            }
+            _isSelected = value;
+            OnPropertyChanged(nameof(IsSelected));
+            OnPropertyChanged(nameof(ActiveTag));
         }
     }
 }
@@ -43,7 +41,6 @@ public sealed class MainViewModel : ViewModelBase
 {
     private ViewModelBase? _currentDashboard;
     private string _pageTitle = string.Empty;
-    private string _themeButtonText = string.Empty;
 
     public MainViewModel()
     {
@@ -59,14 +56,6 @@ public sealed class MainViewModel : ViewModelBase
             _ => "CUSTOMER"
         };
 
-        SelectMenuCommand = new RelayCommand(OnSelectMenu);
-        RefreshCommand = new RelayCommand(() => CurrentDashboard?.LoadData());
-        ToggleThemeCommand = new RelayCommand(() => ThemeManager.ToggleTheme());
-        LogoutCommand = new RelayCommand(() => ((App)Application.Current).Logout());
-
-        ThemeManager.ThemeChanged += OnThemeChanged;
-        UpdateThemeText();
-
         BuildSidebar(user.Role);
         LoadRoleDashboard(user.Role);
     }
@@ -75,23 +64,19 @@ public sealed class MainViewModel : ViewModelBase
     public string UsernameDisplay { get; }
     public string RoleDisplay { get; }
 
-    public string PageTitle { get => _pageTitle; private set => SetProperty(ref _pageTitle, value); }
-    public string ThemeButtonText { get => _themeButtonText; private set => SetProperty(ref _themeButtonText, value); }
+    public string PageTitle
+    {
+        get => _pageTitle;
+        private set { _pageTitle = value; OnPropertyChanged(nameof(PageTitle)); }
+    }
 
     public ViewModelBase? CurrentDashboard
     {
         get => _currentDashboard;
-        private set => SetProperty(ref _currentDashboard, value);
+        private set { _currentDashboard = value; OnPropertyChanged(nameof(CurrentDashboard)); }
     }
 
     public ObservableCollection<SidebarMenuItem> MenuItems { get; } = [];
-
-    public RelayCommand SelectMenuCommand { get; }
-    public RelayCommand RefreshCommand { get; }
-    public RelayCommand ToggleThemeCommand { get; }
-    public RelayCommand LogoutCommand { get; }
-
-    public void Detach() => ThemeManager.ThemeChanged -= OnThemeChanged;
 
     private void BuildSidebar(UserRole role)
     {
@@ -136,9 +121,13 @@ public sealed class MainViewModel : ViewModelBase
         };
     }
 
-    private void OnSelectMenu(object? param)
+    public void RefreshCurrentDashboard() => CurrentDashboard?.LoadData();
+
+    public void Logout() => ((App)Application.Current).Logout();
+
+    public void SelectMenu(SidebarMenuItem? item)
     {
-        if (param is not SidebarMenuItem item)
+        if (item is null)
         {
             return;
         }
@@ -161,9 +150,4 @@ public sealed class MainViewModel : ViewModelBase
         PageTitle = item.Label;
         CurrentDashboard?.LoadData();
     }
-
-    private void OnThemeChanged(object? sender, AppTheme e) => UpdateThemeText();
-
-    private void UpdateThemeText() =>
-        ThemeButtonText = ThemeManager.CurrentTheme == AppTheme.Dark ? "☀ Light Mode" : "🌙 Dark Mode";
 }

@@ -28,33 +28,33 @@
 
             <Border Grid.Column="0" Style="{StaticResource CardBorderStyle}">
                 <StackPanel>
-                    <TextBlock Text="TỔNG DOANH THU" FontSize="{StaticResource FontSizeXs}" FontWeight="SemiBold" Foreground="{DynamicResource TextSecondaryBrush}" />
-                    <TextBlock Text="{Binding TotalRevenueText}" FontSize="{StaticResource FontSizeXl}" FontWeight="Bold" Foreground="{DynamicResource AccentPrimaryBrush}" Margin="0,8,0,4" />
+                    <TextBlock Text="TỔNG DOANH THU" FontSize="11" FontWeight="SemiBold" Foreground="#A1A1AA" />
+                    <TextBlock Text="{Binding TotalRevenueText}" FontSize="20" FontWeight="Bold" Foreground="#5E6AD2" Margin="0,8,0,4" />
                     <TextBlock Text="{Binding TodayRevenueText}" Style="{StaticResource MutedCaptionTextStyle}" />
                 </StackPanel>
             </Border>
 
             <Border Grid.Column="2" Style="{StaticResource CardBorderStyle}">
                 <StackPanel>
-                    <TextBlock Text="VÉ ĐÃ PHÁT HÀNH" FontSize="{StaticResource FontSizeXs}" FontWeight="SemiBold" Foreground="{DynamicResource TextSecondaryBrush}" />
-                    <TextBlock Text="{Binding TotalTicketsText}" FontSize="{StaticResource FontSizeXl}" FontWeight="Bold" Margin="0,8,0,4" />
+                    <TextBlock Text="VÉ ĐÃ PHÁT HÀNH" FontSize="11" FontWeight="SemiBold" Foreground="#A1A1AA" />
+                    <TextBlock Text="{Binding TotalTicketsText}" FontSize="20" FontWeight="Bold" Margin="0,8,0,4" />
                     <TextBlock Text="{Binding CheckedInSubText}" Style="{StaticResource MutedCaptionTextStyle}" />
                 </StackPanel>
             </Border>
 
             <Border Grid.Column="4" Style="{StaticResource CardBorderStyle}">
                 <StackPanel>
-                    <TextBlock Text="DANH MỤC PHIM" FontSize="{StaticResource FontSizeXs}" FontWeight="SemiBold" Foreground="{DynamicResource TextSecondaryBrush}" />
-                    <TextBlock Text="{Binding MoviesCountText}" FontSize="{StaticResource FontSizeXl}" FontWeight="Bold" Margin="0,8,0,4" />
+                    <TextBlock Text="DANH MỤC PHIM" FontSize="11" FontWeight="SemiBold" Foreground="#A1A1AA" />
+                    <TextBlock Text="{Binding MoviesCountText}" FontSize="20" FontWeight="Bold" Margin="0,8,0,4" />
                     <TextBlock Text="{Binding ComingSoonSubText}" Style="{StaticResource MutedCaptionTextStyle}" />
                 </StackPanel>
             </Border>
 
             <Border Grid.Column="6" Style="{StaticResource CardBorderStyle}">
                 <StackPanel>
-                    <TextBlock Text="PHÒNG CHIẾU HOẠT ĐỘNG" FontSize="{StaticResource FontSizeXs}" FontWeight="SemiBold" Foreground="{DynamicResource TextSecondaryBrush}" />
-                    <TextBlock Text="{Binding RoomsText}" FontSize="{StaticResource FontSizeXl}" FontWeight="Bold" Margin="0,8,0,4" />
-                    <TextBlock Text="{Binding MaintenanceSeatsText}" Foreground="{DynamicResource StatusWarningBrush}" FontSize="{StaticResource FontSizeSm}" />
+                    <TextBlock Text="PHÒNG CHIẾU HOẠT ĐỘNG" FontSize="11" FontWeight="SemiBold" Foreground="#A1A1AA" />
+                    <TextBlock Text="{Binding RoomsText}" FontSize="20" FontWeight="Bold" Margin="0,8,0,4" />
+                    <TextBlock Text="{Binding MaintenanceSeatsText}" Foreground="#FEE685" FontSize="12" />
                 </StackPanel>
             </Border>
         </Grid>
@@ -98,10 +98,10 @@
                     <ItemsControl ItemsSource="{Binding RecentOrders}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <Border Background="{DynamicResource SurfaceElevatedBrush}"
-                                        BorderBrush="{DynamicResource BorderSubtleBrush}"
+                                <Border Background="#18181B"
+                                        BorderBrush="#23252A"
                                         BorderThickness="1"
-                                        CornerRadius="{StaticResource RadiusMd}"
+                                        CornerRadius="8"
                                         Padding="12,10"
                                         Margin="0,0,0,10">
                                     <Grid>
@@ -117,11 +117,11 @@
                                         <TextBlock Grid.Row="0" Grid.Column="0"
                                                    Text="{Binding OrderCode}"
                                                    FontWeight="SemiBold"
-                                                   FontSize="{StaticResource FontSizeSm}" />
+                                                   FontSize="12" />
                                         <TextBlock Grid.Row="0" Grid.Column="1"
                                                    Text="{Binding TotalAmount}"
                                                    FontWeight="Bold"
-                                                   Foreground="{DynamicResource AccentPrimaryBrush}" />
+                                                   Foreground="#5E6AD2" />
 
                                         <TextBlock Grid.Row="1" Grid.Column="0"
                                                    Margin="0,4,0,0"
@@ -133,8 +133,8 @@
                                         <TextBlock Grid.Row="1" Grid.Column="1"
                                                    Margin="0,4,0,0"
                                                    Text="{Binding StatusDisplay}"
-                                                   FontSize="{StaticResource FontSizeXs}"
-                                                   Foreground="{DynamicResource StatusSuccessBrush}"
+                                                   FontSize="11"
+                                                   Foreground="#A4F4CF"
                                                    HorizontalAlignment="Right" />
                                     </Grid>
                                 </Border>

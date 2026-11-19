@@ -39,14 +39,53 @@ public sealed class AdminDashboardViewModel : ViewModelBase
         LoadData();
     }
 
-    public string TotalRevenueText { get => _totalRevenueText; private set => SetProperty(ref _totalRevenueText, value); }
-    public string TodayRevenueText { get => _todayRevenueText; private set => SetProperty(ref _todayRevenueText, value); }
-    public string TotalTicketsText { get => _totalTicketsText; private set => SetProperty(ref _totalTicketsText, value); }
-    public string CheckedInSubText { get => _checkedInSubText; private set => SetProperty(ref _checkedInSubText, value); }
-    public string MoviesCountText { get => _moviesCountText; private set => SetProperty(ref _moviesCountText, value); }
-    public string ComingSoonSubText { get => _comingSoonSubText; private set => SetProperty(ref _comingSoonSubText, value); }
-    public string RoomsText { get => _roomsText; private set => SetProperty(ref _roomsText, value); }
-    public string MaintenanceSeatsText { get => _maintenanceSeatsText; private set => SetProperty(ref _maintenanceSeatsText, value); }
+    public string TotalRevenueText
+    {
+        get => _totalRevenueText;
+        private set { _totalRevenueText = value; OnPropertyChanged(nameof(TotalRevenueText)); }
+    }
+
+    public string TodayRevenueText
+    {
+        get => _todayRevenueText;
+        private set { _todayRevenueText = value; OnPropertyChanged(nameof(TodayRevenueText)); }
+    }
+
+    public string TotalTicketsText
+    {
+        get => _totalTicketsText;
+        private set { _totalTicketsText = value; OnPropertyChanged(nameof(TotalTicketsText)); }
+    }
+
+    public string CheckedInSubText
+    {
+        get => _checkedInSubText;
+        private set { _checkedInSubText = value; OnPropertyChanged(nameof(CheckedInSubText)); }
+    }
+
+    public string MoviesCountText
+    {
+        get => _moviesCountText;
+        private set { _moviesCountText = value; OnPropertyChanged(nameof(MoviesCountText)); }
+    }
+
+    public string ComingSoonSubText
+    {
+        get => _comingSoonSubText;
+        private set { _comingSoonSubText = value; OnPropertyChanged(nameof(ComingSoonSubText)); }
+    }
+
+    public string RoomsText
+    {
+        get => _roomsText;
+        private set { _roomsText = value; OnPropertyChanged(nameof(RoomsText)); }
+    }
+
+    public string MaintenanceSeatsText
+    {
+        get => _maintenanceSeatsText;
+        private set { _maintenanceSeatsText = value; OnPropertyChanged(nameof(MaintenanceSeatsText)); }
+    }
 
     public ObservableCollection<AdminShowtimeRow> Showtimes { get; } = [];
     public ObservableCollection<AdminOrderRow> RecentOrders { get; } = [];
@@ -72,8 +111,8 @@ public sealed class AdminDashboardViewModel : ViewModelBase
             using SqliteDataReader r = kpi.ExecuteReader();
             if (r.Read())
             {
-                TotalRevenueText = FormatVnd(ReadDecimal(r, 0));
-                TodayRevenueText = $"Hôm nay: {FormatVnd(ReadDecimal(r, 1))}";
+                TotalRevenueText = CinemaHelper.FormatVnd(CinemaHelper.ReadDecimal(r, 0));
+                TodayRevenueText = $"Hôm nay: {CinemaHelper.FormatVnd(CinemaHelper.ReadDecimal(r, 1))}";
                 TotalTicketsText = $"{r.GetInt32(2)} vé";
                 CheckedInSubText = $"{r.GetInt32(3)} vé đã check-in";
                 MoviesCountText = $"{r.GetInt32(4)} đang chiếu";
@@ -103,11 +142,11 @@ public sealed class AdminDashboardViewModel : ViewModelBase
                 Showtimes.Add(new AdminShowtimeRow(
                     r.GetString(0),
                     r.GetString(1),
-                    FormatSqlDateTime(r.GetString(2)),
+                    CinemaHelper.FormatSqlDateTime(r.GetString(2)),
                     r.GetString(3),
                     $"{r.GetInt32(4)} / {r.GetInt32(5)}",
-                    FormatVnd(ReadDecimal(r, 6)),
-                    FormatStatusLabel(r.GetString(7))));
+                    CinemaHelper.FormatVnd(CinemaHelper.ReadDecimal(r, 6)),
+                    CinemaHelper.FormatStatusLabel(r.GetString(7))));
             }
         }
 
@@ -130,9 +169,9 @@ public sealed class AdminDashboardViewModel : ViewModelBase
                     r.GetString(0),
                     r.GetString(1),
                     channel,
-                    FormatPaymentMethod(r.GetString(3)),
-                    FormatVnd(ReadDecimal(r, 4)),
-                    FormatStatusLabel(r.GetString(5))));
+                    CinemaHelper.FormatPaymentMethod(r.GetString(3)),
+                    CinemaHelper.FormatVnd(CinemaHelper.ReadDecimal(r, 4)),
+                    CinemaHelper.FormatStatusLabel(r.GetString(5))));
             }
         }
     }

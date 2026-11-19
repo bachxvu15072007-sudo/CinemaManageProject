@@ -3,14 +3,6 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              ShutdownMode="OnExplicitShutdown">
     <Application.Resources>
-        <ResourceDictionary>
-            <ResourceDictionary.MergedDictionaries>
-                <!-- Index 0: Theme hiện tại (ThemeManager swap nóng giữa DarkTheme.xaml & LightTheme.xaml) -->
-                <ResourceDictionary Source="Themes/DarkTheme.xaml" />
-                <!-- Index 1+: Design Tokens & Controls Styles dùng chung toàn app -->
-                <ResourceDictionary Source="Themes/SharedTokens.xaml" />
-                <ResourceDictionary Source="Themes/Controls.xaml" />
-            </ResourceDictionary.MergedDictionaries>
-        </ResourceDictionary>
+        <ResourceDictionary Source="Themes/Controls.xaml" />
     </Application.Resources>
 </Application>

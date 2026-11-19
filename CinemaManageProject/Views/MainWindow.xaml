@@ -3,26 +3,12 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:dvm="clr-namespace:CinemaManageProject.ViewModels.Dashboards"
-        xmlns:dview="clr-namespace:CinemaManageProject.Views.Dashboards"
         mc:Ignorable="d"
         Style="{StaticResource CinemaWindowStyle}"
         Title="CINEVERSE CINEMA"
         Width="1280" Height="800"
         MinWidth="1080" MinHeight="660"
         WindowStartupLocation="CenterScreen">
-
-    <Window.Resources>
-        <DataTemplate DataType="{x:Type dvm:AdminDashboardViewModel}">
-            <dview:AdminDashboardView />
-        </DataTemplate>
-        <DataTemplate DataType="{x:Type dvm:StaffDashboardViewModel}">
-            <dview:StaffDashboardView />
-        </DataTemplate>
-        <DataTemplate DataType="{x:Type dvm:CustomerDashboardViewModel}">
-            <dview:CustomerDashboardView />
-        </DataTemplate>
-    </Window.Resources>
 
     <Grid>
         <Grid.ColumnDefinitions>
@@ -32,34 +18,34 @@
 
         <!-- ==================== SIDEBAR TRÁI ==================== -->
         <Border Grid.Column="0"
-                Background="{DynamicResource BgSecondaryBrush}"
-                BorderBrush="{DynamicResource BorderSubtleBrush}"
+                Background="#0F1011"
+                BorderBrush="#23252A"
                 BorderThickness="0,0,1,0"
                 Padding="16,18">
             <DockPanel LastChildFill="True">
                 <!-- LOGO & VAI TRÒ -->
                 <StackPanel DockPanel.Dock="Top" Margin="0,0,0,22">
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="6,0,0,12">
-                        <Border Background="{DynamicResource AccentPrimaryBrush}"
+                        <Border Background="#5E6AD2"
                                 Width="36" Height="36"
-                                CornerRadius="{StaticResource RadiusMd}"
+                                CornerRadius="8"
                                 Margin="0,0,10,0">
                             <TextBlock Text="CV"
                                        FontWeight="Bold"
                                        FontSize="15"
-                                       Foreground="{DynamicResource TextOnAccentBrush}"
+                                       Foreground="#FFFFFF"
                                        HorizontalAlignment="Center"
                                        VerticalAlignment="Center" />
                         </Border>
                         <StackPanel VerticalAlignment="Center">
                             <TextBlock Text="CINEVERSE"
-                                       FontSize="{StaticResource FontSizeLg}"
+                                       FontSize="16"
                                        FontWeight="Bold" />
                             <Border Style="{StaticResource BadgeBorderStyle}" Padding="8,2" Margin="0,2,0,0">
                                 <TextBlock Text="{Binding RoleDisplay}"
-                                           FontSize="{StaticResource FontSizeXs}"
+                                           FontSize="11"
                                            FontWeight="Bold"
-                                           Foreground="{DynamicResource AccentPrimaryBrush}" />
+                                           Foreground="#5E6AD2" />
                             </Border>
                         </StackPanel>
                     </StackPanel>
@@ -67,7 +53,7 @@
 
                 <!-- THÔNG TIN TÀI KHOẢN & ĐĂNG XUẤT -->
                 <Border DockPanel.Dock="Bottom"
-                        BorderBrush="{DynamicResource BorderSubtleBrush}"
+                        BorderBrush="#23252A"
                         BorderThickness="0,1,0,0"
                         Padding="6,14,6,0"
                         Margin="0,14,0,0">
@@ -81,7 +67,7 @@
                         <Button Content="Đăng xuất"
                                 Style="{StaticResource SecondaryButtonStyle}"
                                 Padding="12,8"
-                                Command="{Binding LogoutCommand}" />
+                                Click="OnLogoutClick" />
                     </StackPanel>
                 </Border>
 
@@ -93,8 +79,7 @@
                                     Style="{StaticResource NavMenuButtonStyle}"
                                     Tag="{Binding ActiveTag}"
                                     Margin="0,0,0,4"
-                                    Command="{Binding DataContext.SelectMenuCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                                    CommandParameter="{Binding}" />
+                                    Click="OnSelectMenuClick" />
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
@@ -110,34 +95,28 @@
 
             <!-- TOPBAR -->
             <Border Grid.Row="0"
-                    Background="{DynamicResource BgSecondaryBrush}"
-                    BorderBrush="{DynamicResource BorderSubtleBrush}"
+                    Background="#0F1011"
+                    BorderBrush="#23252A"
                     BorderThickness="0,0,0,1"
                     Padding="24,14">
                 <DockPanel LastChildFill="False">
                     <TextBlock DockPanel.Dock="Left"
                                Text="{Binding PageTitle}"
-                               FontSize="{StaticResource FontSizeLg}"
+                               FontSize="16"
                                FontWeight="SemiBold"
                                VerticalAlignment="Center" />
 
-                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
-                        <Button Content="↻ Làm mới"
-                                Style="{StaticResource SecondaryButtonStyle}"
-                                Padding="12,8"
-                                Margin="0,0,10,0"
-                                Command="{Binding RefreshCommand}" />
-                        <Button Content="{Binding ThemeButtonText}"
-                                Style="{StaticResource PrimaryButtonStyle}"
-                                Padding="14,8"
-                                Command="{Binding ToggleThemeCommand}" />
-                    </StackPanel>
+                    <Button DockPanel.Dock="Right"
+                            Content="↻ Làm mới"
+                            Style="{StaticResource SecondaryButtonStyle}"
+                            Padding="12,8"
+                            Click="OnRefreshClick" />
                 </DockPanel>
             </Border>
 
             <!-- DASHBOARD THEO VAI TRÒ -->
             <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="24">
-                <ContentControl Content="{Binding CurrentDashboard}" />
+                <ContentControl x:Name="DashboardHost" />
             </ScrollViewer>
         </Grid>
     </Grid>

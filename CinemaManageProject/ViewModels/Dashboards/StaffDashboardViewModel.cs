@@ -36,11 +36,35 @@ public sealed class StaffDashboardViewModel : ViewModelBase
         LoadData();
     }
 
-    public string StaffGreeting { get => _staffGreeting; private set => SetProperty(ref _staffGreeting, value); }
-    public string MyTicketsText { get => _myTicketsText; private set => SetProperty(ref _myTicketsText, value); }
-    public string MyRevenueText { get => _myRevenueText; private set => SetProperty(ref _myRevenueText, value); }
-    public string OpenShowtimesText { get => _openShowtimesText; private set => SetProperty(ref _openShowtimesText, value); }
-    public string PendingCheckInText { get => _pendingCheckInText; private set => SetProperty(ref _pendingCheckInText, value); }
+    public string StaffGreeting
+    {
+        get => _staffGreeting;
+        private set { _staffGreeting = value; OnPropertyChanged(nameof(StaffGreeting)); }
+    }
+
+    public string MyTicketsText
+    {
+        get => _myTicketsText;
+        private set { _myTicketsText = value; OnPropertyChanged(nameof(MyTicketsText)); }
+    }
+
+    public string MyRevenueText
+    {
+        get => _myRevenueText;
+        private set { _myRevenueText = value; OnPropertyChanged(nameof(MyRevenueText)); }
+    }
+
+    public string OpenShowtimesText
+    {
+        get => _openShowtimesText;
+        private set { _openShowtimesText = value; OnPropertyChanged(nameof(OpenShowtimesText)); }
+    }
+
+    public string PendingCheckInText
+    {
+        get => _pendingCheckInText;
+        private set { _pendingCheckInText = value; OnPropertyChanged(nameof(PendingCheckInText)); }
+    }
 
     public ObservableCollection<StaffShowtimeRow> OpenShowtimes { get; } = [];
     public ObservableCollection<StaffOrderRow> MyRecentOrders { get; } = [];
@@ -67,7 +91,7 @@ public sealed class StaffDashboardViewModel : ViewModelBase
             if (r.Read())
             {
                 MyTicketsText = $"{r.GetInt32(0)} vé";
-                MyRevenueText = FormatVnd(ReadDecimal(r, 1));
+                MyRevenueText = CinemaHelper.FormatVnd(CinemaHelper.ReadDecimal(r, 1));
                 OpenShowtimesText = $"{r.GetInt32(2)} suất";
                 PendingCheckInText = $"{r.GetInt32(3)} vé chờ soát";
             }
@@ -97,10 +121,10 @@ public sealed class StaffDashboardViewModel : ViewModelBase
                     r.GetString(0),
                     r.GetString(1),
                     r.GetString(2),
-                    FormatSqlDateTime(r.GetString(3)),
+                    CinemaHelper.FormatSqlDateTime(r.GetString(3)),
                     r.GetString(4),
                     $"{avail} / {r.GetInt32(6)} trống",
-                    FormatVnd(ReadDecimal(r, 7))));
+                    CinemaHelper.FormatVnd(CinemaHelper.ReadDecimal(r, 7))));
             }
         }
 
@@ -125,9 +149,9 @@ public sealed class StaffDashboardViewModel : ViewModelBase
                     r.GetString(0),
                     r.GetString(1),
                     r.GetInt32(2),
-                    FormatPaymentMethod(r.GetString(3)),
-                    FormatVnd(ReadDecimal(r, 4)),
-                    FormatSqlDateTime(r.GetString(5))));
+                    CinemaHelper.FormatPaymentMethod(r.GetString(3)),
+                    CinemaHelper.FormatVnd(CinemaHelper.ReadDecimal(r, 4)),
+                    CinemaHelper.FormatSqlDateTime(r.GetString(5))));
             }
         }
     }

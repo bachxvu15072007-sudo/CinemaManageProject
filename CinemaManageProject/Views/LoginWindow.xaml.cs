@@ -1,4 +1,5 @@
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Input;
 using CinemaManageProject.ViewModels;
 
@@ -30,6 +31,17 @@ public partial class LoginWindow : Window
     private void OnRegisterClick(object sender, RoutedEventArgs e)
         => _viewModel.Register(RegPasswordBox.Password, RegConfirmPasswordBox.Password);
 
+    private void OnToggleModeClick(object sender, RoutedEventArgs e)
+        => _viewModel.ToggleMode();
+
+    private void OnFillDemoClick(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button btn)
+        {
+            _viewModel.FillDemo(btn.Tag?.ToString());
+        }
+    }
+
     private void OnLoginPasswordKeyDown(object sender, KeyEventArgs e)
     {
         if (e.Key == Key.Enter)
@@ -55,10 +67,4 @@ public partial class LoginWindow : Window
 
     private void OnLoginSucceeded()
         => ((App)Application.Current).CompleteLogin();
-
-    protected override void OnClosed(EventArgs e)
-    {
-        _viewModel.Detach();
-        base.OnClosed(e);
-    }
 }

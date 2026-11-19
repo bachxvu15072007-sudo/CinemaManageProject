@@ -5,10 +5,6 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              mc:Ignorable="d">
 
-    <UserControl.Resources>
-        <BooleanToVisibilityConverter x:Key="BoolToVis" />
-    </UserControl.Resources>
-
     <StackPanel>
         <!-- THẺ HỘI VIÊN & ĐIỂM THƯỞNG -->
         <Border Style="{StaticResource CardBorderStyle}" Margin="0,0,0,20">
@@ -23,9 +19,9 @@
                 <StackPanel Grid.Column="0" VerticalAlignment="Center">
                     <Border Style="{StaticResource BadgeBorderStyle}" Margin="0,0,0,8">
                         <TextBlock Text="{Binding TierDisplay}"
-                                   FontSize="{StaticResource FontSizeSm}"
+                                   FontSize="12"
                                    FontWeight="SemiBold"
-                                   Foreground="{DynamicResource AccentPrimaryBrush}" />
+                                   Foreground="#5E6AD2" />
                     </Border>
                     <TextBlock Text="{Binding MemberName}"
                                Style="{StaticResource PageTitleTextStyle}" />
@@ -35,24 +31,24 @@
                     </TextBlock>
                 </StackPanel>
 
-                <Border Grid.Column="1" Background="{DynamicResource SurfaceElevatedBrush}" CornerRadius="{StaticResource RadiusMd}" Padding="18,12" Margin="14,0">
+                <Border Grid.Column="1" Background="#18181B" CornerRadius="8" Padding="18,12" Margin="14,0">
                     <StackPanel>
-                        <TextBlock Text="ĐIỂM TÍCH LŨY" FontSize="{StaticResource FontSizeXs}" FontWeight="SemiBold" Foreground="{DynamicResource TextSecondaryBrush}" />
-                        <TextBlock Text="{Binding PointsText}" FontSize="{StaticResource FontSizeXl}" FontWeight="Bold" Foreground="{DynamicResource AccentPrimaryBrush}" Margin="0,4,0,0" />
+                        <TextBlock Text="ĐIỂM TÍCH LŨY" FontSize="11" FontWeight="SemiBold" Foreground="#A1A1AA" />
+                        <TextBlock Text="{Binding PointsText}" FontSize="20" FontWeight="Bold" Foreground="#5E6AD2" Margin="0,4,0,0" />
                     </StackPanel>
                 </Border>
 
-                <Border Grid.Column="2" Background="{DynamicResource SurfaceElevatedBrush}" CornerRadius="{StaticResource RadiusMd}" Padding="18,12" Margin="0,0,14,0">
+                <Border Grid.Column="2" Background="#18181B" CornerRadius="8" Padding="18,12" Margin="0,0,14,0">
                     <StackPanel>
-                        <TextBlock Text="TỔNG CHI TIÊU" FontSize="{StaticResource FontSizeXs}" FontWeight="SemiBold" Foreground="{DynamicResource TextSecondaryBrush}" />
-                        <TextBlock Text="{Binding TotalSpentText}" FontSize="{StaticResource FontSizeXl}" FontWeight="Bold" Margin="0,4,0,0" />
+                        <TextBlock Text="TỔNG CHI TIÊU" FontSize="11" FontWeight="SemiBold" Foreground="#A1A1AA" />
+                        <TextBlock Text="{Binding TotalSpentText}" FontSize="20" FontWeight="Bold" Margin="0,4,0,0" />
                     </StackPanel>
                 </Border>
 
-                <Border Grid.Column="3" Background="{DynamicResource SurfaceElevatedBrush}" CornerRadius="{StaticResource RadiusMd}" Padding="18,12">
+                <Border Grid.Column="3" Background="#18181B" CornerRadius="8" Padding="18,12">
                     <StackPanel>
-                        <TextBlock Text="VÉ ĐÃ ĐẶT" FontSize="{StaticResource FontSizeXs}" FontWeight="SemiBold" Foreground="{DynamicResource TextSecondaryBrush}" />
-                        <TextBlock Text="{Binding ActiveTicketsText}" FontSize="{StaticResource FontSizeXl}" FontWeight="Bold" Foreground="{DynamicResource StatusSuccessBrush}" Margin="0,4,0,0" />
+                        <TextBlock Text="VÉ ĐÃ ĐẶT" FontSize="11" FontWeight="SemiBold" Foreground="#A1A1AA" />
+                        <TextBlock Text="{Binding ActiveTicketsText}" FontSize="20" FontWeight="Bold" Foreground="#A4F4CF" Margin="0,4,0,0" />
                     </StackPanel>
                 </Border>
             </Grid>
@@ -65,9 +61,9 @@
                        Style="{StaticResource SectionTitleTextStyle}"
                        VerticalAlignment="Center" />
             <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
-                <Button Content="Tất cả" Style="{StaticResource SecondaryButtonStyle}" Padding="12,6" FontSize="{StaticResource FontSizeSm}" Margin="0,0,8,0" Command="{Binding FilterCommand}" CommandParameter="All" />
-                <Button Content="Đang chiếu" Style="{StaticResource SecondaryButtonStyle}" Padding="12,6" FontSize="{StaticResource FontSizeSm}" Margin="0,0,8,0" Command="{Binding FilterCommand}" CommandParameter="NowShowing" />
-                <Button Content="Sắp chiếu" Style="{StaticResource SecondaryButtonStyle}" Padding="12,6" FontSize="{StaticResource FontSizeSm}" Command="{Binding FilterCommand}" CommandParameter="ComingSoon" />
+                <Button Content="Tất cả" Style="{StaticResource SecondaryButtonStyle}" Padding="12,6" FontSize="12" Margin="0,0,8,0" Tag="All" Click="OnFilterClick" />
+                <Button Content="Đang chiếu" Style="{StaticResource SecondaryButtonStyle}" Padding="12,6" FontSize="12" Margin="0,0,8,0" Tag="NowShowing" Click="OnFilterClick" />
+                <Button Content="Sắp chiếu" Style="{StaticResource SecondaryButtonStyle}" Padding="12,6" FontSize="12" Tag="ComingSoon" Click="OnFilterClick" />
             </StackPanel>
         </DockPanel>
 
@@ -89,17 +85,17 @@
                             </Grid.RowDefinitions>
 
                             <DockPanel Grid.Row="0" Margin="0,0,0,10" LastChildFill="False">
-                                <Border DockPanel.Dock="Left" Style="{StaticResource BadgeBorderStyle}" Background="{DynamicResource StatusInfoSoftBrush}">
-                                    <TextBlock Text="{Binding StatusDisplay}" FontSize="{StaticResource FontSizeXs}" FontWeight="SemiBold" Foreground="{DynamicResource StatusInfoBrush}" />
+                                <Border DockPanel.Dock="Left" Style="{StaticResource BadgeBorderStyle}" Background="#220084D1">
+                                    <TextBlock Text="{Binding StatusDisplay}" FontSize="11" FontWeight="SemiBold" Foreground="#74D4FF" />
                                 </Border>
-                                <Border DockPanel.Dock="Right" Style="{StaticResource BadgeBorderStyle}" Background="{DynamicResource SurfaceElevatedBrush}">
-                                    <TextBlock Text="{Binding AgeRating}" FontSize="{StaticResource FontSizeXs}" FontWeight="Bold" />
+                                <Border DockPanel.Dock="Right" Style="{StaticResource BadgeBorderStyle}" Background="#18181B">
+                                    <TextBlock Text="{Binding AgeRating}" FontSize="11" FontWeight="Bold" />
                                 </Border>
                             </DockPanel>
 
                             <TextBlock Grid.Row="1"
                                        Text="{Binding Title}"
-                                       FontSize="{StaticResource FontSizeLg}"
+                                       FontSize="16"
                                        FontWeight="Bold"
                                        TextWrapping="Wrap"
                                        Margin="0,0,0,6" />
@@ -110,19 +106,19 @@
                                            TextWrapping="Wrap"
                                            Margin="0,0,0,4" />
                                 <TextBlock Text="{Binding MetaInfo}"
-                                           FontSize="{StaticResource FontSizeXs}"
-                                           Foreground="{DynamicResource TextMutedBrush}" />
+                                           FontSize="11"
+                                           Foreground="#71717A" />
                             </StackPanel>
 
                             <Border Grid.Row="3"
-                                    BorderBrush="{DynamicResource BorderSubtleBrush}"
+                                    BorderBrush="#23252A"
                                     BorderThickness="0,1,0,0"
                                     Padding="0,10,0,0">
                                 <DockPanel LastChildFill="False">
                                     <TextBlock DockPanel.Dock="Left"
                                                Text="{Binding PriceText}"
                                                FontWeight="Bold"
-                                               Foreground="{DynamicResource AccentPrimaryBrush}"
+                                               Foreground="#5E6AD2"
                                                VerticalAlignment="Center" />
                                 </DockPanel>
                             </Border>
