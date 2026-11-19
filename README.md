@@ -36,7 +36,7 @@ Hệ thống hỗ trợ quản lý vận hành rạp phim và đặt vé tập t
 ### 2.4. Đăng nhập, Khung Shell & 3 Dashboard Theo Vai trò (`Views/`, `ViewModels/`)
 * **Vòng đời cửa sổ (`App.xaml` / `App.xaml.cs`):**
   * Dùng `ShutdownMode="OnExplicitShutdown"`, khởi chạy với `LoginWindow`, chuyển sang `Views.MainWindow` sau khi xác thực (`CompleteLogin()`) và quay lại `LoginWindow` khi đăng xuất (`Logout()`).
-  * Mở kết nối tới `Database/cinema.db` trực tiếp qua `App.OpenDbConnection()`.
+  * Mở kết nối tới `Database/cinema.db` qua `DatabaseHelper.OpenConnection()`.
 * **Màn hình Đăng nhập (`Views/LoginWindow.xaml`, `ViewModels/LoginViewModel.cs`):**
   * Xác thực trực tiếp với bảng `Users` (nạp thêm `CustomerProfile` nếu vai trò là `Customer`), hỗ trợ chuyển sang form **Đăng ký hội viên mới** và 3 nút điền nhanh tài khoản mẫu `Admin` / `Staff` / `Customer`.
 * **Khung chính (`Views/MainWindow.xaml`, `ViewModels/MainViewModel.cs`):**

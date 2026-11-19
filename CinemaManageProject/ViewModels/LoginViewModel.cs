@@ -1,3 +1,4 @@
+using CinemaManageProject.Data;
 using CinemaManageProject.Helpers;
 using CinemaManageProject.Models;
 using Microsoft.Data.Sqlite;
@@ -100,7 +101,7 @@ public sealed class LoginViewModel : ViewModelBase
 
         try
         {
-            using SqliteConnection conn = App.OpenDbConnection();
+            using SqliteConnection conn = DatabaseHelper.OpenConnection();
             using SqliteCommand cmd = conn.CreateCommand();
             cmd.CommandText = """
                 SELECT UserId, Username, Password, FullName, Email, Phone, Role, IsActive
@@ -144,7 +145,7 @@ public sealed class LoginViewModel : ViewModelBase
 
             if (user.Role == UserRole.Customer)
             {
-                user.CustomerProfile = CinemaHelper.LoadCustomerProfile(conn, user.UserId);
+                user.CustomerProfile = CustomerData.LoadCustomerProfile(conn, user.UserId);
             }
 
             App.CurrentUser = user;
@@ -185,7 +186,7 @@ public sealed class LoginViewModel : ViewModelBase
 
         try
         {
-            using SqliteConnection conn = App.OpenDbConnection();
+            using SqliteConnection conn = DatabaseHelper.OpenConnection();
             using SqliteTransaction tx = conn.BeginTransaction();
 
             if (ScalarExists(conn, tx, "SELECT 1 FROM Users WHERE Username = @v LIMIT 1;", cleanUser))

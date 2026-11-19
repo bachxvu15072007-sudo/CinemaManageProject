@@ -75,7 +75,7 @@ public sealed class StaffDashboardViewModel : ViewModelBase
         int staffId = App.CurrentUser?.UserId ?? 0;
         StaffGreeting = $"Ca làm việc của {App.CurrentUser?.FullName ?? "Nhân viên"}";
 
-        using SqliteConnection conn = App.OpenDbConnection();
+        using SqliteConnection conn = DatabaseHelper.OpenConnection();
 
         using (SqliteCommand kpi = conn.CreateCommand())
         {
@@ -92,7 +92,7 @@ public sealed class StaffDashboardViewModel : ViewModelBase
             if (r.Read())
             {
                 MyTicketsText = $"{r.GetInt32(0)} vé";
-                MyRevenueText = CinemaHelper.FormatVnd(CinemaHelper.ReadDecimal(r, 1));
+                MyRevenueText = FormatHelper.FormatVnd(DatabaseHelper.ReadDecimal(r, 1));
                 OpenShowtimesText = $"{r.GetInt32(2)} suất";
                 PendingCheckInText = $"{r.GetInt32(3)} vé chờ soát";
             }
@@ -122,10 +122,10 @@ public sealed class StaffDashboardViewModel : ViewModelBase
                     r.GetString(0),
                     r.GetString(1),
                     r.GetString(2),
-                    CinemaHelper.FormatSqlDateTime(r.GetString(3)),
+                    FormatHelper.FormatSqlDateTime(r.GetString(3)),
                     r.GetString(4),
                     $"{avail} / {r.GetInt32(6)} trống",
-                    CinemaHelper.FormatVnd(CinemaHelper.ReadDecimal(r, 7))));
+                    FormatHelper.FormatVnd(DatabaseHelper.ReadDecimal(r, 7))));
             }
         }
 
@@ -150,9 +150,9 @@ public sealed class StaffDashboardViewModel : ViewModelBase
                     r.GetString(0),
                     r.GetString(1),
                     r.GetInt32(2),
-                    CinemaHelper.FormatPaymentMethod(r.GetString(3)),
-                    CinemaHelper.FormatVnd(CinemaHelper.ReadDecimal(r, 4)),
-                    CinemaHelper.FormatSqlDateTime(r.GetString(5))));
+                    FormatHelper.FormatPaymentMethod(r.GetString(3)),
+                    FormatHelper.FormatVnd(DatabaseHelper.ReadDecimal(r, 4)),
+                    FormatHelper.FormatSqlDateTime(r.GetString(5))));
             }
         }
     }

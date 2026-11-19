@@ -1,13 +1,11 @@
-﻿using System.IO;
-using System.Windows;
+﻿using System.Windows;
 using CinemaManageProject.Models;
 using CinemaManageProject.Views;
-using Microsoft.Data.Sqlite;
 
 namespace CinemaManageProject;
 
 /// <summary>
-/// Điểm khởi chạy ứng dụng WPF, quản lý kết nối cinema.db và luồng LoginWindow <-> MainWindow.
+/// Điểm khởi chạy ứng dụng WPF, lưu phiên người dùng và điều phối luồng LoginWindow &lt;-&gt; MainWindow.
 /// </summary>
 public partial class App : Application
 {
@@ -16,21 +14,6 @@ public partial class App : Application
     private bool _isSwitching;
 
     public static User? CurrentUser { get; set; }
-
-    public static string ConnectionString { get; } =
-        $"Data Source={Path.Combine(AppContext.BaseDirectory, "Database", "cinema.db")}";
-
-    public static SqliteConnection OpenDbConnection()
-    {
-        var conn = new SqliteConnection(ConnectionString);
-        conn.Open();
-
-        using var pragma = conn.CreateCommand();
-        pragma.CommandText = "PRAGMA foreign_keys = ON;";
-        pragma.ExecuteNonQuery();
-
-        return conn;
-    }
 
     protected override void OnStartup(StartupEventArgs e)
     {

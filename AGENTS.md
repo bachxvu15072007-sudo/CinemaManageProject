@@ -6,16 +6,16 @@ Tài liệu này quy định các nguyên tắc bắt buộc khi làm việc tr�
 
 ## 1. Công nghệ & Truy cập Dữ liệu
 * **Nền tảng:** `.NET 10 Windows` (`net10.0-windows`), **WPF** (`UseWPF=true`), `Nullable=enable`, `ImplicitUsings=enable`.
-* **CSDL:** Dùng trực tiếp **SQLite (`Microsoft.Data.Sqlite`)** thông qua `App.OpenDbConnection()` làm việc với `Database/cinema.db`.
+* **CSDL:** Dùng trực tiếp **SQLite (`Microsoft.Data.Sqlite`)** thông qua `DatabaseHelper.OpenConnection()` làm việc với `Database/cinema.db`.
 * **Không tự ý thêm package / hạ tầng ngoài phạm vi:** Không thêm Entity Framework Core, `appsettings.json`, hoặc thư viện MVVM bên thứ ba trừ khi người dùng yêu cầu rõ ràng.
-* **An toàn SQL:** Luôn dùng parameterized query (`@param`), bật `PRAGMA foreign_keys = ON;` (đã có trong `App.OpenDbConnection()`), tuân thủ đúng tên bảng, cột và ràng buộc `CHECK (...)` trong `CinemaManageProject/Database/CinemaManageDB.sql`.
+* **An toàn SQL:** Luôn dùng parameterized query (`@param`), bật `PRAGMA foreign_keys = ON;` (đã có trong `DatabaseHelper.OpenConnection()`), tuân thủ đúng tên bảng, cột và ràng buộc `CHECK (...)` trong `CinemaManageProject/Database/CinemaManageDB.sql`.
 
 ## 2. Kiến trúc MVVM Gọn nhẹ & Tổ chức Thư mục
 * **Vị trí file:**
   * Toàn bộ màn hình Window và UserControl đặt trong `CinemaManageProject/Views/` (không đặt file `.xaml` màn hình ở thư mục gốc project).
   * Toàn bộ ViewModel đặt trong `CinemaManageProject/ViewModels/`, kế thừa `ViewModelBase`.
-  * Các lớp truy cập dữ liệu SQLite dùng lại đặt trong `CinemaManageProject/Data/` (như `MovieData`), giữ gọn bằng static method + parameterized query.
-  * Các hàm phụ trợ dùng chung (định dạng tiền/ngày/trạng thái, xử lý ảnh poster...) đặt trong `CinemaManageProject/Helpers/` (`CinemaHelper`).
+  * Các lớp truy cập dữ liệu SQLite dùng lại đặt trong `CinemaManageProject/Data/` (`MovieData`, `CustomerData`...), giữ gọn bằng static method + parameterized query.
+  * Các hàm phụ trợ dùng chung đặt trong `CinemaManageProject/Helpers/` theo đúng chức năng (`DatabaseHelper` mở kết nối SQLite, `FormatHelper` định dạng tiền/ngày/trạng thái, `PosterHelper` xử lý ảnh poster...).
   * Entity và Enum dùng lại trực tiếp từ `CinemaManageProject/Models/` (`CinemaEnums.cs` và 10 class model).
 * **Tránh over-engineering:**
   * Không tạo thêm các lớp trung gian, framework MVVM rườm rà, converter thừa hoặc service tách nhỏ không cần thiết khi code hiện tại xử lý gọn ngay trong ViewModel/helper nhẹ.
