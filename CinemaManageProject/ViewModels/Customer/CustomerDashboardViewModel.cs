@@ -134,7 +134,10 @@ public sealed class CustomerDashboardViewModel : ViewModelBase
                                  FROM MovieGenres mg INNER JOIN Genres g ON g.GenreId = mg.GenreId
                                  WHERE mg.MovieId = m.MovieId), 'Tổng hợp'),
                        m.DurationMinutes, m.Language, m.AgeRating, m.Status,
-                       (SELECT MIN(s.BaseTicketPrice) FROM Showtimes s WHERE s.MovieId = m.MovieId AND s.Status = 'OpenForSale')
+                       (SELECT MIN(s.BaseTicketPrice + r.BasePriceSurcharge)
+                        FROM Showtimes s
+                        INNER JOIN Rooms r ON r.RoomId = s.RoomId
+                        WHERE s.MovieId = m.MovieId AND s.Status = 'OpenForSale')
                 FROM Movies m
                 WHERE m.Status IN ('NowShowing', 'ComingSoon')
                 ORDER BY CASE m.Status WHEN 'NowShowing' THEN 0 ELSE 1 END, m.ReleaseDate DESC;
