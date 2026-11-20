@@ -52,4 +52,27 @@ public static class FormatHelper
         "Cancelled" => "Đã hủy",
         _ => raw
     };
+
+    /// <summary>
+    /// Dịch loại phòng chiếu từ mã lưu trong DB sang nhãn dễ đọc.
+    /// </summary>
+    public static string FormatRoomType(string raw) => raw switch
+    {
+        "Standard2D" => "2D Tiêu chuẩn",
+        "Standard3D" => "3D",
+        "IMAX" => "IMAX",
+        "VIP" => "VIP",
+        _ => raw
+    };
+
+    /// <summary>
+    /// Dịch loại ghế ngồi sang nhãn tiếng Việt.
+    /// </summary>
+    public static string FormatSeatType(string raw) => raw switch
+    {
+        "Standard" => "Ghế Thường",
+        "VIP" => "Ghế VIP",
+        "Couple" => "Ghế Đôi",
+        _ => raw
+    };
 }

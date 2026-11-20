@@ -23,7 +23,7 @@ Hệ thống hỗ trợ quản lý vận hành rạp phim và đặt vé tập t
   * **7 tài khoản:** `admin`, `staff1..3`, `khach1..3`.
   * **3 hồ sơ khách hàng:** hạng `Silver` (180 điểm), `Gold` (420 điểm), `Member` (50 điểm).
   * **6 phim & 6 thể loại:** 4 phim đang chiếu (`NowShowing`), 2 phim sắp chiếu (`ComingSoon`).
-  * **3 phòng chiếu & 296 ghế:** `Phòng 1 - 2D` (8x10), `Phòng 2 - 3D` (8x12), `Phòng 3 - IMAX` (10x12), trong đó ghế `B1` của Phòng 1 đang tắt bảo trì (`IsActive = 0`).
+  * **4 phòng chiếu & 354 ghế (hàng cuối là ghế đôi nên bằng 1/2 số ghế hàng thường):** `Phòng 1 - 2D` (75 ghế, `B1` bảo trì), `Phòng 2 - 2D` (75 ghế), `Phòng 3 - 3D` (90 ghế), `Phòng 4 - IMAX` (114 ghế).
   * **12 suất chiếu** (đã tính +15 phút dọn phòng), **2 hóa đơn** (`SelfService` và `Counter`) và **3 vé mẫu** (`VE-KHACH101`, `VE-KHACH102`, `VE-STAFF101`).
 
 ### 2.2. Models & Enums (`CinemaManageProject/Models/`)

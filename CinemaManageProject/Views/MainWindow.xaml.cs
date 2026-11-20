@@ -38,6 +38,7 @@ public partial class MainWindow : Window
         {
             AdminDashboardViewModel => new AdminDashboardView(),
             AdminMoviesViewModel => new AdminMoviesView(),
+            AdminRoomsViewModel => new AdminRoomsView(),
             StaffDashboardViewModel => new StaffDashboardView(),
             _ => new CustomerDashboardView()
         };
