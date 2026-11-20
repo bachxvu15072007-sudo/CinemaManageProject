@@ -2,7 +2,7 @@ using System.Collections.ObjectModel;
 using CinemaManageProject.Helpers;
 using Microsoft.Data.Sqlite;
 
-namespace CinemaManageProject.ViewModels.Dashboards;
+namespace CinemaManageProject.ViewModels.Staff;
 
 public sealed record StaffShowtimeRow(
     string MovieTitle,

@@ -41,7 +41,7 @@ Hệ thống hỗ trợ quản lý vận hành rạp phim và đặt vé tập t
   * Xác thực trực tiếp với bảng `Users` (nạp thêm `CustomerProfile` nếu vai trò là `Customer`), hỗ trợ chuyển sang form **Đăng ký hội viên mới** và 3 nút điền nhanh tài khoản mẫu `Admin` / `Staff` / `Customer`.
 * **Khung chính (`Views/MainWindow.xaml`, `ViewModels/MainViewModel.cs`):**
   * Sidebar điều hướng phân quyền tự động theo `UserRole`, Topbar làm mới dữ liệu, nút Đăng xuất và vùng `ContentControl` nạp động Dashboard theo vai trò.
-* **3 Dashboard riêng biệt (`Views/Dashboards/`, `ViewModels/Dashboards/`):**
+* **3 Dashboard riêng biệt đặt theo từng thư mục vai trò (`Admin/`, `Staff/`, `Customer/` trong `Views/` và `ViewModels/`):**
   * **`AdminDashboardView`:** 4 thẻ KPI toàn rạp (tổng doanh thu & hôm nay, vé phát hành & đã check-in, số phim đang/sắp chiếu, phòng hoạt động & ghế bảo trì), bảng *Lịch chiếu & Tỷ lệ lấp đầy* và *Hóa đơn gần đây*.
   * **`StaffDashboardView`:** 4 thẻ KPI ca quầy cá nhân (vé đã bán, doanh thu quầy của nhân viên, suất đang mở bán, vé chờ soát check-in), bảng *Suất chiếu mở bán & Ghế trống* và *Giao dịch quầy gần đây*.
   * **`CustomerDashboardView`:** Thẻ hội viên (`Tier`, điểm tích lũy, tổng chi tiêu, vé chờ chiếu), danh sách phim với bộ lọc `Tất cả` / `Đang chiếu` / `Sắp chiếu`, và bảng *Vé của tôi*.

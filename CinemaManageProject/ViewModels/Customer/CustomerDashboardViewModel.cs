@@ -4,7 +4,7 @@ using CinemaManageProject.Helpers;
 using CinemaManageProject.Models;
 using Microsoft.Data.Sqlite;
 
-namespace CinemaManageProject.ViewModels.Dashboards;
+namespace CinemaManageProject.ViewModels.Customer;
 
 public sealed record CustomerMovieRow(
     string Title,
@@ -105,7 +105,7 @@ public sealed class CustomerDashboardViewModel : ViewModelBase
     {
         using SqliteConnection conn = DatabaseHelper.OpenConnection();
 
-        Customer? profile = App.CurrentUser is not null
+        Models.Customer? profile = App.CurrentUser is not null
             ? CustomerData.LoadCustomerProfile(conn, App.CurrentUser.UserId) ?? App.CurrentUser.CustomerProfile
             : null;
         if (App.CurrentUser is not null && profile is not null)

@@ -2,7 +2,8 @@ using System.Collections.ObjectModel;
 using System.Windows;
 using CinemaManageProject.Models;
 using CinemaManageProject.ViewModels.Admin;
-using CinemaManageProject.ViewModels.Dashboards;
+using CinemaManageProject.ViewModels.Customer;
+using CinemaManageProject.ViewModels.Staff;
 
 namespace CinemaManageProject.ViewModels;
 

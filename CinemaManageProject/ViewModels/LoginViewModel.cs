@@ -245,7 +245,7 @@ public sealed class LoginViewModel : ViewModelBase
                 Phone = cleanPhone,
                 Role = UserRole.Customer,
                 IsActive = true,
-                CustomerProfile = new Customer
+                CustomerProfile = new Models.Customer
                 {
                     CustomerId = customerId,
                     UserId = userId,

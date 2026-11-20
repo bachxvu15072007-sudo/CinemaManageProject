@@ -1,8 +1,8 @@
 using System.Windows;
 using System.Windows.Controls;
-using CinemaManageProject.ViewModels.Dashboards;
+using CinemaManageProject.ViewModels.Customer;
 
-namespace CinemaManageProject.Views.Dashboards;
+namespace CinemaManageProject.Views.Customer;
 
 public partial class CustomerDashboardView : UserControl
 {

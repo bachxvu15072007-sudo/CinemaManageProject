@@ -1,6 +1,6 @@
 using System.Windows.Controls;
 
-namespace CinemaManageProject.Views.Dashboards;
+namespace CinemaManageProject.Views.Admin;
 
 public partial class AdminDashboardView : UserControl
 {

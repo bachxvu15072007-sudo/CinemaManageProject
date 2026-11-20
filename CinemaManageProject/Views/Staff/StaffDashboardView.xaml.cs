@@ -1,6 +1,6 @@
 using System.Windows.Controls;
 
-namespace CinemaManageProject.Views.Dashboards;
+namespace CinemaManageProject.Views.Staff;
 
 public partial class StaffDashboardView : UserControl
 {

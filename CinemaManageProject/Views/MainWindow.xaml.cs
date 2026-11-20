@@ -2,9 +2,11 @@ using System.Windows;
 using System.Windows.Controls;
 using CinemaManageProject.ViewModels;
 using CinemaManageProject.ViewModels.Admin;
-using CinemaManageProject.ViewModels.Dashboards;
+using CinemaManageProject.ViewModels.Customer;
+using CinemaManageProject.ViewModels.Staff;
 using CinemaManageProject.Views.Admin;
-using CinemaManageProject.Views.Dashboards;
+using CinemaManageProject.Views.Customer;
+using CinemaManageProject.Views.Staff;
 
 namespace CinemaManageProject.Views;
 
