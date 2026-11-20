@@ -18,10 +18,18 @@
 
                 <StackPanel Grid.Column="0" VerticalAlignment="Center">
                     <Border Style="{StaticResource BadgeBorderStyle}" Margin="0,0,0,8">
-                        <TextBlock Text="{Binding TierDisplay}"
-                                   FontSize="12"
-                                   FontWeight="SemiBold"
-                                   Foreground="#5E6AD2" />
+                        <StackPanel Orientation="Horizontal">
+                            <Path Style="{StaticResource CinemaVectorIconStyle}"
+                                  Width="12" Height="12"
+                                  Data="{StaticResource StarMembershipIconGeometry}"
+                                  Stroke="#7C86FF"
+                                  Margin="0,0,6,0"
+                                  VerticalAlignment="Center" />
+                            <TextBlock Text="{Binding TierDisplay}"
+                                       FontSize="12"
+                                       FontWeight="SemiBold"
+                                       Foreground="#5E6AD2" />
+                        </StackPanel>
                     </Border>
                     <TextBlock Text="{Binding MemberName}"
                                Style="{StaticResource PageTitleTextStyle}" />
@@ -57,8 +65,17 @@
         <!-- TIÊU ĐỀ & BỘ LỌC PHIM -->
         <DockPanel Margin="0,0,0,12" LastChildFill="False">
             <StackPanel DockPanel.Dock="Left" VerticalAlignment="Center">
-                <TextBlock Text="Phim tại CINEVERSE"
-                           Style="{StaticResource SectionTitleTextStyle}" />
+                <StackPanel Orientation="Horizontal">
+                    <Path Style="{StaticResource CinemaVectorIconStyle}"
+                          Width="16" Height="16"
+                          Data="{StaticResource FilmStripIconGeometry}"
+                          Stroke="#7C86FF"
+                          Margin="0,0,8,0"
+                          VerticalAlignment="Center" />
+                    <TextBlock Text="Phim tại CINEVERSE"
+                               Style="{StaticResource SectionTitleTextStyle}"
+                               VerticalAlignment="Center" />
+                </StackPanel>
                 <TextBlock Text="Chọn một poster để xem thông tin giới thiệu chi tiết."
                            Style="{StaticResource MutedCaptionTextStyle}"
                            Margin="0,2,0,0" />
@@ -272,7 +289,15 @@
 
                     <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,10">
                         <Border Style="{StaticResource BadgeBorderStyle}" Background="#265E6AD2" Margin="0,0,8,0">
-                            <TextBlock Text="GIỚI THIỆU PHIM" FontSize="11" FontWeight="Bold" Foreground="#7C86FF" />
+                            <StackPanel Orientation="Horizontal">
+                                <Path Style="{StaticResource CinemaVectorIconStyle}"
+                                      Width="12" Height="12"
+                                      Data="{StaticResource FilmClapperIconGeometry}"
+                                      Stroke="#7C86FF"
+                                      Margin="0,0,6,0"
+                                      VerticalAlignment="Center" />
+                                <TextBlock Text="GIỚI THIỆU PHIM" FontSize="11" FontWeight="Bold" Foreground="#7C86FF" />
+                            </StackPanel>
                         </Border>
                         <Border Style="{StaticResource BadgeBorderStyle}" Background="#220084D1" Margin="0,0,8,0">
                             <TextBlock Text="{Binding StatusDisplay}" FontSize="11" FontWeight="SemiBold" Foreground="#74D4FF" />
@@ -318,23 +343,34 @@
                                    TextWrapping="Wrap" />
                     </StackPanel>
 
-                    <Border Grid.Row="3"
-                            BorderBrush="#23252A"
-                            BorderThickness="0,1,0,0"
-                            Padding="0,10,0,0">
+                    <StackPanel Grid.Row="3">
+                        <Line X1="0" Y1="0" X2="1" Y2="0"
+                              Stretch="Fill"
+                              Height="1"
+                              Stroke="#303440"
+                              StrokeThickness="1"
+                              StrokeDashArray="4 3"
+                              Margin="0,0,0,10" />
                         <DockPanel LastChildFill="False">
-                            <TextBlock DockPanel.Dock="Left"
-                                       Text="{Binding PriceText}"
-                                       FontSize="15"
-                                       FontWeight="Bold"
-                                       Foreground="#5E6AD2"
-                                       VerticalAlignment="Center" />
+                            <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" VerticalAlignment="Center">
+                                <Path Style="{StaticResource CinemaVectorIconStyle}"
+                                      Width="15" Height="15"
+                                      Data="{StaticResource CinemaTicketIconGeometry}"
+                                      Stroke="#7C86FF"
+                                      Margin="0,0,7,0"
+                                      VerticalAlignment="Center" />
+                                <TextBlock Text="{Binding PriceText}"
+                                           FontSize="15"
+                                           FontWeight="Bold"
+                                           Foreground="#5E6AD2"
+                                           VerticalAlignment="Center" />
+                            </StackPanel>
                             <TextBlock DockPanel.Dock="Right"
                                        Text="Giá chuẩn theo loại phòng &amp; hạng ghế"
                                        Style="{StaticResource MutedCaptionTextStyle}"
                                        VerticalAlignment="Center" />
                         </DockPanel>
-                    </Border>
+                    </StackPanel>
                 </Grid>
             </Grid>
         </Border>
@@ -342,9 +378,17 @@
         <!-- VÉ ĐÃ ĐẶT CỦA TÔI -->
         <Border Style="{StaticResource CardBorderStyle}">
             <StackPanel>
-                <TextBlock Text="Vé của tôi"
-                           Style="{StaticResource SectionTitleTextStyle}"
-                           Margin="0,0,0,14" />
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,14">
+                    <Path Style="{StaticResource CinemaVectorIconStyle}"
+                          Width="16" Height="16"
+                          Data="{StaticResource CinemaTicketIconGeometry}"
+                          Stroke="#A4F4CF"
+                          Margin="0,0,8,0"
+                          VerticalAlignment="Center" />
+                    <TextBlock Text="Vé của tôi"
+                               Style="{StaticResource SectionTitleTextStyle}"
+                               VerticalAlignment="Center" />
+                </StackPanel>
 
                 <DataGrid Style="{StaticResource ModernDataGridStyle}"
                           ItemsSource="{Binding MyTickets}"

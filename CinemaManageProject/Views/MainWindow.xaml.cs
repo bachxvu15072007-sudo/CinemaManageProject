@@ -55,6 +55,9 @@ public partial class MainWindow : Window
         }
     }
 
+    private void OnToggleSidebarClick(object sender, RoutedEventArgs e)
+        => _viewModel.ToggleSidebar();
+
     private void OnRefreshClick(object sender, RoutedEventArgs e)
         => _viewModel.RefreshCurrentDashboard();
 

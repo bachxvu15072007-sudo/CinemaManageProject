@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.Windows;
+using System.Windows.Media;
 using CinemaManageProject.Models;
 using CinemaManageProject.ViewModels.Admin;
 using CinemaManageProject.ViewModels.Customer;
@@ -11,16 +12,19 @@ public sealed class SidebarMenuItem : ViewModelBase
 {
     private bool _isSelected;
 
-    public SidebarMenuItem(string key, string label, bool isAvailable)
+    public SidebarMenuItem(string key, string label, bool isAvailable, string iconResourceKey = "DashboardIconGeometry")
     {
         Key = key;
         Label = label;
         IsAvailable = isAvailable;
+        IconResourceKey = iconResourceKey;
     }
 
     public string Key { get; }
     public string Label { get; }
     public bool IsAvailable { get; }
+    public string IconResourceKey { get; }
+    public Geometry? IconGeometry => Application.Current?.TryFindResource(IconResourceKey) as Geometry;
 
     public string? ActiveTag => IsSelected ? "Active" : null;
 
@@ -43,6 +47,7 @@ public sealed class MainViewModel : ViewModelBase
 {
     private ViewModelBase? _currentDashboard;
     private string _pageTitle = string.Empty;
+    private bool _isSidebarOpen = true;
 
     public MainViewModel()
     {
@@ -78,6 +83,28 @@ public sealed class MainViewModel : ViewModelBase
         private set { _currentDashboard = value; OnPropertyChanged(nameof(CurrentDashboard)); }
     }
 
+    public bool IsSidebarOpen
+    {
+        get => _isSidebarOpen;
+        private set
+        {
+            if (_isSidebarOpen == value)
+            {
+                return;
+            }
+
+            _isSidebarOpen = value;
+            OnPropertyChanged(nameof(IsSidebarOpen));
+            OnPropertyChanged(nameof(SidebarToggleLabel));
+            OnPropertyChanged(nameof(SidebarToggleToolTip));
+        }
+    }
+
+    public string SidebarToggleLabel => IsSidebarOpen ? "‹" : "☰";
+    public string SidebarToggleToolTip => IsSidebarOpen ? "Thu gọn thanh bên" : "Mở thanh bên";
+
+    public void ToggleSidebar() => IsSidebarOpen = !IsSidebarOpen;
+
     public ObservableCollection<SidebarMenuItem> MenuItems { get; } = [];
 
     private void BuildSidebar(UserRole role)
@@ -88,27 +115,27 @@ public sealed class MainViewModel : ViewModelBase
         {
             case UserRole.Admin:
                 PageTitle = "Dashboard Quản trị";
-                MenuItems.Add(new SidebarMenuItem("dashboard", "Dashboard Quản trị", true) { IsSelected = true });
-                MenuItems.Add(new SidebarMenuItem("movies", "Quản lý Phim", true));
-                MenuItems.Add(new SidebarMenuItem("rooms", "Phòng & Sơ đồ ghế", true));
-                MenuItems.Add(new SidebarMenuItem("showtimes", "Quản lý Lịch chiếu", true));
-                MenuItems.Add(new SidebarMenuItem("orders", "Hóa đơn & Doanh thu", false));
-                MenuItems.Add(new SidebarMenuItem("users", "Nhân sự & Tài khoản", false));
+                MenuItems.Add(new SidebarMenuItem("dashboard", "Dashboard Quản trị", true, "DashboardIconGeometry") { IsSelected = true });
+                MenuItems.Add(new SidebarMenuItem("movies", "Quản lý Phim", true, "FilmClapperIconGeometry"));
+                MenuItems.Add(new SidebarMenuItem("rooms", "Phòng & Sơ đồ ghế", true, "TheaterScreenIconGeometry"));
+                MenuItems.Add(new SidebarMenuItem("showtimes", "Quản lý Lịch chiếu", true, "ShowtimeClockIconGeometry"));
+                MenuItems.Add(new SidebarMenuItem("orders", "Hóa đơn & Doanh thu", false, "ReceiptIconGeometry"));
+                MenuItems.Add(new SidebarMenuItem("users", "Nhân sự & Tài khoản", false, "UsersGroupIconGeometry"));
                 break;
 
             case UserRole.Staff:
                 PageTitle = "Dashboard Quầy vé";
-                MenuItems.Add(new SidebarMenuItem("dashboard", "Dashboard Quầy vé", true) { IsSelected = true });
-                MenuItems.Add(new SidebarMenuItem("pos", "Bán vé tại quầy", false));
-                MenuItems.Add(new SidebarMenuItem("checkin", "Soát vé Check-in", false));
-                MenuItems.Add(new SidebarMenuItem("customers", "Tra cứu Khách hàng", false));
+                MenuItems.Add(new SidebarMenuItem("dashboard", "Dashboard Quầy vé", true, "DashboardIconGeometry") { IsSelected = true });
+                MenuItems.Add(new SidebarMenuItem("pos", "Bán vé tại quầy", false, "CinemaTicketIconGeometry"));
+                MenuItems.Add(new SidebarMenuItem("checkin", "Soát vé Check-in", false, "CheckTicketIconGeometry"));
+                MenuItems.Add(new SidebarMenuItem("customers", "Tra cứu Khách hàng", false, "UsersGroupIconGeometry"));
                 break;
 
             default:
                 PageTitle = "Trang chủ Hội viên";
-                MenuItems.Add(new SidebarMenuItem("dashboard", "Trang chủ Hội viên", true) { IsSelected = true });
-                MenuItems.Add(new SidebarMenuItem("browse", "Phim & Lịch chiếu", false));
-                MenuItems.Add(new SidebarMenuItem("mytickets", "Vé của tôi", false));
+                MenuItems.Add(new SidebarMenuItem("dashboard", "Trang chủ Hội viên", true, "DashboardIconGeometry") { IsSelected = true });
+                MenuItems.Add(new SidebarMenuItem("browse", "Phim & Lịch chiếu", false, "FilmStripIconGeometry"));
+                MenuItems.Add(new SidebarMenuItem("mytickets", "Vé của tôi", false, "CinemaTicketIconGeometry"));
                 break;
         }
     }
