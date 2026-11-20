@@ -1,9 +1,10 @@
 using System.Collections.ObjectModel;
+using CinemaManageProject.Data;
 using CinemaManageProject.Helpers;
 using CinemaManageProject.Models;
 using Microsoft.Data.Sqlite;
 
-namespace CinemaManageProject.ViewModels.Dashboards;
+namespace CinemaManageProject.ViewModels.Customer;
 
 public sealed record CustomerMovieRow(
     string Title,
@@ -102,10 +103,10 @@ public sealed class CustomerDashboardViewModel : ViewModelBase
 
     public override void LoadData()
     {
-        using SqliteConnection conn = App.OpenDbConnection();
+        using SqliteConnection conn = DatabaseHelper.OpenConnection();
 
-        Customer? profile = App.CurrentUser is not null
-            ? CinemaHelper.LoadCustomerProfile(conn, App.CurrentUser.UserId) ?? App.CurrentUser.CustomerProfile
+        Models.Customer? profile = App.CurrentUser is not null
+            ? CustomerData.LoadCustomerProfile(conn, App.CurrentUser.UserId) ?? App.CurrentUser.CustomerProfile
             : null;
         if (App.CurrentUser is not null && profile is not null)
         {
@@ -122,7 +123,7 @@ public sealed class CustomerDashboardViewModel : ViewModelBase
             _ => "Thành viên (Member)"
         };
         PointsText = $"{profile?.LoyaltyPoints ?? 0} điểm";
-        TotalSpentText = CinemaHelper.FormatVnd(profile?.TotalSpent ?? 0m);
+        TotalSpentText = FormatHelper.FormatVnd(profile?.TotalSpent ?? 0m);
 
         _allMovies.Clear();
         using (SqliteCommand mov = conn.CreateCommand())
@@ -144,7 +145,7 @@ public sealed class CustomerDashboardViewModel : ViewModelBase
                 bool nowShowing = r.GetString(5) == "NowShowing";
                 string priceText = r.IsDBNull(6)
                     ? "Chưa mở bán"
-                    : $"Từ {CinemaHelper.FormatVnd(CinemaHelper.ReadDecimal(r, 6))}";
+                    : $"Từ {FormatHelper.FormatVnd(DatabaseHelper.ReadDecimal(r, 6))}";
 
                 _allMovies.Add(new CustomerMovieRow(
                     r.GetString(0),
@@ -190,9 +191,9 @@ public sealed class CustomerDashboardViewModel : ViewModelBase
                     r.GetString(0),
                     r.GetString(1),
                     $"{r.GetString(2)} • Ghế {r.GetString(3)}",
-                    CinemaHelper.FormatSqlDateTime(r.GetString(4), "dd/MM/yyyy HH:mm"),
-                    CinemaHelper.FormatVnd(CinemaHelper.ReadDecimal(r, 5)),
-                    CinemaHelper.FormatStatusLabel(rawStatus)));
+                    FormatHelper.FormatSqlDateTime(r.GetString(4), "dd/MM/yyyy HH:mm"),
+                    FormatHelper.FormatVnd(DatabaseHelper.ReadDecimal(r, 5)),
+                    FormatHelper.FormatStatusLabel(rawStatus)));
             }
         }
 

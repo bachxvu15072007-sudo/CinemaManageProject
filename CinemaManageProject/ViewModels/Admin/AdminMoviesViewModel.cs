@@ -221,7 +221,7 @@ public sealed class AdminMoviesViewModel : ViewModelBase
 
         try
         {
-            PosterPreview = CinemaHelper.LoadPosterBitmap(sourcePath);
+            PosterPreview = PosterHelper.LoadPosterBitmap(sourcePath);
             _pendingPosterSourcePath = sourcePath;
             PosterFileName = Path.GetFileName(sourcePath);
             OnPropertyChanged(nameof(HasPoster));
@@ -458,7 +458,7 @@ public sealed class AdminMoviesViewModel : ViewModelBase
         if (genreIds.Count == 0) { ErrorMessage = "Vui lòng chọn ít nhất 1 thể loại cho phim."; return false; }
 
         string? posterPath = !string.IsNullOrWhiteSpace(_pendingPosterSourcePath) && File.Exists(_pendingPosterSourcePath)
-            ? CinemaHelper.SavePosterFile(_pendingPosterSourcePath)
+            ? PosterHelper.SavePosterFile(_pendingPosterSourcePath)
             : _posterPath;
 
         input = new MovieSaveInput(
@@ -487,7 +487,7 @@ public sealed class AdminMoviesViewModel : ViewModelBase
             return;
         }
 
-        string fullPath = CinemaHelper.ResolvePosterFullPath(storedPath);
+        string fullPath = PosterHelper.ResolvePosterFullPath(storedPath);
         if (!File.Exists(fullPath))
         {
             PosterPreview = null;
@@ -495,7 +495,7 @@ public sealed class AdminMoviesViewModel : ViewModelBase
             return;
         }
 
-        PosterPreview = CinemaHelper.LoadPosterBitmap(fullPath);
+        PosterPreview = PosterHelper.LoadPosterBitmap(fullPath);
         PosterFileName = Path.GetFileName(storedPath);
     }
 

@@ -2,7 +2,8 @@ using System.Collections.ObjectModel;
 using System.Windows;
 using CinemaManageProject.Models;
 using CinemaManageProject.ViewModels.Admin;
-using CinemaManageProject.ViewModels.Dashboards;
+using CinemaManageProject.ViewModels.Customer;
+using CinemaManageProject.ViewModels.Staff;
 
 namespace CinemaManageProject.ViewModels;
 
@@ -89,7 +90,7 @@ public sealed class MainViewModel : ViewModelBase
                 PageTitle = "Dashboard Quản trị";
                 MenuItems.Add(new SidebarMenuItem("dashboard", "Dashboard Quản trị", true) { IsSelected = true });
                 MenuItems.Add(new SidebarMenuItem("movies", "Quản lý Phim", true));
-                MenuItems.Add(new SidebarMenuItem("rooms", "Phòng & Sơ đồ ghế", false));
+                MenuItems.Add(new SidebarMenuItem("rooms", "Phòng & Sơ đồ ghế", true));
                 MenuItems.Add(new SidebarMenuItem("showtimes", "Quản lý Lịch chiếu", false));
                 MenuItems.Add(new SidebarMenuItem("orders", "Hóa đơn & Doanh thu", false));
                 MenuItems.Add(new SidebarMenuItem("users", "Nhân sự & Tài khoản", false));
@@ -170,6 +171,17 @@ public sealed class MainViewModel : ViewModelBase
                 else
                 {
                     CurrentDashboard = new AdminMoviesViewModel();
+                }
+                break;
+
+            case "rooms":
+                if (CurrentDashboard is AdminRoomsViewModel)
+                {
+                    CurrentDashboard.LoadData();
+                }
+                else
+                {
+                    CurrentDashboard = new AdminRoomsViewModel();
                 }
                 break;
 

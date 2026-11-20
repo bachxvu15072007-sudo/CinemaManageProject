@@ -2,7 +2,7 @@ using System.Collections.ObjectModel;
 using CinemaManageProject.Helpers;
 using Microsoft.Data.Sqlite;
 
-namespace CinemaManageProject.ViewModels.Dashboards;
+namespace CinemaManageProject.ViewModels.Admin;
 
 public sealed record AdminShowtimeRow(
     string MovieTitle,
@@ -93,7 +93,7 @@ public sealed class AdminDashboardViewModel : ViewModelBase
 
     public override void LoadData()
     {
-        using SqliteConnection conn = App.OpenDbConnection();
+        using SqliteConnection conn = DatabaseHelper.OpenConnection();
 
         using (SqliteCommand kpi = conn.CreateCommand())
         {
@@ -112,8 +112,8 @@ public sealed class AdminDashboardViewModel : ViewModelBase
             using SqliteDataReader r = kpi.ExecuteReader();
             if (r.Read())
             {
-                TotalRevenueText = CinemaHelper.FormatVnd(CinemaHelper.ReadDecimal(r, 0));
-                TodayRevenueText = $"Hôm nay: {CinemaHelper.FormatVnd(CinemaHelper.ReadDecimal(r, 1))}";
+                TotalRevenueText = FormatHelper.FormatVnd(DatabaseHelper.ReadDecimal(r, 0));
+                TodayRevenueText = $"Hôm nay: {FormatHelper.FormatVnd(DatabaseHelper.ReadDecimal(r, 1))}";
                 TotalTicketsText = $"{r.GetInt32(2)} vé";
                 CheckedInSubText = $"{r.GetInt32(3)} vé đã check-in";
                 MoviesCountText = $"{r.GetInt32(4)} đang chiếu";
@@ -143,11 +143,11 @@ public sealed class AdminDashboardViewModel : ViewModelBase
                 Showtimes.Add(new AdminShowtimeRow(
                     r.GetString(0),
                     r.GetString(1),
-                    CinemaHelper.FormatSqlDateTime(r.GetString(2)),
+                    FormatHelper.FormatSqlDateTime(r.GetString(2)),
                     r.GetString(3),
                     $"{r.GetInt32(4)} / {r.GetInt32(5)}",
-                    CinemaHelper.FormatVnd(CinemaHelper.ReadDecimal(r, 6)),
-                    CinemaHelper.FormatStatusLabel(r.GetString(7))));
+                    FormatHelper.FormatVnd(DatabaseHelper.ReadDecimal(r, 6)),
+                    FormatHelper.FormatStatusLabel(r.GetString(7))));
             }
         }
 
@@ -170,9 +170,9 @@ public sealed class AdminDashboardViewModel : ViewModelBase
                     r.GetString(0),
                     r.GetString(1),
                     channel,
-                    CinemaHelper.FormatPaymentMethod(r.GetString(3)),
-                    CinemaHelper.FormatVnd(CinemaHelper.ReadDecimal(r, 4)),
-                    CinemaHelper.FormatStatusLabel(r.GetString(5))));
+                    FormatHelper.FormatPaymentMethod(r.GetString(3)),
+                    FormatHelper.FormatVnd(DatabaseHelper.ReadDecimal(r, 4)),
+                    FormatHelper.FormatStatusLabel(r.GetString(5))));
             }
         }
     }

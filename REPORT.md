@@ -73,7 +73,7 @@ Mặc định của WPF, `PasswordBox` và `TextBox` có khung viền vuông gó
 - **Ví dụ sử dụng:**
   - `Visibility="{Binding HasError, Converter={StaticResource BoolToVis}}"` trong [LoginWindow.xaml](CinemaManageProject/Views/LoginWindow.xaml#L49): có lỗi thì hiện hộp thông báo, hết lỗi thì ẩn hẳn (không chiếm chỗ).
   - `Visibility="{Binding IsLoginMode, Converter={StaticResource BoolToVis}}"` ([LoginWindow.xaml](CinemaManageProject/Views/LoginWindow.xaml#L63)) và `IsRegisterMode` ([LoginWindow.xaml](CinemaManageProject/Views/LoginWindow.xaml#L145)): bật/tắt luân phiên giữa form Đăng nhập và form Đăng ký.
-  - `Visibility="{Binding HasNoTickets, Converter={StaticResource BoolToVis}}"` trong [CustomerDashboardView.xaml](CinemaManageProject/Views/Dashboards/CustomerDashboardView.xaml#L152).
+  - `Visibility="{Binding HasNoTickets, Converter={StaticResource BoolToVis}}"` trong [CustomerDashboardView.xaml](CinemaManageProject/Views/Customer/CustomerDashboardView.xaml#L152).
 
 ---
 

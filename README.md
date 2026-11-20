@@ -23,7 +23,7 @@ Hệ thống hỗ trợ quản lý vận hành rạp phim và đặt vé tập t
   * **7 tài khoản:** `admin`, `staff1..3`, `khach1..3`.
   * **3 hồ sơ khách hàng:** hạng `Silver` (180 điểm), `Gold` (420 điểm), `Member` (50 điểm).
   * **6 phim & 6 thể loại:** 4 phim đang chiếu (`NowShowing`), 2 phim sắp chiếu (`ComingSoon`).
-  * **3 phòng chiếu & 296 ghế:** `Phòng 1 - 2D` (8x10), `Phòng 2 - 3D` (8x12), `Phòng 3 - IMAX` (10x12), trong đó ghế `B1` của Phòng 1 đang tắt bảo trì (`IsActive = 0`).
+  * **4 phòng chiếu & 354 ghế (hàng cuối là ghế đôi nên bằng 1/2 số ghế hàng thường):** `Phòng 1 - 2D` (75 ghế, `B1` bảo trì), `Phòng 2 - 2D` (75 ghế), `Phòng 3 - 3D` (90 ghế), `Phòng 4 - IMAX` (114 ghế).
   * **12 suất chiếu** (đã tính +15 phút dọn phòng), **2 hóa đơn** (`SelfService` và `Counter`) và **3 vé mẫu** (`VE-KHACH101`, `VE-KHACH102`, `VE-STAFF101`).
 
 ### 2.2. Models & Enums (`CinemaManageProject/Models/`)
@@ -36,12 +36,12 @@ Hệ thống hỗ trợ quản lý vận hành rạp phim và đặt vé tập t
 ### 2.4. Đăng nhập, Khung Shell & 3 Dashboard Theo Vai trò (`Views/`, `ViewModels/`)
 * **Vòng đời cửa sổ (`App.xaml` / `App.xaml.cs`):**
   * Dùng `ShutdownMode="OnExplicitShutdown"`, khởi chạy với `LoginWindow`, chuyển sang `Views.MainWindow` sau khi xác thực (`CompleteLogin()`) và quay lại `LoginWindow` khi đăng xuất (`Logout()`).
-  * Mở kết nối tới `Database/cinema.db` trực tiếp qua `App.OpenDbConnection()`.
+  * Mở kết nối tới `Database/cinema.db` qua `DatabaseHelper.OpenConnection()`.
 * **Màn hình Đăng nhập (`Views/LoginWindow.xaml`, `ViewModels/LoginViewModel.cs`):**
   * Xác thực trực tiếp với bảng `Users` (nạp thêm `CustomerProfile` nếu vai trò là `Customer`), hỗ trợ chuyển sang form **Đăng ký hội viên mới** và 3 nút điền nhanh tài khoản mẫu `Admin` / `Staff` / `Customer`.
 * **Khung chính (`Views/MainWindow.xaml`, `ViewModels/MainViewModel.cs`):**
   * Sidebar điều hướng phân quyền tự động theo `UserRole`, Topbar làm mới dữ liệu, nút Đăng xuất và vùng `ContentControl` nạp động Dashboard theo vai trò.
-* **3 Dashboard riêng biệt (`Views/Dashboards/`, `ViewModels/Dashboards/`):**
+* **3 Dashboard riêng biệt đặt theo từng thư mục vai trò (`Admin/`, `Staff/`, `Customer/` trong `Views/` và `ViewModels/`):**
   * **`AdminDashboardView`:** 4 thẻ KPI toàn rạp (tổng doanh thu & hôm nay, vé phát hành & đã check-in, số phim đang/sắp chiếu, phòng hoạt động & ghế bảo trì), bảng *Lịch chiếu & Tỷ lệ lấp đầy* và *Hóa đơn gần đây*.
   * **`StaffDashboardView`:** 4 thẻ KPI ca quầy cá nhân (vé đã bán, doanh thu quầy của nhân viên, suất đang mở bán, vé chờ soát check-in), bảng *Suất chiếu mở bán & Ghế trống* và *Giao dịch quầy gần đây*.
   * **`CustomerDashboardView`:** Thẻ hội viên (`Tier`, điểm tích lũy, tổng chi tiêu, vé chờ chiếu), danh sách phim với bộ lọc `Tất cả` / `Đang chiếu` / `Sắp chiếu`, và bảng *Vé của tôi*.

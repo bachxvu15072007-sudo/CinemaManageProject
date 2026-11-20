@@ -22,7 +22,7 @@ public sealed record AdminMovieRow(
     IReadOnlyList<int> GenreIds)
 {
     public string DurationText => $"{DurationMinutes} phút";
-    public string StatusDisplay => CinemaHelper.FormatStatusLabel(Status);
+    public string StatusDisplay => FormatHelper.FormatStatusLabel(Status);
 }
 
 public sealed record MovieSaveInput(
@@ -48,7 +48,7 @@ public static class MovieData
     public static List<(int GenreId, string Name)> LoadAllGenres()
     {
         var result = new List<(int, string)>();
-        using SqliteConnection conn = App.OpenDbConnection();
+        using SqliteConnection conn = DatabaseHelper.OpenConnection();
         using SqliteCommand cmd = conn.CreateCommand();
         cmd.CommandText = "SELECT GenreId, Name FROM Genres ORDER BY Name COLLATE NOCASE ASC;";
 
@@ -63,7 +63,7 @@ public static class MovieData
 
     public static int InsertGenre(string name)
     {
-        using SqliteConnection conn = App.OpenDbConnection();
+        using SqliteConnection conn = DatabaseHelper.OpenConnection();
         using SqliteCommand cmd = conn.CreateCommand();
         cmd.CommandText = """
             INSERT INTO Genres (Name) VALUES (@name);
@@ -75,7 +75,7 @@ public static class MovieData
 
     public static List<AdminMovieRow> LoadAllMovies()
     {
-        using SqliteConnection conn = App.OpenDbConnection();
+        using SqliteConnection conn = DatabaseHelper.OpenConnection();
         Dictionary<int, List<int>> movieGenres = LoadMovieGenreMap(conn);
 
         var movies = new List<AdminMovieRow>();
@@ -121,7 +121,7 @@ public static class MovieData
 
     public static int SaveMovie(int? movieId, MovieSaveInput input)
     {
-        using SqliteConnection conn = App.OpenDbConnection();
+        using SqliteConnection conn = DatabaseHelper.OpenConnection();
         using SqliteTransaction tx = conn.BeginTransaction();
 
         int savedId;
@@ -165,7 +165,7 @@ public static class MovieData
 
     public static int CountMovieShowtimes(int movieId)
     {
-        using SqliteConnection conn = App.OpenDbConnection();
+        using SqliteConnection conn = DatabaseHelper.OpenConnection();
         using SqliteCommand cmd = conn.CreateCommand();
         cmd.CommandText = "SELECT COUNT(*) FROM Showtimes WHERE MovieId = @id;";
         cmd.Parameters.AddWithValue("@id", movieId);
@@ -174,7 +174,7 @@ public static class MovieData
 
     public static void DeleteMovie(int movieId)
     {
-        using SqliteConnection conn = App.OpenDbConnection();
+        using SqliteConnection conn = DatabaseHelper.OpenConnection();
         using SqliteCommand cmd = conn.CreateCommand();
         cmd.CommandText = "DELETE FROM Movies WHERE MovieId = @id;";
         cmd.Parameters.AddWithValue("@id", movieId);
