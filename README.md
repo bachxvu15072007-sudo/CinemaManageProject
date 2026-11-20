@@ -20,11 +20,11 @@ Hệ thống hỗ trợ quản lý vận hành rạp phim và đặt vé tập t
   * `Users`, `Customers`, `Genres`, `Movies`, `MovieGenres`, `Rooms`, `Seats`, `Showtimes`, `Orders`, `Tickets`.
   * Các giá trị enum được ràng buộc trực tiếp bằng `CHECK (...)` dạng chuỗi.
 * **`SeedData.sql` & `cinema.db`:** Dữ liệu mẫu sẵn sàng kiểm thử:
-  * **7 tài khoản:** `admin`, `staff1..3`, `khach1..3`.
-  * **3 hồ sơ khách hàng:** hạng `Silver` (180 điểm), `Gold` (420 điểm), `Member` (50 điểm).
-  * **6 phim & 6 thể loại:** 4 phim đang chiếu (`NowShowing`), 2 phim sắp chiếu (`ComingSoon`).
+  * **29 tài khoản:** `admin`, `staff1..3`, `khach1..25`.
+  * **25 hồ sơ khách hàng:** rải theo nhiều nhóm sở thích xem phim (`95` cặp khách–phim riêng biệt) để phục vụ hệ khuyến nghị.
+  * **15 phim & 10 thể loại:** 10 phim đang chiếu (`NowShowing`), 5 phim sắp chiếu (`ComingSoon`), kèm đầy đủ ảnh poster thực tế (`CinemaManageProject/Posters/`).
   * **4 phòng chiếu & 354 ghế (hàng cuối là ghế đôi nên bằng 1/2 số ghế hàng thường):** `Phòng 1 - 2D` (75 ghế, `B1` bảo trì), `Phòng 2 - 2D` (75 ghế), `Phòng 3 - 3D` (90 ghế), `Phòng 4 - IMAX` (114 ghế).
-  * **12 suất chiếu** (đã tính +15 phút dọn phòng), **2 hóa đơn** (`SelfService` và `Counter`) và **3 vé mẫu** (`VE-KHACH101`, `VE-KHACH102`, `VE-STAFF101`).
+  * **28 suất chiếu** (`18` mở bán + `10` đã chiếu quá khứ, đồng nhất giá gốc chuẩn `80.000đ` và đã tính `+15` phút dọn phòng), **98 hóa đơn** và **160 vé mẫu** (`Booked`, `CheckedIn`, `Cancelled`).
 
 ### 2.2. Models & Enums (`CinemaManageProject/Models/`)
 * **`CinemaEnums.cs`:** Định nghĩa 11 enum (`UserRole`, `CustomerTier`, `MovieStatus`, `AgeRating`, `RoomType`, `SeatType`, `ShowtimeStatus`, `OrderStatus`, `PaymentMethod`, `BookingChannel`, `TicketStatus`).

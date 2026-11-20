@@ -91,7 +91,7 @@ public sealed class MainViewModel : ViewModelBase
                 MenuItems.Add(new SidebarMenuItem("dashboard", "Dashboard Quản trị", true) { IsSelected = true });
                 MenuItems.Add(new SidebarMenuItem("movies", "Quản lý Phim", true));
                 MenuItems.Add(new SidebarMenuItem("rooms", "Phòng & Sơ đồ ghế", true));
-                MenuItems.Add(new SidebarMenuItem("showtimes", "Quản lý Lịch chiếu", false));
+                MenuItems.Add(new SidebarMenuItem("showtimes", "Quản lý Lịch chiếu", true));
                 MenuItems.Add(new SidebarMenuItem("orders", "Hóa đơn & Doanh thu", false));
                 MenuItems.Add(new SidebarMenuItem("users", "Nhân sự & Tài khoản", false));
                 break;
@@ -182,6 +182,17 @@ public sealed class MainViewModel : ViewModelBase
                 else
                 {
                     CurrentDashboard = new AdminRoomsViewModel();
+                }
+                break;
+
+            case "showtimes":
+                if (CurrentDashboard is AdminShowtimesViewModel)
+                {
+                    CurrentDashboard.LoadData();
+                }
+                else
+                {
+                    CurrentDashboard = new AdminShowtimesViewModel();
                 }
                 break;
 

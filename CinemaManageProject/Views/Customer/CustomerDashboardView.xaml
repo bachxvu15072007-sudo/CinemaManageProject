@@ -54,79 +54,290 @@
             </Grid>
         </Border>
 
-        <!-- PHIM ĐANG CHIẾU & SẮP CHIẾU -->
+        <!-- TIÊU ĐỀ & BỘ LỌC PHIM -->
         <DockPanel Margin="0,0,0,12" LastChildFill="False">
-            <TextBlock DockPanel.Dock="Left"
-                       Text="Phim tại CINEVERSE"
-                       Style="{StaticResource SectionTitleTextStyle}"
-                       VerticalAlignment="Center" />
-            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
-                <Button Content="Tất cả" Style="{StaticResource SecondaryButtonStyle}" Padding="12,6" FontSize="12" Margin="0,0,8,0" Tag="All" Click="OnFilterClick" />
-                <Button Content="Đang chiếu" Style="{StaticResource SecondaryButtonStyle}" Padding="12,6" FontSize="12" Margin="0,0,8,0" Tag="NowShowing" Click="OnFilterClick" />
-                <Button Content="Sắp chiếu" Style="{StaticResource SecondaryButtonStyle}" Padding="12,6" FontSize="12" Tag="ComingSoon" Click="OnFilterClick" />
+            <StackPanel DockPanel.Dock="Left" VerticalAlignment="Center">
+                <TextBlock Text="Phim tại CINEVERSE"
+                           Style="{StaticResource SectionTitleTextStyle}" />
+                <TextBlock Text="Chọn một poster để xem thông tin giới thiệu chi tiết."
+                           Style="{StaticResource MutedCaptionTextStyle}"
+                           Margin="0,2,0,0" />
+            </StackPanel>
+            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                <Button x:Name="FilterAllButton"
+                        Content="Tất cả"
+                        Style="{StaticResource FilterChipButtonStyle}"
+                        Tag="{Binding AllFilterTag}"
+                        Margin="0,0,8,0"
+                        Click="OnFilterClick" />
+                <Button x:Name="FilterNowShowingButton"
+                        Content="Đang chiếu"
+                        Style="{StaticResource FilterChipButtonStyle}"
+                        Tag="{Binding NowShowingFilterTag}"
+                        Margin="0,0,8,0"
+                        Click="OnFilterClick" />
+                <Button x:Name="FilterComingSoonButton"
+                        Content="Sắp chiếu"
+                        Style="{StaticResource FilterChipButtonStyle}"
+                        Tag="{Binding ComingSoonFilterTag}"
+                        Click="OnFilterClick" />
             </StackPanel>
         </DockPanel>
 
-        <ItemsControl ItemsSource="{Binding Movies}" Margin="0,0,0,22">
-            <ItemsControl.ItemsPanel>
-                <ItemsPanelTemplate>
-                    <UniformGrid Columns="3" />
-                </ItemsPanelTemplate>
-            </ItemsControl.ItemsPanel>
-            <ItemsControl.ItemTemplate>
-                <DataTemplate>
-                    <Border Style="{StaticResource CardBorderStyle}" Margin="0,0,14,14">
-                        <Grid>
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto" />
-                                <RowDefinition Height="Auto" />
-                                <RowDefinition Height="*" />
-                                <RowDefinition Height="Auto" />
-                            </Grid.RowDefinitions>
+        <!-- DẢI POSTER TRƯỢT NGANG -->
+        <Grid Margin="0,0,0,16">
+            <Grid.Style>
+                <Style TargetType="Grid">
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding HasNoMovies}" Value="True">
+                            <Setter Property="Visibility" Value="Collapsed" />
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Grid.Style>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
 
-                            <DockPanel Grid.Row="0" Margin="0,0,0,10" LastChildFill="False">
-                                <Border DockPanel.Dock="Left" Style="{StaticResource BadgeBorderStyle}" Background="#220084D1">
-                                    <TextBlock Text="{Binding StatusDisplay}" FontSize="11" FontWeight="SemiBold" Foreground="#74D4FF" />
-                                </Border>
-                                <Border DockPanel.Dock="Right" Style="{StaticResource BadgeBorderStyle}" Background="#18181B">
-                                    <TextBlock Text="{Binding AgeRating}" FontSize="11" FontWeight="Bold" />
-                                </Border>
-                            </DockPanel>
+            <Button x:Name="ScrollLeftButton"
+                    Grid.Column="0"
+                    Content="‹"
+                    FontSize="20"
+                    FontWeight="Bold"
+                    Width="34"
+                    Height="80"
+                    Padding="0"
+                    Margin="0,0,10,0"
+                    VerticalAlignment="Center"
+                    Style="{StaticResource SecondaryButtonStyle}"
+                    ToolTip="Cuộn sang trái"
+                    Click="OnScrollLeftClick" />
 
-                            <TextBlock Grid.Row="1"
-                                       Text="{Binding Title}"
-                                       FontSize="16"
-                                       FontWeight="Bold"
-                                       TextWrapping="Wrap"
-                                       Margin="0,0,0,6" />
+            <ScrollViewer x:Name="PosterStripScrollViewer"
+                          Grid.Column="1"
+                          HorizontalScrollBarVisibility="Hidden"
+                          VerticalScrollBarVisibility="Disabled"
+                          PanningMode="HorizontalOnly"
+                          ScrollChanged="OnPosterStripScrollChanged"
+                          PreviewMouseWheel="OnPosterStripPreviewMouseWheel">
+                <ItemsControl ItemsSource="{Binding Movies}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <StackPanel Orientation="Horizontal" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Button Style="{StaticResource PosterCardButtonStyle}"
+                                    Width="168"
+                                    Margin="0,0,12,0"
+                                    Tag="{Binding ActiveTag}"
+                                    Click="OnMovieCardClick">
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="208" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="38" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
 
-                            <StackPanel Grid.Row="2" Margin="0,0,0,12">
-                                <TextBlock Text="{Binding Genres}"
-                                           Style="{StaticResource MutedCaptionTextStyle}"
-                                           TextWrapping="Wrap"
-                                           Margin="0,0,0,4" />
-                                <TextBlock Text="{Binding MetaInfo}"
-                                           FontSize="11"
-                                           Foreground="#71717A" />
-                            </StackPanel>
+                                    <Border Grid.Row="0"
+                                            Background="#18181B"
+                                            CornerRadius="8"
+                                            ClipToBounds="True">
+                                        <Grid>
+                                            <TextBlock Text="Chưa có poster"
+                                                       FontSize="11"
+                                                       Foreground="#71717A"
+                                                       TextWrapping="Wrap"
+                                                       TextAlignment="Center"
+                                                       HorizontalAlignment="Center"
+                                                       VerticalAlignment="Center"
+                                                       Margin="8" />
+                                            <Image Source="{Binding PosterImage}"
+                                                   Stretch="UniformToFill"
+                                                   RenderOptions.BitmapScalingMode="HighQuality" />
+                                        </Grid>
+                                    </Border>
 
-                            <Border Grid.Row="3"
-                                    BorderBrush="#23252A"
-                                    BorderThickness="0,1,0,0"
-                                    Padding="0,10,0,0">
-                                <DockPanel LastChildFill="False">
-                                    <TextBlock DockPanel.Dock="Left"
-                                               Text="{Binding PriceText}"
+                                    <DockPanel Grid.Row="1" Margin="0,8,0,4" LastChildFill="False">
+                                        <Border DockPanel.Dock="Left"
+                                                Style="{StaticResource BadgeBorderStyle}"
+                                                Background="#220084D1"
+                                                Padding="8,2">
+                                            <TextBlock Text="{Binding StatusDisplay}" FontSize="10" FontWeight="SemiBold" Foreground="#74D4FF" />
+                                        </Border>
+                                        <Border DockPanel.Dock="Right"
+                                                Style="{StaticResource BadgeBorderStyle}"
+                                                Background="#18181B"
+                                                Padding="8,2">
+                                            <TextBlock Text="{Binding AgeRating}" FontSize="10" FontWeight="Bold" />
+                                        </Border>
+                                    </DockPanel>
+
+                                    <TextBlock Grid.Row="2"
+                                               Text="{Binding Title}"
+                                               FontSize="13"
                                                FontWeight="Bold"
-                                               Foreground="#5E6AD2"
-                                               VerticalAlignment="Center" />
-                                </DockPanel>
-                            </Border>
-                        </Grid>
+                                               TextWrapping="Wrap"
+                                               TextTrimming="CharacterEllipsis"
+                                               VerticalAlignment="Top" />
+
+                                    <TextBlock Grid.Row="3"
+                                               Text="{Binding Genres}"
+                                               FontSize="11"
+                                               Foreground="#A1A1AA"
+                                               TextTrimming="CharacterEllipsis"
+                                               Margin="0,2,0,4" />
+
+                                    <TextBlock Grid.Row="4"
+                                               Text="{Binding PriceText}"
+                                               FontSize="12"
+                                               FontWeight="Bold"
+                                               Foreground="#5E6AD2" />
+                                </Grid>
+                            </Button>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+
+            <Button x:Name="ScrollRightButton"
+                    Grid.Column="2"
+                    Content="›"
+                    FontSize="20"
+                    FontWeight="Bold"
+                    Width="34"
+                    Height="80"
+                    Padding="0"
+                    Margin="10,0,0,0"
+                    VerticalAlignment="Center"
+                    Style="{StaticResource SecondaryButtonStyle}"
+                    ToolTip="Cuộn sang phải"
+                    Click="OnScrollRightClick" />
+        </Grid>
+
+        <!-- TRẠNG THÁI TRỐNG KHI KHÔNG CÓ PHIM -->
+        <Border Style="{StaticResource CardBorderStyle}"
+                Visibility="{Binding HasNoMovies, Converter={StaticResource BoolToVis}}"
+                Margin="0,0,0,22">
+            <TextBlock Text="Hiện chưa có phim nào phù hợp với bộ lọc đã chọn."
+                       Style="{StaticResource MutedCaptionTextStyle}" />
+        </Border>
+
+        <!-- KHUNG GIỚI THIỆU PHIM ĐANG CHỌN -->
+        <Border Style="{StaticResource CardBorderStyle}"
+                Visibility="{Binding HasSelectedMovie, Converter={StaticResource BoolToVis}}"
+                Margin="0,0,0,22">
+            <Grid DataContext="{Binding SelectedMovie}">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="148" />
+                    <ColumnDefinition Width="20" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+
+                <Border Grid.Column="0"
+                        Height="214"
+                        Background="#18181B"
+                        BorderBrush="#3F3F46"
+                        BorderThickness="1"
+                        CornerRadius="10"
+                        ClipToBounds="True"
+                        VerticalAlignment="Top">
+                    <Grid>
+                        <TextBlock Text="Chưa có poster"
+                                   FontSize="12"
+                                   Foreground="#71717A"
+                                   TextWrapping="Wrap"
+                                   TextAlignment="Center"
+                                   HorizontalAlignment="Center"
+                                   VerticalAlignment="Center"
+                                   Margin="10" />
+                        <Image Source="{Binding PosterImage}"
+                               Stretch="UniformToFill"
+                               RenderOptions.BitmapScalingMode="HighQuality" />
+                    </Grid>
+                </Border>
+
+                <Grid Grid.Column="2">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+
+                    <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,10">
+                        <Border Style="{StaticResource BadgeBorderStyle}" Background="#265E6AD2" Margin="0,0,8,0">
+                            <TextBlock Text="GIỚI THIỆU PHIM" FontSize="11" FontWeight="Bold" Foreground="#7C86FF" />
+                        </Border>
+                        <Border Style="{StaticResource BadgeBorderStyle}" Background="#220084D1" Margin="0,0,8,0">
+                            <TextBlock Text="{Binding StatusDisplay}" FontSize="11" FontWeight="SemiBold" Foreground="#74D4FF" />
+                        </Border>
+                        <Border Style="{StaticResource BadgeBorderStyle}" Background="#18181B" Margin="0,0,10,0">
+                            <TextBlock Text="{Binding AgeRating}" FontSize="11" FontWeight="Bold" />
+                        </Border>
+                        <TextBlock Text="{Binding ReleaseDateText}"
+                                   Style="{StaticResource MutedCaptionTextStyle}"
+                                   VerticalAlignment="Center" />
+                    </StackPanel>
+
+                    <StackPanel Grid.Row="1" Margin="0,0,0,10">
+                        <TextBlock Text="{Binding Title}"
+                                   FontSize="22"
+                                   FontWeight="Bold"
+                                   TextWrapping="Wrap" />
+                        <TextBlock Text="{Binding OriginalTitle}"
+                                   Style="{StaticResource MutedCaptionTextStyle}"
+                                   FontSize="13"
+                                   Visibility="{Binding HasOriginalTitle, Converter={StaticResource BoolToVis}}"
+                                   Margin="0,2,0,0" />
+                    </StackPanel>
+
+                    <StackPanel Grid.Row="2" Margin="0,0,0,12">
+                        <TextBlock FontSize="13" TextWrapping="Wrap" Margin="0,0,0,6">
+                            <Run Text="{Binding Genres, Mode=OneWay}" FontWeight="SemiBold" Foreground="#FAFAFA" />
+                            <Run Text="  •  " Foreground="#71717A" />
+                            <Run Text="{Binding MetaInfo, Mode=OneWay}" Foreground="#A1A1AA" />
+                        </TextBlock>
+                        <TextBlock Text="{Binding DirectorText}"
+                                   Style="{StaticResource MutedCaptionTextStyle}"
+                                   TextWrapping="Wrap"
+                                   Margin="0,0,0,2" />
+                        <TextBlock Text="{Binding CastText}"
+                                   Style="{StaticResource MutedCaptionTextStyle}"
+                                   TextWrapping="Wrap"
+                                   Margin="0,0,0,10" />
+                        <TextBlock Text="{Binding DescriptionText}"
+                                   FontSize="13"
+                                   Foreground="#D4D4D8"
+                                   LineHeight="20"
+                                   TextWrapping="Wrap" />
+                    </StackPanel>
+
+                    <Border Grid.Row="3"
+                            BorderBrush="#23252A"
+                            BorderThickness="0,1,0,0"
+                            Padding="0,10,0,0">
+                        <DockPanel LastChildFill="False">
+                            <TextBlock DockPanel.Dock="Left"
+                                       Text="{Binding PriceText}"
+                                       FontSize="15"
+                                       FontWeight="Bold"
+                                       Foreground="#5E6AD2"
+                                       VerticalAlignment="Center" />
+                            <TextBlock DockPanel.Dock="Right"
+                                       Text="Giá chuẩn theo loại phòng &amp; hạng ghế"
+                                       Style="{StaticResource MutedCaptionTextStyle}"
+                                       VerticalAlignment="Center" />
+                        </DockPanel>
                     </Border>
-                </DataTemplate>
-            </ItemsControl.ItemTemplate>
-        </ItemsControl>
+                </Grid>
+            </Grid>
+        </Border>
 
         <!-- VÉ ĐÃ ĐẶT CỦA TÔI -->
         <Border Style="{StaticResource CardBorderStyle}">

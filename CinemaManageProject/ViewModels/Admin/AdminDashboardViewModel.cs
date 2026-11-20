@@ -130,11 +130,12 @@ public sealed class AdminDashboardViewModel : ViewModelBase
                 SELECT m.Title, r.Name, s.StartTime, s.Format,
                        (SELECT COUNT(*) FROM Tickets t WHERE t.ShowtimeId = s.ShowtimeId AND t.Status IN ('Booked', 'CheckedIn')),
                        (SELECT COUNT(*) FROM Seats se WHERE se.RoomId = s.RoomId AND se.IsActive = 1),
-                       s.BaseTicketPrice, s.Status
+                       s.BaseTicketPrice + r.BasePriceSurcharge, s.Status
                 FROM Showtimes s
                 INNER JOIN Movies m ON m.MovieId = s.MovieId
                 INNER JOIN Rooms r ON r.RoomId = s.RoomId
-                ORDER BY s.StartTime ASC
+                ORDER BY CASE WHEN s.Status IN ('OpenForSale', 'Scheduled') THEN 0 ELSE 1 END,
+                         s.StartTime ASC
                 LIMIT 12;
                 """;
             using SqliteDataReader r = st.ExecuteReader();

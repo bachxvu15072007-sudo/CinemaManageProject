@@ -63,10 +63,13 @@
                 <StackPanel Visibility="{Binding IsLoginMode, Converter={StaticResource BoolToVis}}">
                     <TextBlock Text="Đăng nhập tài khoản"
                                Style="{StaticResource PageTitleTextStyle}"
+                               HorizontalAlignment="Center"
                                FontSize="20"
                                Margin="0,0,0,4" />
                     <TextBlock Text="Đăng nhập bằng tài khoản Admin, Staff hoặc Khách hàng để vào bảng điều khiển."
                                Style="{StaticResource MutedCaptionTextStyle}"
+                               HorizontalAlignment="Center"
+                               TextAlignment="Center"
                                TextWrapping="Wrap"
                                Margin="0,0,0,18" />
 

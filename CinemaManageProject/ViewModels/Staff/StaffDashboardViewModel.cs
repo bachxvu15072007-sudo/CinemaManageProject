@@ -106,7 +106,7 @@ public sealed class StaffDashboardViewModel : ViewModelBase
                        (SELECT COUNT(*) FROM Seats se WHERE se.RoomId = s.RoomId AND se.IsActive = 1) -
                        (SELECT COUNT(*) FROM Tickets t WHERE t.ShowtimeId = s.ShowtimeId AND t.Status IN ('Booked', 'CheckedIn')),
                        (SELECT COUNT(*) FROM Seats se WHERE se.RoomId = s.RoomId AND se.IsActive = 1),
-                       s.BaseTicketPrice
+                       s.BaseTicketPrice + r.BasePriceSurcharge
                 FROM Showtimes s
                 INNER JOIN Movies m ON m.MovieId = s.MovieId
                 INNER JOIN Rooms r ON r.RoomId = s.RoomId
