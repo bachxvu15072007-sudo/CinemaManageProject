@@ -166,6 +166,38 @@
         </Style.Triggers>
     </Style>
 
+    <Style x:Key="FilterChipButtonStyle" TargetType="Button" BasedOn="{StaticResource SecondaryButtonStyle}">
+        <Setter Property="Padding" Value="12,6" />
+        <Setter Property="FontSize" Value="12" />
+        <Style.Triggers>
+            <Trigger Property="Tag" Value="Active">
+                <Setter Property="Background" Value="#265E6AD2" />
+                <Setter Property="BorderBrush" Value="#5E6AD2" />
+                <Setter Property="Foreground" Value="#FAFAFA" />
+                <Setter Property="FontWeight" Value="SemiBold" />
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <Style x:Key="PosterCardButtonStyle" TargetType="Button" BasedOn="{StaticResource SecondaryButtonStyle}">
+        <Setter Property="Background" Value="#141516" />
+        <Setter Property="BorderBrush" Value="#23252A" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="Padding" Value="10" />
+        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+        <Setter Property="VerticalContentAlignment" Value="Stretch" />
+        <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Background" Value="#18181B" />
+                <Setter Property="BorderBrush" Value="#3F3F46" />
+            </Trigger>
+            <Trigger Property="Tag" Value="Active">
+                <Setter Property="Background" Value="#1B1E2E" />
+                <Setter Property="BorderBrush" Value="#5E6AD2" />
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
     <!-- ==================== TEXTBOX & PASSWORDBOX ==================== -->
 
     <Style x:Key="ModernTextBoxStyle" TargetType="TextBox">
