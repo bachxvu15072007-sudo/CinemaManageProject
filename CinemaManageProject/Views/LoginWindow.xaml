@@ -18,6 +18,23 @@
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
+        <!-- HỌA TIẾT CUỘN PHIM CHÌM -->
+        <Path Grid.RowSpan="2"
+              Style="{StaticResource CinemaVectorIconStyle}"
+              Data="{StaticResource FilmStripIconGeometry}"
+              Width="136" Height="136"
+              Stroke="#5E6AD2"
+              StrokeThickness="1.1"
+              Opacity="0.06"
+              HorizontalAlignment="Right"
+              VerticalAlignment="Bottom"
+              Margin="0,0,-14,-14"
+              IsHitTestVisible="False">
+            <Path.RenderTransform>
+                <RotateTransform Angle="-14" CenterX="68" CenterY="68" />
+            </Path.RenderTransform>
+        </Path>
+
         <!-- HEADER LOGO -->
         <DockPanel Grid.Row="0" Margin="0,0,0,18" LastChildFill="False">
             <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" VerticalAlignment="Center">
@@ -25,12 +42,12 @@
                         Width="38" Height="38"
                         CornerRadius="8"
                         Margin="0,0,12,0">
-                    <TextBlock Text="CV"
-                               FontWeight="Bold"
-                               FontSize="15"
-                               Foreground="#FFFFFF"
-                               HorizontalAlignment="Center"
-                               VerticalAlignment="Center" />
+                    <Path Style="{StaticResource CinemaVectorIconStyle}"
+                          Width="20" Height="20"
+                          Data="{StaticResource FilmClapperIconGeometry}"
+                          Stroke="#FFFFFF"
+                          HorizontalAlignment="Center"
+                          VerticalAlignment="Center" />
                 </Border>
                 <StackPanel VerticalAlignment="Center">
                     <TextBlock Text="CINEVERSE CINEMA"

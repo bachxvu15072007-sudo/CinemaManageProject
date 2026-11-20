@@ -12,12 +12,15 @@
 
     <Grid>
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="244" />
+            <ColumnDefinition Width="Auto" />
             <ColumnDefinition Width="*" />
         </Grid.ColumnDefinitions>
 
         <!-- ==================== SIDEBAR TRÁI ==================== -->
-        <Border Grid.Column="0"
+        <Border x:Name="SidebarPanel"
+                Grid.Column="0"
+                Width="244"
+                Visibility="{Binding IsSidebarOpen, Converter={StaticResource BoolToVis}}"
                 Background="#0F1011"
                 BorderBrush="#23252A"
                 BorderThickness="0,0,1,0"
@@ -30,12 +33,12 @@
                                 Width="36" Height="36"
                                 CornerRadius="8"
                                 Margin="0,0,10,0">
-                            <TextBlock Text="CV"
-                                       FontWeight="Bold"
-                                       FontSize="15"
-                                       Foreground="#FFFFFF"
-                                       HorizontalAlignment="Center"
-                                       VerticalAlignment="Center" />
+                            <Path Style="{StaticResource CinemaVectorIconStyle}"
+                                  Width="19" Height="19"
+                                  Data="{StaticResource FilmClapperIconGeometry}"
+                                  Stroke="#FFFFFF"
+                                  HorizontalAlignment="Center"
+                                  VerticalAlignment="Center" />
                         </Border>
                         <StackPanel VerticalAlignment="Center">
                             <TextBlock Text="CINEVERSE"
@@ -75,11 +78,22 @@
                 <ItemsControl ItemsSource="{Binding MenuItems}">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
-                            <Button Content="{Binding Label}"
-                                    Style="{StaticResource NavMenuButtonStyle}"
+                            <Button Style="{StaticResource NavMenuButtonStyle}"
                                     Tag="{Binding ActiveTag}"
                                     Margin="0,0,0,4"
-                                    Click="OnSelectMenuClick" />
+                                    Click="OnSelectMenuClick">
+                                <StackPanel Orientation="Horizontal">
+                                    <Path Style="{StaticResource CinemaVectorIconStyle}"
+                                          Width="15" Height="15"
+                                          Data="{Binding IconGeometry}"
+                                          Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                                          Margin="0,0,10,0"
+                                          VerticalAlignment="Center" />
+                                    <TextBlock Text="{Binding Label}"
+                                               Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                                               VerticalAlignment="Center" />
+                                </StackPanel>
+                            </Button>
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
@@ -100,6 +114,19 @@
                     BorderThickness="0,0,0,1"
                     Padding="24,14">
                 <DockPanel LastChildFill="False">
+                    <Button x:Name="SidebarToggleButton"
+                            DockPanel.Dock="Left"
+                            Content="{Binding SidebarToggleLabel}"
+                            ToolTip="{Binding SidebarToggleToolTip}"
+                            Style="{StaticResource SecondaryButtonStyle}"
+                            Width="36"
+                            Height="34"
+                            Padding="0"
+                            FontSize="15"
+                            Margin="0,0,12,0"
+                            VerticalAlignment="Center"
+                            Click="OnToggleSidebarClick" />
+
                     <TextBlock DockPanel.Dock="Left"
                                Text="{Binding PageTitle}"
                                FontSize="16"
@@ -113,6 +140,23 @@
                             Click="OnRefreshClick" />
                 </DockPanel>
             </Border>
+
+            <!-- HỌA TIẾT DẢI PHIM CHÌM -->
+            <Path Grid.Row="1"
+                  Style="{StaticResource CinemaVectorIconStyle}"
+                  Data="{StaticResource FilmStripIconGeometry}"
+                  Width="210" Height="210"
+                  Stroke="#5E6AD2"
+                  StrokeThickness="1.0"
+                  Opacity="0.045"
+                  HorizontalAlignment="Right"
+                  VerticalAlignment="Bottom"
+                  Margin="0,0,18,12"
+                  IsHitTestVisible="False">
+                <Path.RenderTransform>
+                    <RotateTransform Angle="-14" CenterX="105" CenterY="105" />
+                </Path.RenderTransform>
+            </Path>
 
             <!-- DASHBOARD THEO VAI TRÒ -->
             <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="24">
