@@ -119,7 +119,7 @@ public sealed class MainViewModel : ViewModelBase
                 MenuItems.Add(new SidebarMenuItem("movies", "Quản lý Phim", true, "FilmClapperIconGeometry"));
                 MenuItems.Add(new SidebarMenuItem("rooms", "Phòng & Sơ đồ ghế", true, "TheaterScreenIconGeometry"));
                 MenuItems.Add(new SidebarMenuItem("showtimes", "Quản lý Lịch chiếu", true, "ShowtimeClockIconGeometry"));
-                MenuItems.Add(new SidebarMenuItem("orders", "Hóa đơn & Doanh thu", false, "ReceiptIconGeometry"));
+                MenuItems.Add(new SidebarMenuItem("orders", "Hóa đơn & Doanh thu", true, "ReceiptIconGeometry"));
                 MenuItems.Add(new SidebarMenuItem("users", "Nhân sự & Tài khoản", false, "UsersGroupIconGeometry"));
                 break;
 
@@ -220,6 +220,17 @@ public sealed class MainViewModel : ViewModelBase
                 else
                 {
                     CurrentDashboard = new AdminShowtimesViewModel();
+                }
+                break;
+
+            case "orders":
+                if (CurrentDashboard is AdminOrdersViewModel)
+                {
+                    CurrentDashboard.LoadData();
+                }
+                else
+                {
+                    CurrentDashboard = new AdminOrdersViewModel();
                 }
                 break;
 
