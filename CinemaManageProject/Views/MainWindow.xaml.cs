@@ -41,6 +41,7 @@ public partial class MainWindow : Window
             AdminRoomsViewModel => new AdminRoomsView(),
             AdminShowtimesViewModel => new AdminShowtimesView(),
             AdminOrdersViewModel => new AdminOrdersView(),
+            AdminUsersViewModel => new AdminUsersView(),
             StaffDashboardViewModel => new StaffDashboardView(),
             _ => new CustomerDashboardView()
         };
