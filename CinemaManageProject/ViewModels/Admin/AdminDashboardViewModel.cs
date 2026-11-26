@@ -1,6 +1,6 @@
 using System.Collections.ObjectModel;
+using CinemaManageProject.Data;
 using CinemaManageProject.Helpers;
-using Microsoft.Data.Sqlite;
 
 namespace CinemaManageProject.ViewModels.Admin;
 
@@ -93,88 +93,41 @@ public sealed class AdminDashboardViewModel : ViewModelBase
 
     public override void LoadData()
     {
-        using SqliteConnection conn = DatabaseHelper.OpenConnection();
+        AdminDashboardSnapshot data = DashboardData.LoadAdminDashboard();
 
-        using (SqliteCommand kpi = conn.CreateCommand())
-        {
-            kpi.CommandText = """
-                SELECT
-                    (SELECT COALESCE(SUM(TotalAmount), 0) FROM Orders WHERE Status != 'Cancelled'),
-                    (SELECT COALESCE(SUM(TotalAmount), 0) FROM Orders WHERE Status != 'Cancelled' AND date(CreatedAt) = date('now', 'localtime')),
-                    (SELECT COUNT(*) FROM Tickets WHERE Status != 'Cancelled'),
-                    (SELECT COUNT(*) FROM Tickets WHERE Status = 'CheckedIn'),
-                    (SELECT COUNT(*) FROM Movies WHERE Status = 'NowShowing'),
-                    (SELECT COUNT(*) FROM Movies WHERE Status = 'ComingSoon'),
-                    (SELECT COUNT(*) FROM Rooms WHERE IsActive = 1),
-                    (SELECT COUNT(*) FROM Rooms),
-                    (SELECT COUNT(*) FROM Seats WHERE IsActive = 0);
-                """;
-            using SqliteDataReader r = kpi.ExecuteReader();
-            if (r.Read())
-            {
-                TotalRevenueText = FormatHelper.FormatVnd(DatabaseHelper.ReadDecimal(r, 0));
-                TodayRevenueText = $"Hôm nay: {FormatHelper.FormatVnd(DatabaseHelper.ReadDecimal(r, 1))}";
-                TotalTicketsText = $"{r.GetInt32(2)} vé";
-                CheckedInSubText = $"{r.GetInt32(3)} vé đã check-in";
-                MoviesCountText = $"{r.GetInt32(4)} đang chiếu";
-                ComingSoonSubText = $"{r.GetInt32(5)} phim sắp chiếu";
-                RoomsText = $"{r.GetInt32(6)} / {r.GetInt32(7)}";
-                MaintenanceSeatsText = $"{r.GetInt32(8)} ghế đang bảo trì";
-            }
-        }
+        TotalRevenueText = FormatHelper.FormatVnd(data.TotalRevenue);
+        TodayRevenueText = $"Hôm nay: {FormatHelper.FormatVnd(data.TodayRevenue)}";
+        TotalTicketsText = $"{data.TotalTickets} vé";
+        CheckedInSubText = $"{data.CheckedInTickets} vé đã check-in";
+        MoviesCountText = $"{data.NowShowingCount} đang chiếu";
+        ComingSoonSubText = $"{data.ComingSoonCount} phim sắp chiếu";
+        RoomsText = $"{data.ActiveRooms} / {data.TotalRooms}";
+        MaintenanceSeatsText = $"{data.MaintenanceSeats} ghế đang bảo trì";
 
         Showtimes.Clear();
-        using (SqliteCommand st = conn.CreateCommand())
+        foreach (AdminDashboardShowtimeDto st in data.Showtimes)
         {
-            st.CommandText = """
-                SELECT m.Title, r.Name, s.StartTime, s.Format,
-                       (SELECT COUNT(*) FROM Tickets t WHERE t.ShowtimeId = s.ShowtimeId AND t.Status IN ('Booked', 'CheckedIn')),
-                       (SELECT COUNT(*) FROM Seats se WHERE se.RoomId = s.RoomId AND se.IsActive = 1),
-                       s.BaseTicketPrice + r.BasePriceSurcharge, s.Status
-                FROM Showtimes s
-                INNER JOIN Movies m ON m.MovieId = s.MovieId
-                INNER JOIN Rooms r ON r.RoomId = s.RoomId
-                ORDER BY CASE WHEN s.Status IN ('OpenForSale', 'Scheduled') THEN 0 ELSE 1 END,
-                         s.StartTime ASC
-                LIMIT 12;
-                """;
-            using SqliteDataReader r = st.ExecuteReader();
-            while (r.Read())
-            {
-                Showtimes.Add(new AdminShowtimeRow(
-                    r.GetString(0),
-                    r.GetString(1),
-                    FormatHelper.FormatSqlDateTime(r.GetString(2)),
-                    r.GetString(3),
-                    $"{r.GetInt32(4)} / {r.GetInt32(5)}",
-                    FormatHelper.FormatVnd(DatabaseHelper.ReadDecimal(r, 6)),
-                    FormatHelper.FormatStatusLabel(r.GetString(7))));
-            }
+            Showtimes.Add(new AdminShowtimeRow(
+                st.MovieTitle,
+                st.RoomName,
+                FormatHelper.FormatSqlDateTime(st.StartTimeSql),
+                st.Format,
+                $"{st.BookedCount} / {st.ActiveSeats}",
+                FormatHelper.FormatVnd(st.BasePlusSurcharge),
+                FormatHelper.FormatStatusLabel(st.Status)));
         }
 
         RecentOrders.Clear();
-        using (SqliteCommand ord = conn.CreateCommand())
+        foreach (AdminDashboardOrderDto ord in data.RecentOrders)
         {
-            ord.CommandText = """
-                SELECT o.OrderCode, COALESCE(c.FullName, 'Khách vãng lai'),
-                       o.BookingChannel, o.PaymentMethod, o.TotalAmount, o.Status
-                FROM Orders o
-                LEFT JOIN Customers c ON c.CustomerId = o.CustomerId
-                ORDER BY o.CreatedAt DESC
-                LIMIT 8;
-                """;
-            using SqliteDataReader r = ord.ExecuteReader();
-            while (r.Read())
-            {
-                string channel = r.GetString(2) == "SelfService" ? "Tự đặt" : "Tại quầy";
-                RecentOrders.Add(new AdminOrderRow(
-                    r.GetString(0),
-                    r.GetString(1),
-                    channel,
-                    FormatHelper.FormatPaymentMethod(r.GetString(3)),
-                    FormatHelper.FormatVnd(DatabaseHelper.ReadDecimal(r, 4)),
-                    FormatHelper.FormatStatusLabel(r.GetString(5))));
-            }
+            string channel = ord.BookingChannel == "SelfService" ? "Tự đặt" : "Tại quầy";
+            RecentOrders.Add(new AdminOrderRow(
+                ord.OrderCode,
+                ord.CustomerName,
+                channel,
+                FormatHelper.FormatPaymentMethod(ord.PaymentMethod),
+                FormatHelper.FormatVnd(ord.TotalAmount),
+                FormatHelper.FormatStatusLabel(ord.Status)));
         }
     }
 }

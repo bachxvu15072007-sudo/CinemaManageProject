@@ -4,7 +4,6 @@ using System.Windows.Media;
 using CinemaManageProject.Data;
 using CinemaManageProject.Helpers;
 using CinemaManageProject.Models;
-using Microsoft.Data.Sqlite;
 
 namespace CinemaManageProject.ViewModels.Customer;
 
@@ -212,11 +211,11 @@ public sealed class CustomerDashboardViewModel : ViewModelBase
 
     public override void LoadData()
     {
-        using SqliteConnection conn = DatabaseHelper.OpenConnection();
+        CustomerDashboardSnapshot data = DashboardData.LoadCustomerDashboard(
+            App.CurrentUser?.UserId,
+            App.CurrentUser?.CustomerProfile);
 
-        Models.Customer? profile = App.CurrentUser is not null
-            ? CustomerData.LoadCustomerProfile(conn, App.CurrentUser.UserId) ?? App.CurrentUser.CustomerProfile
-            : null;
+        Models.Customer? profile = data.Profile;
         if (App.CurrentUser is not null && profile is not null)
         {
             App.CurrentUser.CustomerProfile = profile;
@@ -235,88 +234,47 @@ public sealed class CustomerDashboardViewModel : ViewModelBase
         TotalSpentText = FormatHelper.FormatVnd(profile?.TotalSpent ?? 0m);
 
         _allMovies.Clear();
-        using (SqliteCommand mov = conn.CreateCommand())
+        foreach (CustomerDashboardMovieDto mov in data.Movies)
         {
-            mov.CommandText = """
-                SELECT m.MovieId, m.Title, m.OriginalTitle, m.Director, m.Cast,
-                       m.DurationMinutes, m.Language, m.ReleaseDate, m.AgeRating,
-                       m.Description, m.PosterPath, m.Status,
-                       COALESCE((SELECT GROUP_CONCAT(g.Name, ', ')
-                                 FROM MovieGenres mg INNER JOIN Genres g ON g.GenreId = mg.GenreId
-                                 WHERE mg.MovieId = m.MovieId), 'Tổng hợp'),
-                       (SELECT MIN(s.BaseTicketPrice + r.BasePriceSurcharge)
-                        FROM Showtimes s
-                        INNER JOIN Rooms r ON r.RoomId = s.RoomId
-                        WHERE s.MovieId = m.MovieId AND s.Status = 'OpenForSale')
-                FROM Movies m
-                WHERE m.Status IN ('NowShowing', 'ComingSoon')
-                ORDER BY CASE m.Status WHEN 'NowShowing' THEN 0 ELSE 1 END, m.ReleaseDate DESC;
-                """;
-            using SqliteDataReader r = mov.ExecuteReader();
-            while (r.Read())
-            {
-                string rawStatus = r.GetString(11);
-                bool nowShowing = rawStatus == "NowShowing";
-                string priceText = r.IsDBNull(13)
-                    ? "Chưa mở bán"
-                    : $"Từ {FormatHelper.FormatVnd(DatabaseHelper.ReadDecimal(r, 13))}";
-                string? posterPath = r.IsDBNull(10) ? null : r.GetString(10);
+            bool nowShowing = mov.Status == "NowShowing";
+            string priceText = mov.MinOpenPrice.HasValue
+                ? $"Từ {FormatHelper.FormatVnd(mov.MinOpenPrice.Value)}"
+                : "Chưa mở bán";
 
-                _allMovies.Add(new CustomerMovieRow(
-                    r.GetInt32(0),
-                    r.GetString(1),
-                    r.IsDBNull(2) ? null : r.GetString(2),
-                    $"Đạo diễn: {ReadOptionalText(r, 3, "Đang cập nhật")}",
-                    $"Diễn viên: {ReadOptionalText(r, 4, "Đang cập nhật")}",
-                    ReadOptionalText(r, 9, "Chưa có mô tả giới thiệu cho phim này."),
-                    $"Khởi chiếu {FormatHelper.FormatSqlDateTime(r.GetString(7), "dd/MM/yyyy")}",
-                    r.GetString(12),
-                    $"{r.GetInt32(5)} phút • {r.GetString(6)}",
-                    r.GetString(8),
-                    FormatHelper.FormatStatusLabel(rawStatus),
-                    priceText,
-                    nowShowing,
-                    TryLoadPoster(posterPath)));
-            }
+            _allMovies.Add(new CustomerMovieRow(
+                mov.MovieId,
+                mov.Title,
+                mov.OriginalTitle,
+                $"Đạo diễn: {mov.Director}",
+                $"Diễn viên: {mov.Cast}",
+                mov.Description,
+                $"Khởi chiếu {FormatHelper.FormatSqlDateTime(mov.ReleaseDateSql, "dd/MM/yyyy")}",
+                mov.Genres,
+                $"{mov.DurationMinutes} phút • {mov.Language}",
+                mov.AgeRating,
+                FormatHelper.FormatStatusLabel(mov.Status),
+                priceText,
+                nowShowing,
+                TryLoadPoster(mov.PosterPath)));
         }
         ApplyFilter();
 
         MyTickets.Clear();
         int bookedCount = 0;
-        if (profile is not null)
+        foreach (CustomerDashboardTicketDto tk in data.MyTickets)
         {
-            using SqliteCommand tk = conn.CreateCommand();
-            tk.CommandText = """
-                SELECT t.TicketCode, m.Title, r.Name, se.SeatCode, s.StartTime, t.UnitPrice, t.Status
-                FROM Tickets t
-                INNER JOIN Orders o ON o.OrderId = t.OrderId
-                INNER JOIN Showtimes s ON s.ShowtimeId = t.ShowtimeId
-                INNER JOIN Movies m ON m.MovieId = s.MovieId
-                INNER JOIN Rooms r ON r.RoomId = s.RoomId
-                INNER JOIN Seats se ON se.SeatId = t.SeatId
-                WHERE o.CustomerId = @cid
-                ORDER BY s.StartTime DESC
-                LIMIT 15;
-                """;
-            tk.Parameters.AddWithValue("@cid", profile.CustomerId);
-
-            using SqliteDataReader r = tk.ExecuteReader();
-            while (r.Read())
+            if (tk.Status == "Booked")
             {
-                string rawStatus = r.GetString(6);
-                if (rawStatus == "Booked")
-                {
-                    bookedCount++;
-                }
-
-                MyTickets.Add(new CustomerTicketRow(
-                    r.GetString(0),
-                    r.GetString(1),
-                    $"{r.GetString(2)} • Ghế {r.GetString(3)}",
-                    FormatHelper.FormatSqlDateTime(r.GetString(4), "dd/MM/yyyy HH:mm"),
-                    FormatHelper.FormatVnd(DatabaseHelper.ReadDecimal(r, 5)),
-                    FormatHelper.FormatStatusLabel(rawStatus)));
+                bookedCount++;
             }
+
+            MyTickets.Add(new CustomerTicketRow(
+                tk.TicketCode,
+                tk.MovieTitle,
+                $"{tk.RoomName} • Ghế {tk.SeatCode}",
+                FormatHelper.FormatSqlDateTime(tk.StartTimeSql, "dd/MM/yyyy HH:mm"),
+                FormatHelper.FormatVnd(tk.UnitPrice),
+                FormatHelper.FormatStatusLabel(tk.Status)));
         }
 
         ActiveTicketsText = $"{bookedCount} vé chờ chiếu";
@@ -347,17 +305,6 @@ public sealed class CustomerDashboardViewModel : ViewModelBase
             : Movies.FirstOrDefault();
 
         SelectMovie(nextSelection);
-    }
-
-    private static string ReadOptionalText(SqliteDataReader reader, int ordinal, string fallback)
-    {
-        if (reader.IsDBNull(ordinal))
-        {
-            return fallback;
-        }
-
-        string text = reader.GetString(ordinal).Trim();
-        return string.IsNullOrWhiteSpace(text) ? fallback : text;
     }
 
     private static ImageSource? TryLoadPoster(string? storedPath)
