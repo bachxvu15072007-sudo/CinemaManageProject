@@ -78,6 +78,25 @@ public sealed record BookingCustomerSummary
     public string TotalSpentText => FormatHelper.FormatVnd(TotalSpent);
 }
 
+public sealed record BrowseMovieRow
+{
+    public int MovieId { get; init; }
+    public string Title { get; init; } = string.Empty;
+    public string? OriginalTitle { get; init; }
+    public string? Director { get; init; }
+    public string? Cast { get; init; }
+    public int DurationMinutes { get; init; }
+    public string Language { get; init; } = string.Empty;
+    public string ReleaseDateSql { get; init; } = string.Empty;
+    public string AgeRating { get; init; } = string.Empty;
+    public string? Description { get; init; }
+    public string? PosterPath { get; init; }
+    public string Status { get; init; } = string.Empty;
+    public string GenresText { get; init; } = string.Empty;
+    public int OpenShowtimesCount { get; init; }
+    public decimal? MinOpenPrice { get; init; }
+}
+
 public sealed record BookingCreateInput(
     int ShowtimeId,
     IReadOnlyList<int> SeatIds,
@@ -203,6 +222,60 @@ public static class BookingData
             """;
 
         return conn.Query<OpenShowtimeOption>(sql, new { mid = movieId }).AsList();
+    }
+
+    public static List<BrowseMovieRow> LoadBrowseMovies()
+    {
+        using SqliteConnection conn = DatabaseHelper.OpenConnection();
+        const string sql = """
+            SELECT m.MovieId,
+                   m.Title,
+                   m.OriginalTitle,
+                   m.Director,
+                   m.Cast,
+                   m.DurationMinutes,
+                   m.Language,
+                   m.ReleaseDate AS ReleaseDateSql,
+                   m.AgeRating,
+                   m.Description,
+                   m.PosterPath,
+                   m.Status,
+                   COALESCE((SELECT GROUP_CONCAT(g.Name, ', ')
+                             FROM MovieGenres mg INNER JOIN Genres g ON g.GenreId = mg.GenreId
+                             WHERE mg.MovieId = m.MovieId), 'Tổng hợp') AS GenresText,
+                   (SELECT COUNT(*)
+                    FROM Showtimes s
+                    INNER JOIN Rooms r ON r.RoomId = s.RoomId
+                    WHERE s.MovieId = m.MovieId AND s.Status = 'OpenForSale' AND r.IsActive = 1) AS OpenShowtimesCount,
+                   (SELECT MIN(s.BaseTicketPrice + r.BasePriceSurcharge)
+                    FROM Showtimes s
+                    INNER JOIN Rooms r ON r.RoomId = s.RoomId
+                    WHERE s.MovieId = m.MovieId AND s.Status = 'OpenForSale' AND r.IsActive = 1) AS MinOpenPrice
+            FROM Movies m
+            WHERE m.Status IN ('NowShowing', 'ComingSoon')
+            ORDER BY CASE m.Status WHEN 'NowShowing' THEN 0 ELSE 1 END,
+                     OpenShowtimesCount DESC,
+                     m.ReleaseDate DESC;
+            """;
+        return conn.Query<BrowseMovieRow>(sql).AsList();
+    }
+
+    public static List<string> LoadGenreNames()
+    {
+        using SqliteConnection conn = DatabaseHelper.OpenConnection();
+        return conn.Query<string>("SELECT Name FROM Genres ORDER BY Name COLLATE NOCASE ASC;").AsList();
+    }
+
+    public static BookingCustomerSummary? FindCustomerByUserId(int userId)
+    {
+        using SqliteConnection conn = DatabaseHelper.OpenConnection();
+        const string sql = """
+            SELECT CustomerId, UserId, FullName, Phone, Email, LoyaltyPoints, TotalSpent, Tier
+            FROM Customers
+            WHERE UserId = @uid
+            LIMIT 1;
+            """;
+        return conn.QueryFirstOrDefault<BookingCustomerSummary>(sql, new { uid = userId });
     }
 
     public static List<ShowtimeSeatRow> LoadShowtimeSeatMap(int showtimeId)

@@ -134,7 +134,7 @@ public sealed class MainViewModel : ViewModelBase
             default:
                 PageTitle = "Trang chủ Hội viên";
                 MenuItems.Add(new SidebarMenuItem("dashboard", "Trang chủ Hội viên", true, "DashboardIconGeometry") { IsSelected = true });
-                MenuItems.Add(new SidebarMenuItem("browse", "Phim & Lịch chiếu", false, "FilmStripIconGeometry"));
+                MenuItems.Add(new SidebarMenuItem("browse", "Phim & Lịch chiếu", true, "FilmStripIconGeometry"));
                 MenuItems.Add(new SidebarMenuItem("mytickets", "Vé của tôi", false, "CinemaTicketIconGeometry"));
                 break;
         }
@@ -275,6 +275,17 @@ public sealed class MainViewModel : ViewModelBase
                 else
                 {
                     CurrentDashboard = new StaffCustomersViewModel();
+                }
+                break;
+
+            case "browse":
+                if (CurrentDashboard is CustomerBrowseViewModel)
+                {
+                    CurrentDashboard.LoadData();
+                }
+                else
+                {
+                    CurrentDashboard = new CustomerBrowseViewModel();
                 }
                 break;
 
