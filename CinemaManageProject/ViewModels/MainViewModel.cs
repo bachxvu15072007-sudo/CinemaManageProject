@@ -127,15 +127,15 @@ public sealed class MainViewModel : ViewModelBase
                 PageTitle = "Dashboard Quầy vé";
                 MenuItems.Add(new SidebarMenuItem("dashboard", "Dashboard Quầy vé", true, "DashboardIconGeometry") { IsSelected = true });
                 MenuItems.Add(new SidebarMenuItem("pos", "Bán vé tại quầy", true, "CinemaTicketIconGeometry"));
-                MenuItems.Add(new SidebarMenuItem("checkin", "Soát vé Check-in", false, "CheckTicketIconGeometry"));
-                MenuItems.Add(new SidebarMenuItem("customers", "Tra cứu Khách hàng", false, "UsersGroupIconGeometry"));
+                MenuItems.Add(new SidebarMenuItem("checkin", "Soát vé Check-in", true, "CheckTicketIconGeometry"));
+                MenuItems.Add(new SidebarMenuItem("customers", "Tra cứu Khách hàng", true, "UsersGroupIconGeometry"));
                 break;
 
             default:
                 PageTitle = "Trang chủ Hội viên";
                 MenuItems.Add(new SidebarMenuItem("dashboard", "Trang chủ Hội viên", true, "DashboardIconGeometry") { IsSelected = true });
-                MenuItems.Add(new SidebarMenuItem("browse", "Phim & Lịch chiếu", false, "FilmStripIconGeometry"));
-                MenuItems.Add(new SidebarMenuItem("mytickets", "Vé của tôi", false, "CinemaTicketIconGeometry"));
+                MenuItems.Add(new SidebarMenuItem("browse", "Phim & Lịch chiếu", true, "FilmStripIconGeometry"));
+                MenuItems.Add(new SidebarMenuItem("mytickets", "Vé của tôi", true, "CinemaTicketIconGeometry"));
                 break;
         }
     }
@@ -253,6 +253,50 @@ public sealed class MainViewModel : ViewModelBase
                 else
                 {
                     CurrentDashboard = new StaffPosViewModel();
+                }
+                break;
+
+            case "checkin":
+                if (CurrentDashboard is StaffCheckInViewModel)
+                {
+                    CurrentDashboard.LoadData();
+                }
+                else
+                {
+                    CurrentDashboard = new StaffCheckInViewModel();
+                }
+                break;
+
+            case "customers":
+                if (CurrentDashboard is StaffCustomersViewModel)
+                {
+                    CurrentDashboard.LoadData();
+                }
+                else
+                {
+                    CurrentDashboard = new StaffCustomersViewModel();
+                }
+                break;
+
+            case "browse":
+                if (CurrentDashboard is CustomerBrowseViewModel)
+                {
+                    CurrentDashboard.LoadData();
+                }
+                else
+                {
+                    CurrentDashboard = new CustomerBrowseViewModel();
+                }
+                break;
+
+            case "mytickets":
+                if (CurrentDashboard is CustomerMyTicketsViewModel)
+                {
+                    CurrentDashboard.LoadData();
+                }
+                else
+                {
+                    CurrentDashboard = new CustomerMyTicketsViewModel();
                 }
                 break;
 

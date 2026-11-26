@@ -1,0 +1,248 @@
+<UserControl x:Class="CinemaManageProject.Views.Staff.StaffCheckInView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             d:DesignWidth="988"
+             d:DesignHeight="860"
+             d:Background="#09090B">
+
+    <StackPanel>
+        <!-- HEADER -->
+        <StackPanel Margin="0,0,0,16">
+            <TextBlock Text="Soát vé Check-in"
+                       Style="{StaticResource PageTitleTextStyle}"
+                       Margin="0,0,0,4" />
+            <TextBlock Text="Quét hoặc nhập mã vé (TicketCode), đối chiếu phòng/ghế/suất chiếu và xác nhận khách vào phòng."
+                       Style="{StaticResource MutedCaptionTextStyle}" />
+        </StackPanel>
+
+        <!-- 4 KPI SOÁT VÉ -->
+        <Grid Margin="0,0,0,16">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="12" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="12" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="12" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <Border Grid.Column="0" Style="{StaticResource CardBorderStyle}" Padding="14">
+                <StackPanel>
+                    <TextBlock Text="VÉ CHỜ SOÁT" FontSize="11" FontWeight="SemiBold" Foreground="#A1A1AA" />
+                    <TextBlock Text="{Binding PendingCountText}" FontSize="20" FontWeight="Bold" Foreground="#FEE685" Margin="0,6,0,2" />
+                    <TextBlock Text="Trạng thái Booked" Style="{StaticResource MutedCaptionTextStyle}" />
+                </StackPanel>
+            </Border>
+
+            <Border Grid.Column="2" Style="{StaticResource CardBorderStyle}" Padding="14">
+                <StackPanel>
+                    <TextBlock Text="CHECK-IN HÔM NAY" FontSize="11" FontWeight="SemiBold" Foreground="#A1A1AA" />
+                    <TextBlock Text="{Binding CheckedInTodayText}" FontSize="20" FontWeight="Bold" Foreground="#A4F4CF" Margin="0,6,0,2" />
+                    <TextBlock Text="Ghi nhận trong ngày" Style="{StaticResource MutedCaptionTextStyle}" />
+                </StackPanel>
+            </Border>
+
+            <Border Grid.Column="4" Style="{StaticResource CardBorderStyle}" Padding="14">
+                <StackPanel>
+                    <TextBlock Text="TỔNG ĐÃ CHECK-IN" FontSize="11" FontWeight="SemiBold" Foreground="#A1A1AA" />
+                    <TextBlock Text="{Binding CheckedInTotalText}" FontSize="20" FontWeight="Bold" Foreground="#5E6AD2" Margin="0,6,0,2" />
+                    <TextBlock Text="Toàn bộ lịch sử" Style="{StaticResource MutedCaptionTextStyle}" />
+                </StackPanel>
+            </Border>
+
+            <Border Grid.Column="6" Style="{StaticResource CardBorderStyle}" Padding="14">
+                <StackPanel>
+                    <TextBlock Text="VÉ ĐÃ HỦY" FontSize="11" FontWeight="SemiBold" Foreground="#A1A1AA" />
+                    <TextBlock Text="{Binding CancelledCountText}" FontSize="20" FontWeight="Bold" Foreground="#FDA4AF" Margin="0,6,0,2" />
+                    <TextBlock Text="Không hợp lệ vào rạp" Style="{StaticResource MutedCaptionTextStyle}" />
+                </StackPanel>
+            </Border>
+        </Grid>
+
+        <!-- THÔNG BÁO -->
+        <Border Visibility="{Binding HasError, Converter={StaticResource BoolToVis}, FallbackValue=Collapsed}"
+                Background="#24C10007"
+                BorderBrush="#FFC9C9"
+                BorderThickness="1"
+                CornerRadius="8"
+                Padding="12,10"
+                Margin="0,0,0,12">
+            <TextBlock Text="{Binding ErrorMessage}" Foreground="#FFC9C9" FontSize="12" TextWrapping="Wrap" />
+        </Border>
+
+        <Border Visibility="{Binding HasSuccess, Converter={StaticResource BoolToVis}, FallbackValue=Collapsed}"
+                Background="#22166534"
+                BorderBrush="#A4F4CF"
+                BorderThickness="1"
+                CornerRadius="8"
+                Padding="12,10"
+                Margin="0,0,0,12">
+            <TextBlock Text="{Binding SuccessMessage}" Foreground="#A4F4CF" FontSize="12" TextWrapping="Wrap" />
+        </Border>
+
+        <!-- KHUNG TRA CỨU & XÁC NHẬN MÃ VÉ -->
+        <Border Style="{StaticResource CardBorderStyle}" Margin="0,0,0,16">
+            <StackPanel>
+                <TextBlock Text="Tra cứu &amp; Xác nhận Check-in"
+                           Style="{StaticResource SectionTitleTextStyle}"
+                           Margin="0,0,0,12" />
+
+                <Grid Margin="0,0,0,14">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="10" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="8" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="8" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+
+                    <TextBox Grid.Column="0"
+                             Style="{StaticResource ModernTextBoxStyle}"
+                             Text="{Binding TicketCodeInput, UpdateSourceTrigger=PropertyChanged}"
+                             KeyDown="OnTicketCodeKeyDown"
+                             ToolTip="Nhập mã vé (ví dụ: VE-KHACH101) rồi bấm Enter hoặc Tra cứu" />
+                    <Button Grid.Column="2"
+                            Content="Tra cứu mã vé"
+                            Style="{StaticResource SecondaryButtonStyle}"
+                            Click="OnLookupClick" />
+                    <Button Grid.Column="4"
+                            Content="Xác nhận Check-in"
+                            Style="{StaticResource PrimaryButtonStyle}"
+                            IsEnabled="{Binding CanConfirmCheckIn}"
+                            Click="OnConfirmCheckInClick" />
+                    <Button Grid.Column="6"
+                            Content="Xóa"
+                            Style="{StaticResource GhostButtonStyle}"
+                            Click="OnClearClick" />
+                </Grid>
+
+                <!-- THẺ CHI TIẾT VÉ ĐANG KIỂM TRA -->
+                <Border Visibility="{Binding HasCurrentTicket, Converter={StaticResource BoolToVis}, FallbackValue=Collapsed}"
+                        Background="#18181B"
+                        BorderBrush="#2B2E38"
+                        BorderThickness="1"
+                        CornerRadius="10"
+                        Padding="16">
+                    <StackPanel>
+                        <!-- BANNER TRẠNG THÁI HỢP LỆ / ĐÃ CHECK-IN / HỦY -->
+                        <Border Visibility="{Binding IsCurrentValid, Converter={StaticResource BoolToVis}, FallbackValue=Collapsed}"
+                                Background="#22166534" BorderBrush="#A4F4CF" BorderThickness="1" CornerRadius="8" Padding="12,8" Margin="0,0,0,14">
+                            <TextBlock Text="{Binding CurrentTicket.ValidationSummary}" Foreground="#A4F4CF" FontSize="12" FontWeight="SemiBold" TextWrapping="Wrap" />
+                        </Border>
+                        <Border Visibility="{Binding IsCurrentAlreadyCheckedIn, Converter={StaticResource BoolToVis}, FallbackValue=Collapsed}"
+                                Background="#295E4500" BorderBrush="#FEE685" BorderThickness="1" CornerRadius="8" Padding="12,8" Margin="0,0,0,14">
+                            <TextBlock Text="{Binding CurrentTicket.ValidationSummary}" Foreground="#FEE685" FontSize="12" FontWeight="SemiBold" TextWrapping="Wrap" />
+                        </Border>
+                        <Border Visibility="{Binding IsCurrentBlocked, Converter={StaticResource BoolToVis}, FallbackValue=Collapsed}"
+                                Background="#24C10007" BorderBrush="#FFC9C9" BorderThickness="1" CornerRadius="8" Padding="12,8" Margin="0,0,0,14">
+                            <TextBlock Text="{Binding CurrentTicket.ValidationSummary}" Foreground="#FFC9C9" FontSize="12" FontWeight="SemiBold" TextWrapping="Wrap" />
+                        </Border>
+
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="16" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="16" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="MÃ VÉ / HÓA ĐƠN" FontSize="10" FontWeight="Bold" Foreground="#71717A" />
+                                <TextBlock Text="{Binding CurrentTicket.TicketCode}" FontSize="18" FontWeight="Bold" Foreground="#FAFAFA" Margin="0,2,0,4" />
+                                <TextBlock FontSize="12" Foreground="#A1A1AA">
+                                    <Run Text="Hóa đơn: " />
+                                    <Run Text="{Binding CurrentTicket.OrderCode, Mode=OneWay}" Foreground="#FAFAFA" />
+                                </TextBlock>
+                                <TextBlock FontSize="12" Foreground="#A1A1AA" Margin="0,2,0,0">
+                                    <Run Text="Giá vé: " />
+                                    <Run Text="{Binding CurrentTicket.UnitPriceText, Mode=OneWay}" Foreground="#5E6AD2" FontWeight="SemiBold" />
+                                </TextBlock>
+                            </StackPanel>
+
+                            <StackPanel Grid.Column="2">
+                                <TextBlock Text="PHIM &amp; SUẤT CHIẾU" FontSize="10" FontWeight="Bold" Foreground="#71717A" />
+                                <TextBlock Text="{Binding CurrentTicket.MovieTitle}" FontSize="15" FontWeight="Bold" Foreground="#FAFAFA" TextWrapping="Wrap" Margin="0,2,0,4" />
+                                <TextBlock FontSize="12" Foreground="#A1A1AA">
+                                    <Run Text="{Binding CurrentTicket.StartTimeDisplay, Mode=OneWay}" Foreground="#FAFAFA" />
+                                    <Run Text=" • " />
+                                    <Run Text="{Binding CurrentTicket.Format, Mode=OneWay}" />
+                                </TextBlock>
+                                <TextBlock FontSize="12" Foreground="#A1A1AA" Margin="0,2,0,0">
+                                    <Run Text="{Binding CurrentTicket.RoomAndSeat, Mode=OneWay}" Foreground="#FAFAFA" FontWeight="SemiBold" />
+                                    <Run Text=" (" />
+                                    <Run Text="{Binding CurrentTicket.SeatTypeDisplay, Mode=OneWay}" />
+                                    <Run Text=")" />
+                                </TextBlock>
+                            </StackPanel>
+
+                            <StackPanel Grid.Column="4">
+                                <TextBlock Text="KHÁCH HÀNG &amp; TRẠNG THÁI" FontSize="10" FontWeight="Bold" Foreground="#71717A" />
+                                <TextBlock Text="{Binding CurrentTicket.CustomerName}" FontSize="14" FontWeight="SemiBold" Foreground="#FAFAFA" Margin="0,2,0,2" />
+                                <TextBlock Text="{Binding CurrentTicket.CustomerPhone}" FontSize="12" Foreground="#A1A1AA" Margin="0,0,0,4" />
+                                <TextBlock FontSize="12" Foreground="#A1A1AA">
+                                    <Run Text="Trạng thái: " />
+                                    <Run Text="{Binding CurrentTicket.StatusDisplay, Mode=OneWay}" Foreground="#FAFAFA" FontWeight="SemiBold" />
+                                </TextBlock>
+                                <TextBlock FontSize="11" Foreground="#71717A" Margin="0,2,0,0">
+                                    <Run Text="Soát lúc: " />
+                                    <Run Text="{Binding CurrentTicket.CheckedInAtDisplay, Mode=OneWay}" />
+                                    <Run Text=" • NV: " />
+                                    <Run Text="{Binding CurrentTicket.CheckedInByDisplay, Mode=OneWay}" />
+                                </TextBlock>
+                            </StackPanel>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </Border>
+
+        <!-- DANH SÁCH VÉ -->
+        <Border Style="{StaticResource CardBorderStyle}">
+            <StackPanel>
+                <Grid Margin="0,0,0,12">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="260" />
+                    </Grid.ColumnDefinitions>
+                    <WrapPanel Grid.Column="0" VerticalAlignment="Center">
+                        <Button Content="Chờ soát vé" Tag="{Binding BookedFilterTag}" Style="{StaticResource FilterChipButtonStyle}" Margin="0,0,8,0" Click="OnFilterBookedClick" />
+                        <Button Content="Đã check-in" Tag="{Binding CheckedInFilterTag}" Style="{StaticResource FilterChipButtonStyle}" Margin="0,0,8,0" Click="OnFilterCheckedInClick" />
+                        <Button Content="Đã hủy" Tag="{Binding CancelledFilterTag}" Style="{StaticResource FilterChipButtonStyle}" Margin="0,0,8,0" Click="OnFilterCancelledClick" />
+                        <Button Content="Tất cả" Tag="{Binding AllFilterTag}" Style="{StaticResource FilterChipButtonStyle}" Click="OnFilterAllClick" />
+                    </WrapPanel>
+                    <TextBox Grid.Column="1"
+                             Style="{StaticResource ModernTextBoxStyle}"
+                             Text="{Binding SearchKeyword, UpdateSourceTrigger=PropertyChanged}"
+                             ToolTip="Lọc theo mã vé, mã đơn, phim, ghế, khách hàng..." />
+                </Grid>
+
+                <TextBlock Text="Không có vé nào khớp bộ lọc hiện tại."
+                           Visibility="{Binding HasNoFilteredTickets, Converter={StaticResource BoolToVis}, FallbackValue=Collapsed}"
+                           Style="{StaticResource MutedCaptionTextStyle}"
+                           Margin="0,8,0,8" />
+
+                <DataGrid Style="{StaticResource CompactDataGridStyle}"
+                          ItemsSource="{Binding FilteredTickets}"
+                          SelectedItem="{Binding SelectedQueueTicket, Mode=TwoWay}"
+                          MaxHeight="340">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="Mã vé" Binding="{Binding TicketCode}" Width="130" MinWidth="115" ElementStyle="{StaticResource EllipsisCellTextStyle}" />
+                        <DataGridTextColumn Header="Phim" Binding="{Binding MovieTitle}" Width="*" MinWidth="150" ElementStyle="{StaticResource EllipsisCellTextStyle}" />
+                        <DataGridTextColumn Header="Phòng &amp; Ghế" Binding="{Binding RoomAndSeat}" Width="155" MinWidth="135" ElementStyle="{StaticResource EllipsisCellTextStyle}" />
+                        <DataGridTextColumn Header="Suất chiếu" Binding="{Binding StartTimeDisplay}" Width="116" MinWidth="105" />
+                        <DataGridTextColumn Header="Khách hàng" Binding="{Binding CustomerName}" Width="130" MinWidth="110" ElementStyle="{StaticResource EllipsisCellTextStyle}" />
+                        <DataGridTextColumn Header="Trạng thái" Binding="{Binding StatusDisplay}" Width="98" MinWidth="90" />
+                        <DataGridTextColumn Header="Check-in lúc" Binding="{Binding CheckedInAtDisplay}" Width="116" MinWidth="105" />
+                    </DataGrid.Columns>
+                </DataGrid>
+            </StackPanel>
+        </Border>
+    </StackPanel>
+</UserControl>
