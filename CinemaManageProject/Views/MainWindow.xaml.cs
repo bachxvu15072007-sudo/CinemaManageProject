@@ -47,6 +47,7 @@ public partial class MainWindow : Window
             StaffCheckInViewModel => new StaffCheckInView(),
             StaffCustomersViewModel => new StaffCustomersView(),
             CustomerBrowseViewModel => new CustomerBrowseView(),
+            CustomerMyTicketsViewModel => new CustomerMyTicketsView(),
             _ => new CustomerDashboardView()
         };
         view.DataContext = _viewModel.CurrentDashboard;

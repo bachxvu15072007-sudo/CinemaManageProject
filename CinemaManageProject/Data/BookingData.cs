@@ -124,6 +124,89 @@ public sealed record BookingCreateResult(
     string? UpdatedCustomerTier,
     string? ErrorMessage);
 
+public sealed record CustomerMyTicketRow
+{
+    public int TicketId { get; init; }
+    public string TicketCode { get; init; } = string.Empty;
+    public int OrderId { get; init; }
+    public string OrderCode { get; init; } = string.Empty;
+    public string BookingChannel { get; init; } = string.Empty;
+    public string PaymentMethod { get; init; } = string.Empty;
+    public string MovieTitle { get; init; } = string.Empty;
+    public string AgeRating { get; init; } = string.Empty;
+    public string RoomName { get; init; } = string.Empty;
+    public string Format { get; init; } = string.Empty;
+    public string SeatCode { get; init; } = string.Empty;
+    public string SeatType { get; init; } = string.Empty;
+    public string StartTimeSql { get; init; } = string.Empty;
+    public string EndTimeSql { get; init; } = string.Empty;
+    public string ShowtimeStatus { get; init; } = string.Empty;
+    public decimal UnitPrice { get; init; }
+    public string TicketStatus { get; init; } = string.Empty;
+    public string OrderStatus { get; init; } = string.Empty;
+    public string? CheckedInAtSql { get; init; }
+    public string OrderCreatedAtSql { get; init; } = string.Empty;
+
+    public string RoomAndSeat => $"{RoomName} • Ghế {SeatCode}";
+    public string SeatTypeDisplay => FormatHelper.FormatSeatType(SeatType);
+    public string StartTimeDisplay => FormatHelper.FormatSqlDateTime(StartTimeSql, "dd/MM/yyyy HH:mm");
+    public string TimeRangeDisplay =>
+        $"{FormatHelper.FormatSqlDateTime(StartTimeSql, "HH:mm")} - {FormatHelper.FormatSqlDateTime(EndTimeSql, "HH:mm")}";
+    public string UnitPriceText => FormatHelper.FormatVnd(UnitPrice);
+    public string StatusDisplay => FormatHelper.FormatStatusLabel(TicketStatus);
+    public string PaymentDisplay => FormatHelper.FormatPaymentMethod(PaymentMethod);
+    public string ChannelDisplay => BookingChannel == "SelfService" ? "Đặt online" : "Tại quầy";
+    public string CheckedInAtDisplay => string.IsNullOrWhiteSpace(CheckedInAtSql)
+        ? "Chưa soát vé"
+        : FormatHelper.FormatSqlDateTime(CheckedInAtSql, "dd/MM/yyyy HH:mm");
+    public string OrderCreatedAtDisplay => FormatHelper.FormatSqlDateTime(OrderCreatedAtSql, "dd/MM/yyyy HH:mm");
+
+    public bool IsPending => TicketStatus == "Booked";
+    public bool IsCheckedIn => TicketStatus == "CheckedIn";
+    public bool IsCancelled => TicketStatus == "Cancelled";
+
+    public bool CanCancel =>
+        TicketStatus == "Booked"
+        && OrderStatus != "Cancelled"
+        && (ShowtimeStatus == "OpenForSale" || ShowtimeStatus == "Scheduled");
+}
+
+public sealed record CustomerMyOrderRow
+{
+    public int OrderId { get; init; }
+    public string OrderCode { get; init; } = string.Empty;
+    public string BookingChannel { get; init; } = string.Empty;
+    public int TotalTickets { get; init; }
+    public int ActiveTicketsCount { get; init; }
+    public decimal SubTotalAmount { get; init; }
+    public int PointsUsed { get; init; }
+    public decimal DiscountAmount { get; init; }
+    public decimal TotalAmount { get; init; }
+    public string PaymentMethod { get; init; } = string.Empty;
+    public string Status { get; init; } = string.Empty;
+    public string CreatedAtSql { get; init; } = string.Empty;
+    public string MoviesSummary { get; init; } = string.Empty;
+    public string TicketCodesSummary { get; init; } = string.Empty;
+
+    public string ChannelDisplay => BookingChannel == "SelfService" ? "Online" : "Tại quầy";
+    public string PaymentDisplay => FormatHelper.FormatPaymentMethod(PaymentMethod);
+    public string StatusDisplay => FormatHelper.FormatStatusLabel(Status);
+    public string TicketsText => ActiveTicketsCount != TotalTickets
+        ? $"{ActiveTicketsCount}/{TotalTickets} vé"
+        : $"{TotalTickets} vé";
+    public string DiscountText => DiscountAmount > 0m ? $"-{FormatHelper.FormatVnd(DiscountAmount)}" : "0đ";
+    public string TotalAmountText => FormatHelper.FormatVnd(TotalAmount);
+    public string CreatedAtDisplay => FormatHelper.FormatSqlDateTime(CreatedAtSql, "dd/MM/yyyy HH:mm");
+}
+
+public sealed record CancelTicketResult(
+    bool Succeeded,
+    string NewOrderStatus,
+    decimal RefundedAmount,
+    int UpdatedPoints,
+    string UpdatedTier,
+    string? ErrorMessage);
+
 /// <summary>
 /// Lõi truy vấn và giao dịch đặt vé SQLite bằng Dapper dùng chung cho Staff POS (Counter) và Customer Self-Booking (SelfService).
 /// </summary>
@@ -629,4 +712,209 @@ public static class BookingData
 
     private static BookingCreateResult Fail(string message)
         => new(false, 0, string.Empty, [], 0m, 0, 0m, 0m, 0m, 0m, 0, null, null, message);
+
+    private sealed class CancelTicketTxRow
+    {
+        public int TicketId { get; init; }
+        public int OrderId { get; init; }
+        public int? CustomerId { get; init; }
+        public decimal UnitPrice { get; init; }
+        public string TicketStatus { get; init; } = string.Empty;
+        public string OrderStatus { get; init; } = string.Empty;
+        public string ShowtimeStatus { get; init; } = string.Empty;
+        public decimal OrderTotalAmount { get; init; }
+        public int OrderPointsUsed { get; init; }
+    }
+
+    public static List<CustomerMyTicketRow> LoadMyTickets(int customerId)
+    {
+        using SqliteConnection conn = DatabaseHelper.OpenConnection();
+        const string sql = """
+            SELECT t.TicketId,
+                   t.TicketCode,
+                   o.OrderId,
+                   o.OrderCode,
+                   o.BookingChannel,
+                   o.PaymentMethod,
+                   m.Title AS MovieTitle,
+                   m.AgeRating,
+                   r.Name AS RoomName,
+                   s.Format,
+                   se.SeatCode,
+                   se.SeatType,
+                   s.StartTime AS StartTimeSql,
+                   s.EndTime AS EndTimeSql,
+                   s.Status AS ShowtimeStatus,
+                   t.UnitPrice,
+                   t.Status AS TicketStatus,
+                   o.Status AS OrderStatus,
+                   t.CheckedInAt AS CheckedInAtSql,
+                   o.CreatedAt AS OrderCreatedAtSql
+            FROM Tickets t
+            INNER JOIN Orders o ON o.OrderId = t.OrderId
+            INNER JOIN Showtimes s ON s.ShowtimeId = t.ShowtimeId
+            INNER JOIN Movies m ON m.MovieId = s.MovieId
+            INNER JOIN Rooms r ON r.RoomId = s.RoomId
+            INNER JOIN Seats se ON se.SeatId = t.SeatId
+            WHERE o.CustomerId = @cid
+            ORDER BY CASE t.Status WHEN 'Booked' THEN 0 WHEN 'CheckedIn' THEN 1 ELSE 2 END,
+                     s.StartTime DESC,
+                     t.TicketId DESC;
+            """;
+        return conn.Query<CustomerMyTicketRow>(sql, new { cid = customerId }).AsList();
+    }
+
+    public static List<CustomerMyOrderRow> LoadMyOrders(int customerId)
+    {
+        using SqliteConnection conn = DatabaseHelper.OpenConnection();
+        const string sql = """
+            SELECT o.OrderId,
+                   o.OrderCode,
+                   o.BookingChannel,
+                   o.TotalTickets,
+                   (SELECT COUNT(*) FROM Tickets t WHERE t.OrderId = o.OrderId AND t.Status != 'Cancelled') AS ActiveTicketsCount,
+                   o.SubTotalAmount,
+                   o.PointsUsed,
+                   o.DiscountAmount,
+                   o.TotalAmount,
+                   o.PaymentMethod,
+                   o.Status,
+                   o.CreatedAt AS CreatedAtSql,
+                   COALESCE((SELECT GROUP_CONCAT(DISTINCT m.Title)
+                             FROM Tickets t
+                             INNER JOIN Showtimes s ON s.ShowtimeId = t.ShowtimeId
+                             INNER JOIN Movies m ON m.MovieId = s.MovieId
+                             WHERE t.OrderId = o.OrderId), '—') AS MoviesSummary,
+                   COALESCE((SELECT GROUP_CONCAT(t.TicketCode, ', ')
+                             FROM Tickets t
+                             WHERE t.OrderId = o.OrderId), '—') AS TicketCodesSummary
+            FROM Orders o
+            WHERE o.CustomerId = @cid
+            ORDER BY o.CreatedAt DESC, o.OrderId DESC;
+            """;
+        return conn.Query<CustomerMyOrderRow>(sql, new { cid = customerId }).AsList();
+    }
+
+    public static CancelTicketResult CancelCustomerTicket(int ticketId, int customerId)
+    {
+        try
+        {
+            using SqliteConnection conn = DatabaseHelper.OpenConnection();
+            using SqliteTransaction tx = conn.BeginTransaction();
+
+            CancelTicketTxRow? row = conn.QueryFirstOrDefault<CancelTicketTxRow>(
+                """
+                SELECT t.TicketId,
+                       t.OrderId,
+                       o.CustomerId,
+                       t.UnitPrice,
+                       t.Status AS TicketStatus,
+                       o.Status AS OrderStatus,
+                       s.Status AS ShowtimeStatus,
+                       o.TotalAmount AS OrderTotalAmount,
+                       o.PointsUsed AS OrderPointsUsed
+                FROM Tickets t
+                INNER JOIN Orders o ON o.OrderId = t.OrderId
+                INNER JOIN Showtimes s ON s.ShowtimeId = t.ShowtimeId
+                WHERE t.TicketId = @tid
+                LIMIT 1;
+                """,
+                new { tid = ticketId },
+                tx);
+
+            if (row is null || row.CustomerId != customerId)
+            {
+                return new CancelTicketResult(false, string.Empty, 0m, 0, "Member", "Không tìm thấy vé thuộc tài khoản của bạn.");
+            }
+
+            if (row.TicketStatus != "Booked")
+            {
+                return new CancelTicketResult(false, row.OrderStatus, 0m, 0, "Member", "Chỉ có thể hủy vé đang ở trạng thái Chờ soát vé (Booked).");
+            }
+
+            if (row.OrderStatus == "Cancelled" || (row.ShowtimeStatus != "OpenForSale" && row.ShowtimeStatus != "Scheduled"))
+            {
+                return new CancelTicketResult(false, row.OrderStatus, 0m, 0, "Member", "Suất chiếu đã hoàn tất hoặc bị hủy, không thể thực hiện hủy vé.");
+            }
+
+            decimal prevActiveSub = conn.ExecuteScalar<decimal>(
+                "SELECT COALESCE(SUM(UnitPrice), 0) FROM Tickets WHERE OrderId = @oid AND Status != 'Cancelled';",
+                new { oid = row.OrderId },
+                tx);
+
+            int updatedTickets = conn.Execute(
+                "UPDATE Tickets SET Status = 'Cancelled' WHERE TicketId = @tid AND Status = 'Booked';",
+                new { tid = ticketId },
+                tx);
+
+            if (updatedTickets != 1)
+            {
+                return new CancelTicketResult(false, row.OrderStatus, 0m, 0, "Member", "Trạng thái vé vừa thay đổi, vui lòng tải lại.");
+            }
+
+            int remainingActiveCount = conn.ExecuteScalar<int>(
+                "SELECT COUNT(*) FROM Tickets WHERE OrderId = @oid AND Status != 'Cancelled';",
+                new { oid = row.OrderId },
+                tx);
+            decimal remainingActiveSub = conn.ExecuteScalar<decimal>(
+                "SELECT COALESCE(SUM(UnitPrice), 0) FROM Tickets WHERE OrderId = @oid AND Status != 'Cancelled';",
+                new { oid = row.OrderId },
+                tx);
+
+            CustomerTxRow? cust = conn.QueryFirstOrDefault<CustomerTxRow>(
+                "SELECT CustomerId, LoyaltyPoints, TotalSpent FROM Customers WHERE CustomerId = @cid LIMIT 1;",
+                new { cid = customerId },
+                tx);
+
+            if (cust is null)
+            {
+                return new CancelTicketResult(false, row.OrderStatus, 0m, 0, "Member", "Không tìm thấy hồ sơ hội viên.");
+            }
+
+            string newOrderStatus;
+            decimal refundedAmount;
+            int nextPoints;
+
+            if (remainingActiveCount == 0)
+            {
+                newOrderStatus = "Cancelled";
+                refundedAmount = row.OrderTotalAmount;
+                conn.Execute("UPDATE Orders SET Status = 'Cancelled' WHERE OrderId = @oid;", new { oid = row.OrderId }, tx);
+
+                int earnedToRevert = CalculateEarnedPoints(row.OrderTotalAmount);
+                nextPoints = Math.Max(0, cust.LoyaltyPoints - earnedToRevert + row.OrderPointsUsed);
+            }
+            else
+            {
+                newOrderStatus = "PartiallyRefunded";
+                decimal newOrderTotal = prevActiveSub > 0m
+                    ? Math.Max(0m, Math.Round(row.OrderTotalAmount * remainingActiveSub / prevActiveSub, 0, MidpointRounding.AwayFromZero))
+                    : 0m;
+                refundedAmount = Math.Max(0m, row.OrderTotalAmount - newOrderTotal);
+
+                conn.Execute(
+                    "UPDATE Orders SET Status = 'PartiallyRefunded', TotalAmount = @newTotal WHERE OrderId = @oid;",
+                    new { newTotal = newOrderTotal, oid = row.OrderId },
+                    tx);
+
+                int earnedDelta = Math.Max(0, CalculateEarnedPoints(row.OrderTotalAmount) - CalculateEarnedPoints(newOrderTotal));
+                nextPoints = Math.Max(0, cust.LoyaltyPoints - earnedDelta);
+            }
+
+            decimal nextSpent = Math.Max(0m, cust.TotalSpent - refundedAmount);
+            string nextTier = ComputeTier(nextSpent);
+
+            conn.Execute(
+                "UPDATE Customers SET LoyaltyPoints = @pts, TotalSpent = @spent, Tier = @tier WHERE CustomerId = @cid;",
+                new { pts = nextPoints, spent = nextSpent, tier = nextTier, cid = customerId },
+                tx);
+
+            tx.Commit();
+            return new CancelTicketResult(true, newOrderStatus, refundedAmount, nextPoints, nextTier, null);
+        }
+        catch (SqliteException ex)
+        {
+            return new CancelTicketResult(false, string.Empty, 0m, 0, "Member", $"Không thể hủy vé: {ex.Message}");
+        }
+    }
 }
