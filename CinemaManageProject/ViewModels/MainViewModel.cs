@@ -126,7 +126,7 @@ public sealed class MainViewModel : ViewModelBase
             case UserRole.Staff:
                 PageTitle = "Dashboard Quầy vé";
                 MenuItems.Add(new SidebarMenuItem("dashboard", "Dashboard Quầy vé", true, "DashboardIconGeometry") { IsSelected = true });
-                MenuItems.Add(new SidebarMenuItem("pos", "Bán vé tại quầy", false, "CinemaTicketIconGeometry"));
+                MenuItems.Add(new SidebarMenuItem("pos", "Bán vé tại quầy", true, "CinemaTicketIconGeometry"));
                 MenuItems.Add(new SidebarMenuItem("checkin", "Soát vé Check-in", false, "CheckTicketIconGeometry"));
                 MenuItems.Add(new SidebarMenuItem("customers", "Tra cứu Khách hàng", false, "UsersGroupIconGeometry"));
                 break;
@@ -242,6 +242,17 @@ public sealed class MainViewModel : ViewModelBase
                 else
                 {
                     CurrentDashboard = new AdminUsersViewModel();
+                }
+                break;
+
+            case "pos":
+                if (CurrentDashboard is StaffPosViewModel)
+                {
+                    CurrentDashboard.LoadData();
+                }
+                else
+                {
+                    CurrentDashboard = new StaffPosViewModel();
                 }
                 break;
 

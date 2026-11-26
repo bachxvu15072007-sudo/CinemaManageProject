@@ -43,6 +43,7 @@ public partial class MainWindow : Window
             AdminOrdersViewModel => new AdminOrdersView(),
             AdminUsersViewModel => new AdminUsersView(),
             StaffDashboardViewModel => new StaffDashboardView(),
+            StaffPosViewModel => new StaffPosView(),
             _ => new CustomerDashboardView()
         };
         view.DataContext = _viewModel.CurrentDashboard;
