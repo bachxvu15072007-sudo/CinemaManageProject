@@ -1,6 +1,7 @@
 <Window x:Class="CinemaManageProject.Views.LoginWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d"
@@ -19,21 +20,19 @@
         </Grid.RowDefinitions>
 
         <!-- HỌA TIẾT CUỘN PHIM CHÌM -->
-        <Path Grid.RowSpan="2"
-              Style="{StaticResource CinemaVectorIconStyle}"
-              Data="{StaticResource FilmStripIconGeometry}"
-              Width="136" Height="136"
-              Stroke="#5E6AD2"
-              StrokeThickness="1.1"
-              Opacity="0.06"
-              HorizontalAlignment="Right"
-              VerticalAlignment="Bottom"
-              Margin="0,0,-14,-14"
-              IsHitTestVisible="False">
-            <Path.RenderTransform>
-                <RotateTransform Angle="-14" CenterX="68" CenterY="68" />
-            </Path.RenderTransform>
-        </Path>
+        <ui:SymbolIcon Grid.RowSpan="2"
+                       Symbol="Filmstrip24"
+                       FontSize="128"
+                       Foreground="#5E6AD2"
+                       Opacity="0.06"
+                       HorizontalAlignment="Right"
+                       VerticalAlignment="Bottom"
+                       Margin="0,0,-10,-10"
+                       IsHitTestVisible="False">
+            <ui:SymbolIcon.RenderTransform>
+                <RotateTransform Angle="-14" CenterX="64" CenterY="64" />
+            </ui:SymbolIcon.RenderTransform>
+        </ui:SymbolIcon>
 
         <!-- HEADER LOGO -->
         <DockPanel Grid.Row="0" Margin="0,0,0,18" LastChildFill="False">
@@ -42,12 +41,11 @@
                         Width="38" Height="38"
                         CornerRadius="8"
                         Margin="0,0,12,0">
-                    <Path Style="{StaticResource CinemaVectorIconStyle}"
-                          Width="20" Height="20"
-                          Data="{StaticResource FilmClapperIconGeometry}"
-                          Stroke="#FFFFFF"
-                          HorizontalAlignment="Center"
-                          VerticalAlignment="Center" />
+                    <ui:SymbolIcon Symbol="MoviesAndTv24"
+                                   FontSize="20"
+                                   Foreground="#FFFFFF"
+                                   HorizontalAlignment="Center"
+                                   VerticalAlignment="Center" />
                 </Border>
                 <StackPanel VerticalAlignment="Center">
                     <TextBlock Text="CINEVERSE CINEMA"

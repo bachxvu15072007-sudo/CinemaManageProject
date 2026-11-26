@@ -4,14 +4,17 @@ using System.Windows.Media;
 using CinemaManageProject.Data;
 using CinemaManageProject.Helpers;
 using CinemaManageProject.Models;
+using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace CinemaManageProject.ViewModels.Customer;
 
 /// <summary>
 /// Mục hiển thị từng phim trên dải poster và khung giới thiệu chi tiết của Customer.
 /// </summary>
-public sealed class CustomerMovieRow : ViewModelBase
+public sealed partial class CustomerMovieRow : ViewModelBase
 {
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ActiveTag))]
     private bool _isSelected;
 
     public CustomerMovieRow(
@@ -64,24 +67,7 @@ public sealed class CustomerMovieRow : ViewModelBase
     public bool IsNowShowing { get; }
     public ImageSource? PosterImage { get; }
     public bool HasPoster => PosterImage is not null;
-
     public string? ActiveTag => IsSelected ? "Active" : null;
-
-    public bool IsSelected
-    {
-        get => _isSelected;
-        set
-        {
-            if (_isSelected == value)
-            {
-                return;
-            }
-
-            _isSelected = value;
-            OnPropertyChanged(nameof(IsSelected));
-            OnPropertyChanged(nameof(ActiveTag));
-        }
-    }
 }
 
 public sealed record CustomerTicketRow(
@@ -95,16 +81,25 @@ public sealed record CustomerTicketRow(
 /// <summary>
 /// ViewModel cho Dashboard vai trò Customer: thẻ hội viên, dải poster giới thiệu phim và vé đã đặt.
 /// </summary>
-public sealed class CustomerDashboardViewModel : ViewModelBase
+public sealed partial class CustomerDashboardViewModel : ViewModelBase
 {
     private readonly List<CustomerMovieRow> _allMovies = [];
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasSelectedMovie))]
     private CustomerMovieRow? _selectedMovie;
-    private string _memberName = string.Empty;
-    private string _memberPhone = string.Empty;
-    private string _tierDisplay = "Thành viên";
-    private string _pointsText = "0 điểm";
-    private string _totalSpentText = "0đ";
-    private string _activeTicketsText = "0 vé";
+
+    [ObservableProperty] private string _memberName = string.Empty;
+    [ObservableProperty] private string _memberPhone = string.Empty;
+    [ObservableProperty] private string _tierDisplay = "Thành viên";
+    [ObservableProperty] private string _pointsText = "0 điểm";
+    [ObservableProperty] private string _totalSpentText = "0đ";
+    [ObservableProperty] private string _activeTicketsText = "0 vé";
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(AllFilterTag))]
+    [NotifyPropertyChangedFor(nameof(NowShowingFilterTag))]
+    [NotifyPropertyChangedFor(nameof(ComingSoonFilterTag))]
     private string _selectedFilter = "All";
 
     public CustomerDashboardViewModel()
@@ -112,91 +107,9 @@ public sealed class CustomerDashboardViewModel : ViewModelBase
         LoadData();
     }
 
-    public string MemberName
-    {
-        get => _memberName;
-        private set { _memberName = value; OnPropertyChanged(nameof(MemberName)); }
-    }
-
-    public string MemberPhone
-    {
-        get => _memberPhone;
-        private set { _memberPhone = value; OnPropertyChanged(nameof(MemberPhone)); }
-    }
-
-    public string TierDisplay
-    {
-        get => _tierDisplay;
-        private set { _tierDisplay = value; OnPropertyChanged(nameof(TierDisplay)); }
-    }
-
-    public string PointsText
-    {
-        get => _pointsText;
-        private set { _pointsText = value; OnPropertyChanged(nameof(PointsText)); }
-    }
-
-    public string TotalSpentText
-    {
-        get => _totalSpentText;
-        private set { _totalSpentText = value; OnPropertyChanged(nameof(TotalSpentText)); }
-    }
-
-    public string ActiveTicketsText
-    {
-        get => _activeTicketsText;
-        private set { _activeTicketsText = value; OnPropertyChanged(nameof(ActiveTicketsText)); }
-    }
-
-    public string SelectedFilter
-    {
-        get => _selectedFilter;
-        private set
-        {
-            if (_selectedFilter == value)
-            {
-                return;
-            }
-
-            _selectedFilter = value;
-            OnPropertyChanged(nameof(SelectedFilter));
-            OnPropertyChanged(nameof(AllFilterTag));
-            OnPropertyChanged(nameof(NowShowingFilterTag));
-            OnPropertyChanged(nameof(ComingSoonFilterTag));
-            ApplyFilter();
-        }
-    }
-
     public string? AllFilterTag => SelectedFilter == "All" ? "Active" : null;
     public string? NowShowingFilterTag => SelectedFilter == "NowShowing" ? "Active" : null;
     public string? ComingSoonFilterTag => SelectedFilter == "ComingSoon" ? "Active" : null;
-
-    public CustomerMovieRow? SelectedMovie
-    {
-        get => _selectedMovie;
-        private set
-        {
-            if (ReferenceEquals(_selectedMovie, value))
-            {
-                return;
-            }
-
-            if (_selectedMovie is not null)
-            {
-                _selectedMovie.IsSelected = false;
-            }
-
-            _selectedMovie = value;
-
-            if (_selectedMovie is not null)
-            {
-                _selectedMovie.IsSelected = true;
-            }
-
-            OnPropertyChanged(nameof(SelectedMovie));
-            OnPropertyChanged(nameof(HasSelectedMovie));
-        }
-    }
 
     public bool HasSelectedMovie => SelectedMovie is not null;
     public bool HasNoMovies => Movies.Count == 0;
@@ -205,8 +118,15 @@ public sealed class CustomerDashboardViewModel : ViewModelBase
     public ObservableCollection<CustomerMovieRow> Movies { get; } = [];
     public ObservableCollection<CustomerTicketRow> MyTickets { get; } = [];
 
-    public void SetFilter(string? filter) => SelectedFilter = filter ?? "All";
+    partial void OnSelectedFilterChanged(string value) => ApplyFilter();
 
+    partial void OnSelectedMovieChanging(CustomerMovieRow? oldValue, CustomerMovieRow? newValue)
+    {
+        if (oldValue is not null) oldValue.IsSelected = false;
+        if (newValue is not null) newValue.IsSelected = true;
+    }
+
+    public void SetFilter(string? filter) => SelectedFilter = filter ?? "All";
     public void SelectMovie(CustomerMovieRow? movie) => SelectedMovie = movie;
 
     public override void LoadData()

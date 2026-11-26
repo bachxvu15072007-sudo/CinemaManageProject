@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
              mc:Ignorable="d"
              d:DesignWidth="988"
              d:DesignHeight="960"
@@ -58,13 +59,11 @@
                         Height="42"
                         Margin="0,0,12,0"
                         VerticalAlignment="Center">
-                    <Path Style="{StaticResource CinemaVectorIconStyle}"
-                          Data="{StaticResource ReceiptIconGeometry}"
-                          Width="20"
-                          Height="20"
-                          Stroke="#A5B4FC"
-                          HorizontalAlignment="Center"
-                          VerticalAlignment="Center" />
+                    <ui:SymbolIcon Symbol="Receipt24"
+                                   FontSize="20"
+                                   Foreground="#A5B4FC"
+                                   HorizontalAlignment="Center"
+                                   VerticalAlignment="Center" />
                 </Border>
                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
                     <TextBlock Text="Hóa đơn &amp; Doanh thu"
@@ -514,13 +513,11 @@
 
                         <!-- Vé trong hóa đơn -->
                         <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
-                            <Path Style="{StaticResource CinemaVectorIconStyle}"
-                                  Data="{StaticResource CinemaTicketIconGeometry}"
-                                  Width="15"
-                                  Height="15"
-                                  Stroke="#A5B4FC"
-                                  Margin="0,0,8,0"
-                                  VerticalAlignment="Center" />
+                            <ui:SymbolIcon Symbol="TicketDiagonal24"
+                                           FontSize="15"
+                                           Foreground="#A5B4FC"
+                                           Margin="0,0,8,0"
+                                           VerticalAlignment="Center" />
                             <TextBlock Text="Vé trong hóa đơn"
                                        FontSize="13"
                                        FontWeight="SemiBold"

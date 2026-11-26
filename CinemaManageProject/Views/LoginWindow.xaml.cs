@@ -15,6 +15,7 @@ public partial class LoginWindow : Window
     public LoginWindow()
     {
         InitializeComponent();
+        App.ApplyDarkTitleBar(this);
 
         _viewModel = new LoginViewModel();
         _viewModel.LoginSucceeded += OnLoginSucceeded;

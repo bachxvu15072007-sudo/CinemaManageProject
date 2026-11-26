@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using CinemaManageProject.Data;
 using CinemaManageProject.Helpers;
+using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace CinemaManageProject.ViewModels.Staff;
 
@@ -24,47 +25,17 @@ public sealed record StaffOrderRow(
 /// <summary>
 /// ViewModel cho Dashboard vai trò Staff: doanh số quầy cá nhân, suất chiếu mở bán và vé chờ soát.
 /// </summary>
-public sealed class StaffDashboardViewModel : ViewModelBase
+public sealed partial class StaffDashboardViewModel : ViewModelBase
 {
-    private string _staffGreeting = string.Empty;
-    private string _myTicketsText = "0 vé";
-    private string _myRevenueText = "0đ";
-    private string _openShowtimesText = "0 suất";
-    private string _pendingCheckInText = "0 vé";
+    [ObservableProperty] private string _staffGreeting = string.Empty;
+    [ObservableProperty] private string _myTicketsText = "0 vé";
+    [ObservableProperty] private string _myRevenueText = "0đ";
+    [ObservableProperty] private string _openShowtimesText = "0 suất";
+    [ObservableProperty] private string _pendingCheckInText = "0 vé";
 
     public StaffDashboardViewModel()
     {
         LoadData();
-    }
-
-    public string StaffGreeting
-    {
-        get => _staffGreeting;
-        private set { _staffGreeting = value; OnPropertyChanged(nameof(StaffGreeting)); }
-    }
-
-    public string MyTicketsText
-    {
-        get => _myTicketsText;
-        private set { _myTicketsText = value; OnPropertyChanged(nameof(MyTicketsText)); }
-    }
-
-    public string MyRevenueText
-    {
-        get => _myRevenueText;
-        private set { _myRevenueText = value; OnPropertyChanged(nameof(MyRevenueText)); }
-    }
-
-    public string OpenShowtimesText
-    {
-        get => _openShowtimesText;
-        private set { _openShowtimesText = value; OnPropertyChanged(nameof(OpenShowtimesText)); }
-    }
-
-    public string PendingCheckInText
-    {
-        get => _pendingCheckInText;
-        private set { _pendingCheckInText = value; OnPropertyChanged(nameof(PendingCheckInText)); }
     }
 
     public ObservableCollection<StaffShowtimeRow> OpenShowtimes { get; } = [];

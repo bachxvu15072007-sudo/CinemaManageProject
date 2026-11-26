@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using CinemaManageProject.Data;
 using CinemaManageProject.Helpers;
+using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace CinemaManageProject.ViewModels.Admin;
 
@@ -24,68 +25,20 @@ public sealed record AdminOrderRow(
 /// <summary>
 /// ViewModel cho Dashboard vai trò Admin: KPI toàn rạp, suất chiếu và hóa đơn gần đây.
 /// </summary>
-public sealed class AdminDashboardViewModel : ViewModelBase
+public sealed partial class AdminDashboardViewModel : ViewModelBase
 {
-    private string _totalRevenueText = "0đ";
-    private string _todayRevenueText = "Hôm nay: 0đ";
-    private string _totalTicketsText = "0 vé";
-    private string _checkedInSubText = "0 đã check-in";
-    private string _moviesCountText = "0 phim";
-    private string _comingSoonSubText = "0 sắp chiếu";
-    private string _roomsText = "0 / 0";
-    private string _maintenanceSeatsText = "0 ghế bảo trì";
+    [ObservableProperty] private string _totalRevenueText = "0đ";
+    [ObservableProperty] private string _todayRevenueText = "Hôm nay: 0đ";
+    [ObservableProperty] private string _totalTicketsText = "0 vé";
+    [ObservableProperty] private string _checkedInSubText = "0 đã check-in";
+    [ObservableProperty] private string _moviesCountText = "0 phim";
+    [ObservableProperty] private string _comingSoonSubText = "0 sắp chiếu";
+    [ObservableProperty] private string _roomsText = "0 / 0";
+    [ObservableProperty] private string _maintenanceSeatsText = "0 ghế bảo trì";
 
     public AdminDashboardViewModel()
     {
         LoadData();
-    }
-
-    public string TotalRevenueText
-    {
-        get => _totalRevenueText;
-        private set { _totalRevenueText = value; OnPropertyChanged(nameof(TotalRevenueText)); }
-    }
-
-    public string TodayRevenueText
-    {
-        get => _todayRevenueText;
-        private set { _todayRevenueText = value; OnPropertyChanged(nameof(TodayRevenueText)); }
-    }
-
-    public string TotalTicketsText
-    {
-        get => _totalTicketsText;
-        private set { _totalTicketsText = value; OnPropertyChanged(nameof(TotalTicketsText)); }
-    }
-
-    public string CheckedInSubText
-    {
-        get => _checkedInSubText;
-        private set { _checkedInSubText = value; OnPropertyChanged(nameof(CheckedInSubText)); }
-    }
-
-    public string MoviesCountText
-    {
-        get => _moviesCountText;
-        private set { _moviesCountText = value; OnPropertyChanged(nameof(MoviesCountText)); }
-    }
-
-    public string ComingSoonSubText
-    {
-        get => _comingSoonSubText;
-        private set { _comingSoonSubText = value; OnPropertyChanged(nameof(ComingSoonSubText)); }
-    }
-
-    public string RoomsText
-    {
-        get => _roomsText;
-        private set { _roomsText = value; OnPropertyChanged(nameof(RoomsText)); }
-    }
-
-    public string MaintenanceSeatsText
-    {
-        get => _maintenanceSeatsText;
-        private set { _maintenanceSeatsText = value; OnPropertyChanged(nameof(MaintenanceSeatsText)); }
     }
 
     public ObservableCollection<AdminShowtimeRow> Showtimes { get; } = [];

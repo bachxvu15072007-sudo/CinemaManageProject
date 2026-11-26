@@ -1,27 +1,49 @@
 using System.Collections.ObjectModel;
 using CinemaManageProject.Data;
+using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace CinemaManageProject.ViewModels.Staff;
 
 /// <summary>
 /// ViewModel màn hình Tra cứu &amp; Đăng ký Khách hàng hội viên tại quầy cho vai trò Staff.
 /// </summary>
-public sealed class StaffCustomersViewModel : ViewModelBase
+public sealed partial class StaffCustomersViewModel : ViewModelBase
 {
     private readonly List<StaffCustomerRow> _allCustomers = [];
-    private StaffCustomerRow? _selectedCustomer;
     private bool _isCreatingNew;
-    private string _searchKeyword = string.Empty;
+    private bool _suppressSelectionSideEffects;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsEditingExisting))]
+    [NotifyPropertyChangedFor(nameof(FormHeader))]
+    [NotifyPropertyChangedFor(nameof(SaveButtonLabel))]
+    private StaffCustomerRow? _selectedCustomer;
+
+    [ObservableProperty] private string _searchKeyword = string.Empty;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(AllTierTag))]
+    [NotifyPropertyChangedFor(nameof(MemberTierTag))]
+    [NotifyPropertyChangedFor(nameof(SilverTierTag))]
+    [NotifyPropertyChangedFor(nameof(GoldTierTag))]
+    [NotifyPropertyChangedFor(nameof(PlatinumTierTag))]
     private string _tierFilter = "All";
-    private string _editFullName = string.Empty;
-    private string _editPhone = string.Empty;
-    private string _editEmail = string.Empty;
-    private string _editDateOfBirth = string.Empty;
-    private string _totalCustomersText = "0";
-    private string _silverPlusText = "0";
-    private string _appLinkedText = "0";
-    private string _counterOnlyText = "0";
+
+    [ObservableProperty] private string _editFullName = string.Empty;
+    [ObservableProperty] private string _editPhone = string.Empty;
+    [ObservableProperty] private string _editEmail = string.Empty;
+    [ObservableProperty] private string _editDateOfBirth = string.Empty;
+    [ObservableProperty] private string _totalCustomersText = "0";
+    [ObservableProperty] private string _silverPlusText = "0";
+    [ObservableProperty] private string _appLinkedText = "0";
+    [ObservableProperty] private string _counterOnlyText = "0";
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasError))]
     private string? _errorMessage;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasSuccess))]
     private string? _successMessage;
 
     public StaffCustomersViewModel()
@@ -32,71 +54,11 @@ public sealed class StaffCustomersViewModel : ViewModelBase
     public ObservableCollection<StaffCustomerRow> FilteredCustomers { get; } = [];
     public ObservableCollection<CustomerOrderHistoryRow> OrderHistory { get; } = [];
 
-    public string TotalCustomersText { get => _totalCustomersText; private set { _totalCustomersText = value; OnPropertyChanged(nameof(TotalCustomersText)); } }
-    public string SilverPlusText { get => _silverPlusText; private set { _silverPlusText = value; OnPropertyChanged(nameof(SilverPlusText)); } }
-    public string AppLinkedText { get => _appLinkedText; private set { _appLinkedText = value; OnPropertyChanged(nameof(AppLinkedText)); } }
-    public string CounterOnlyText { get => _counterOnlyText; private set { _counterOnlyText = value; OnPropertyChanged(nameof(CounterOnlyText)); } }
-
-    public string SearchKeyword
-    {
-        get => _searchKeyword;
-        set
-        {
-            if (_searchKeyword == value) return;
-            _searchKeyword = value ?? string.Empty;
-            OnPropertyChanged(nameof(SearchKeyword));
-            ApplyFilter();
-        }
-    }
-
-    public string TierFilter
-    {
-        get => _tierFilter;
-        private set
-        {
-            if (_tierFilter == value) return;
-            _tierFilter = value;
-            OnPropertyChanged(nameof(TierFilter));
-            OnPropertyChanged(nameof(AllTierTag));
-            OnPropertyChanged(nameof(MemberTierTag));
-            OnPropertyChanged(nameof(SilverTierTag));
-            OnPropertyChanged(nameof(GoldTierTag));
-            OnPropertyChanged(nameof(PlatinumTierTag));
-            ApplyFilter();
-        }
-    }
-
     public string? AllTierTag => TierFilter == "All" ? "Active" : null;
     public string? MemberTierTag => TierFilter == "Member" ? "Active" : null;
     public string? SilverTierTag => TierFilter == "Silver" ? "Active" : null;
     public string? GoldTierTag => TierFilter == "Gold" ? "Active" : null;
     public string? PlatinumTierTag => TierFilter == "Platinum" ? "Active" : null;
-
-    public StaffCustomerRow? SelectedCustomer
-    {
-        get => _selectedCustomer;
-        set
-        {
-            if (ReferenceEquals(_selectedCustomer, value)) return;
-            _selectedCustomer = value;
-            if (value is not null)
-            {
-                _isCreatingNew = false;
-                PopulateForm(value);
-                LoadHistory(value.CustomerId);
-            }
-            else if (!_isCreatingNew)
-            {
-                OrderHistory.Clear();
-                OnPropertyChanged(nameof(HasNoOrderHistory));
-            }
-
-            OnPropertyChanged(nameof(SelectedCustomer));
-            OnPropertyChanged(nameof(IsEditingExisting));
-            OnPropertyChanged(nameof(FormHeader));
-            OnPropertyChanged(nameof(SaveButtonLabel));
-        }
-    }
 
     public bool IsEditingExisting => !_isCreatingNew && SelectedCustomer is not null;
     public string FormHeader => _isCreatingNew
@@ -107,42 +69,50 @@ public sealed class StaffCustomersViewModel : ViewModelBase
 
     public string SaveButtonLabel => IsEditingExisting ? "Cập nhật thông tin" : "Tạo hội viên mới";
     public bool HasNoOrderHistory => OrderHistory.Count == 0;
-
-    public string EditFullName { get => _editFullName; set { _editFullName = value ?? string.Empty; OnPropertyChanged(nameof(EditFullName)); } }
-    public string EditPhone { get => _editPhone; set { _editPhone = value ?? string.Empty; OnPropertyChanged(nameof(EditPhone)); } }
-    public string EditEmail { get => _editEmail; set { _editEmail = value ?? string.Empty; OnPropertyChanged(nameof(EditEmail)); } }
-    public string EditDateOfBirth { get => _editDateOfBirth; set { _editDateOfBirth = value ?? string.Empty; OnPropertyChanged(nameof(EditDateOfBirth)); } }
-
-    public string? ErrorMessage
-    {
-        get => _errorMessage;
-        private set { _errorMessage = value; OnPropertyChanged(nameof(ErrorMessage)); OnPropertyChanged(nameof(HasError)); }
-    }
     public bool HasError => !string.IsNullOrWhiteSpace(ErrorMessage);
-
-    public string? SuccessMessage
-    {
-        get => _successMessage;
-        private set { _successMessage = value; OnPropertyChanged(nameof(SuccessMessage)); OnPropertyChanged(nameof(HasSuccess)); }
-    }
     public bool HasSuccess => !string.IsNullOrWhiteSpace(SuccessMessage);
 
-    public override void LoadData() => ReloadCustomers(SelectedCustomer?.CustomerId);
+    partial void OnSearchKeywordChanged(string value) => ApplyFilter();
+    partial void OnTierFilterChanged(string value) => ApplyFilter();
 
+    partial void OnSelectedCustomerChanged(StaffCustomerRow? value)
+    {
+        if (_suppressSelectionSideEffects)
+        {
+            return;
+        }
+
+        if (value is not null)
+        {
+            _isCreatingNew = false;
+            PopulateForm(value);
+            LoadHistory(value.CustomerId);
+        }
+        else if (!_isCreatingNew)
+        {
+            OrderHistory.Clear();
+            OnPropertyChanged(nameof(HasNoOrderHistory));
+        }
+
+        OnPropertyChanged(nameof(IsEditingExisting));
+        OnPropertyChanged(nameof(FormHeader));
+        OnPropertyChanged(nameof(SaveButtonLabel));
+    }
+
+    public override void LoadData() => ReloadCustomers(SelectedCustomer?.CustomerId);
     public void SetTierFilter(string? tier) => TierFilter = tier ?? "All";
 
     public void StartNewCustomer()
     {
         ClearMessages();
         _isCreatingNew = true;
-        _selectedCustomer = null;
+        SelectedCustomer = null;
         EditFullName = string.Empty;
         EditPhone = string.Empty;
         EditEmail = string.Empty;
         EditDateOfBirth = string.Empty;
         OrderHistory.Clear();
 
-        OnPropertyChanged(nameof(SelectedCustomer));
         OnPropertyChanged(nameof(IsEditingExisting));
         OnPropertyChanged(nameof(FormHeader));
         OnPropertyChanged(nameof(SaveButtonLabel));
@@ -168,8 +138,8 @@ public sealed class StaffCustomersViewModel : ViewModelBase
         }
 
         string actionMsg = editingId.HasValue
-            ? $"Đã cập nhật thông tin hội viên \"{EditFullName.Trim()}\"."
-            : $"Đã đăng ký hội viên mới \"{EditFullName.Trim()}\" tại quầy (hạng Member).";
+            ? $"Đã cập nhật thông tin hội viên \"{(EditFullName ?? string.Empty).Trim()}\"."
+            : $"Đã đăng ký hội viên mới \"{(EditFullName ?? string.Empty).Trim()}\" tại quầy (hạng Member).";
 
         _isCreatingNew = false;
         ReloadCustomers(result.CustomerId);
@@ -192,7 +162,7 @@ public sealed class StaffCustomersViewModel : ViewModelBase
     private void ApplyFilter(int? preferredId = null)
     {
         int? keepId = preferredId ?? SelectedCustomer?.CustomerId;
-        string kw = SearchKeyword.Trim();
+        string kw = (SearchKeyword ?? string.Empty).Trim();
 
         FilteredCustomers.Clear();
         IEnumerable<StaffCustomerRow> query = _allCustomers;
@@ -224,7 +194,10 @@ public sealed class StaffCustomersViewModel : ViewModelBase
             ? FilteredCustomers.FirstOrDefault(c => c.CustomerId == keepId.Value) ?? FilteredCustomers.FirstOrDefault()
             : FilteredCustomers.FirstOrDefault();
 
-        _selectedCustomer = target;
+        _suppressSelectionSideEffects = true;
+        SelectedCustomer = target;
+        _suppressSelectionSideEffects = false;
+
         if (target is not null)
         {
             PopulateForm(target);
@@ -236,7 +209,6 @@ public sealed class StaffCustomersViewModel : ViewModelBase
             OnPropertyChanged(nameof(HasNoOrderHistory));
         }
 
-        OnPropertyChanged(nameof(SelectedCustomer));
         OnPropertyChanged(nameof(IsEditingExisting));
         OnPropertyChanged(nameof(FormHeader));
         OnPropertyChanged(nameof(SaveButtonLabel));

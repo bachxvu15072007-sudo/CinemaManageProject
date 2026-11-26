@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using System.Globalization;
 using CinemaManageProject.Data;
+using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace CinemaManageProject.ViewModels.Admin;
 
@@ -12,33 +13,72 @@ public sealed record UserFilterOption(string Value, string Label)
 /// <summary>
 /// ViewModel Quản lý Nhân sự &amp; Tài khoản (Staff + Customer, bảo vệ Admin gốc).
 /// </summary>
-public sealed class AdminUsersViewModel : ViewModelBase
+public sealed partial class AdminUsersViewModel : ViewModelBase
 {
     private static readonly string[] DobFormats = ["dd/MM/yyyy", "d/M/yyyy", "yyyy-MM-dd"];
 
     private List<AdminUserRow> _allUsers = [];
     private int? _editingUserId;
     private bool _isResettingFilters;
+    private bool _suppressSelectionPopulate;
 
+    [ObservableProperty]
     private string _searchKeyword = string.Empty;
+
+    [ObservableProperty]
     private UserFilterOption? _selectedRoleFilterOption;
+
+    [ObservableProperty]
     private UserFilterOption? _selectedStatusFilterOption;
+
+    [ObservableProperty]
     private AdminUserRow? _selectedUser;
 
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsCustomerFormMode))]
+    [NotifyPropertyChangedFor(nameof(ShowMemberReadOnlyCard))]
+    [NotifyPropertyChangedFor(nameof(PhoneFieldLabel))]
     private UserFilterOption? _selectedFormRoleOption;
+
+    [ObservableProperty]
     private string _username = string.Empty;
+
+    [ObservableProperty]
     private string _fullName = string.Empty;
+
+    [ObservableProperty]
     private string _phone = string.Empty;
+
+    [ObservableProperty]
     private string _email = string.Empty;
+
+    [ObservableProperty]
     private string _dateOfBirthText = string.Empty;
+
+    [ObservableProperty]
     private bool _isActiveAccount = true;
 
+    [ObservableProperty]
     private string _totalUsersCountText = "0 tài khoản";
+
+    [ObservableProperty]
     private string _staffCountText = "0 nhân viên";
+
+    [ObservableProperty]
     private string _customerCountText = "0 khách hàng";
+
+    [ObservableProperty]
     private string _lockedUsersCountText = "0 đang khóa";
+
+    [ObservableProperty]
     private string _resultCountText = "0 tài khoản";
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasError))]
     private string? _errorMessage;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasSuccess))]
     private string? _successMessage;
 
     public AdminUsersViewModel()
@@ -80,199 +120,12 @@ public sealed class AdminUsersViewModel : ViewModelBase
 
     public ObservableCollection<AdminUserRow> Users { get; } = [];
 
-    public string SearchKeyword
-    {
-        get => _searchKeyword;
-        set
-        {
-            if (_searchKeyword == value)
-            {
-                return;
-            }
-
-            _searchKeyword = value ?? string.Empty;
-            OnPropertyChanged(nameof(SearchKeyword));
-            if (!_isResettingFilters)
-            {
-                ApplyFilters();
-            }
-        }
-    }
-
-    public UserFilterOption? SelectedRoleFilterOption
-    {
-        get => _selectedRoleFilterOption;
-        set
-        {
-            if (Equals(_selectedRoleFilterOption, value))
-            {
-                return;
-            }
-
-            _selectedRoleFilterOption = value;
-            OnPropertyChanged(nameof(SelectedRoleFilterOption));
-            if (!_isResettingFilters)
-            {
-                ApplyFilters();
-            }
-        }
-    }
-
-    public UserFilterOption? SelectedStatusFilterOption
-    {
-        get => _selectedStatusFilterOption;
-        set
-        {
-            if (Equals(_selectedStatusFilterOption, value))
-            {
-                return;
-            }
-
-            _selectedStatusFilterOption = value;
-            OnPropertyChanged(nameof(SelectedStatusFilterOption));
-            if (!_isResettingFilters)
-            {
-                ApplyFilters();
-            }
-        }
-    }
-
-    public AdminUserRow? SelectedUser
-    {
-        get => _selectedUser;
-        set
-        {
-            if (Equals(_selectedUser, value))
-            {
-                return;
-            }
-
-            _selectedUser = value;
-            OnPropertyChanged(nameof(SelectedUser));
-
-            if (value is not null)
-            {
-                PopulateFormFromUser(value, clearMessages: true);
-            }
-            else
-            {
-                NotifyFormStateProperties();
-            }
-        }
-    }
-
-    public UserFilterOption? SelectedFormRoleOption
-    {
-        get => _selectedFormRoleOption;
-        set
-        {
-            if (Equals(_selectedFormRoleOption, value))
-            {
-                return;
-            }
-
-            _selectedFormRoleOption = value;
-            OnPropertyChanged(nameof(SelectedFormRoleOption));
-            OnPropertyChanged(nameof(IsCustomerFormMode));
-            OnPropertyChanged(nameof(ShowMemberReadOnlyCard));
-            OnPropertyChanged(nameof(PhoneFieldLabel));
-        }
-    }
-
-    public string Username
-    {
-        get => _username;
-        set { if (_username == value) return; _username = value ?? string.Empty; OnPropertyChanged(nameof(Username)); }
-    }
-
-    public string FullName
-    {
-        get => _fullName;
-        set { if (_fullName == value) return; _fullName = value ?? string.Empty; OnPropertyChanged(nameof(FullName)); }
-    }
-
-    public string Phone
-    {
-        get => _phone;
-        set { if (_phone == value) return; _phone = value ?? string.Empty; OnPropertyChanged(nameof(Phone)); }
-    }
-
-    public string Email
-    {
-        get => _email;
-        set { if (_email == value) return; _email = value ?? string.Empty; OnPropertyChanged(nameof(Email)); }
-    }
-
-    public string DateOfBirthText
-    {
-        get => _dateOfBirthText;
-        set { if (_dateOfBirthText == value) return; _dateOfBirthText = value ?? string.Empty; OnPropertyChanged(nameof(DateOfBirthText)); }
-    }
-
-    public bool IsActiveAccount
-    {
-        get => _isActiveAccount;
-        set { if (_isActiveAccount == value) return; _isActiveAccount = value; OnPropertyChanged(nameof(IsActiveAccount)); }
-    }
-
-    public string TotalUsersCountText
-    {
-        get => _totalUsersCountText;
-        private set { if (_totalUsersCountText == value) return; _totalUsersCountText = value; OnPropertyChanged(nameof(TotalUsersCountText)); }
-    }
-
-    public string StaffCountText
-    {
-        get => _staffCountText;
-        private set { if (_staffCountText == value) return; _staffCountText = value; OnPropertyChanged(nameof(StaffCountText)); }
-    }
-
-    public string CustomerCountText
-    {
-        get => _customerCountText;
-        private set { if (_customerCountText == value) return; _customerCountText = value; OnPropertyChanged(nameof(CustomerCountText)); }
-    }
-
-    public string LockedUsersCountText
-    {
-        get => _lockedUsersCountText;
-        private set { if (_lockedUsersCountText == value) return; _lockedUsersCountText = value; OnPropertyChanged(nameof(LockedUsersCountText)); }
-    }
-
-    public string ResultCountText
-    {
-        get => _resultCountText;
-        private set { if (_resultCountText == value) return; _resultCountText = value; OnPropertyChanged(nameof(ResultCountText)); }
-    }
-
-    public string? ErrorMessage
-    {
-        get => _errorMessage;
-        private set
-        {
-            _errorMessage = value;
-            OnPropertyChanged(nameof(ErrorMessage));
-            OnPropertyChanged(nameof(HasError));
-        }
-    }
-
-    public string? SuccessMessage
-    {
-        get => _successMessage;
-        private set
-        {
-            _successMessage = value;
-            OnPropertyChanged(nameof(SuccessMessage));
-            OnPropertyChanged(nameof(HasSuccess));
-        }
-    }
-
     public bool HasError => !string.IsNullOrWhiteSpace(ErrorMessage);
     public bool HasSuccess => !string.IsNullOrWhiteSpace(SuccessMessage);
     public bool HasNoUsers => Users.Count == 0;
 
     public bool IsEditMode => _editingUserId.HasValue;
-    public bool IsProtectedAdmin => _selectedUser?.IsAdminRole == true;
+    public bool IsProtectedAdmin => SelectedUser?.IsAdminRole == true;
     public bool IsSelfSelected => _editingUserId.HasValue && _editingUserId.Value == CurrentAdminId;
     public bool IsEditableUser => !IsProtectedAdmin;
     public bool CanSelectRole => !IsEditMode && !IsProtectedAdmin;
@@ -280,13 +133,13 @@ public sealed class AdminUsersViewModel : ViewModelBase
     public bool CanClickDelete => IsEditMode && !IsProtectedAdmin && !IsSelfSelected;
     public bool CanEditActiveStatus => !IsProtectedAdmin && !IsSelfSelected;
 
-    public bool IsCustomerFormMode => !IsProtectedAdmin && _selectedFormRoleOption?.Value == "Customer";
-    public bool ShowMemberReadOnlyCard => IsEditMode && !IsProtectedAdmin && _selectedUser?.IsCustomerRole == true;
+    public bool IsCustomerFormMode => !IsProtectedAdmin && SelectedFormRoleOption?.Value == "Customer";
+    public bool ShowMemberReadOnlyCard => IsEditMode && !IsProtectedAdmin && SelectedUser?.IsCustomerRole == true;
 
     public string FormHeaderText => IsProtectedAdmin
-        ? $"Hồ sơ Quản trị viên: {_selectedUser?.FullName}"
+        ? $"Hồ sơ Quản trị viên: {SelectedUser?.FullName}"
         : IsEditMode
-            ? $"Cập nhật tài khoản: {_selectedUser?.Username}"
+            ? $"Cập nhật tài khoản: {SelectedUser?.Username}"
             : "Thêm tài khoản mới";
 
     public string FormModeBadge => IsProtectedAdmin
@@ -297,7 +150,7 @@ public sealed class AdminUsersViewModel : ViewModelBase
 
     public string FixedRoleDisplayText => IsProtectedAdmin
         ? "Quản trị viên (Bảo vệ — không sửa/khóa/xóa)"
-        : _selectedUser?.RoleDisplay ?? string.Empty;
+        : SelectedUser?.RoleDisplay ?? string.Empty;
 
     public string PasswordFieldLabel => IsEditMode
         ? "Mật khẩu mới (bỏ trống nếu giữ nguyên)"
@@ -307,33 +160,70 @@ public sealed class AdminUsersViewModel : ViewModelBase
         ? "Số điện thoại * (bắt buộc cho hội viên)"
         : "Số điện thoại";
 
-    public string QuickLockButtonLabel => _selectedUser?.IsActive == true
+    public string QuickLockButtonLabel => SelectedUser?.IsActive == true
         ? "Khóa tài khoản"
         : "Mở khóa";
 
     public string ProtectedAdminNotice =>
         "Tài khoản Quản trị viên gốc được bảo vệ: hệ thống không cho phép tạo thêm Admin mới, đổi vai trò lên Admin, khóa hoặc xóa tài khoản này.";
 
-    public string MemberTierText => _selectedUser?.TierDisplay ?? "Member";
-    public string MemberPointsText => _selectedUser?.LoyaltyPointsText ?? "0 điểm";
-    public string MemberTotalSpentText => _selectedUser?.TotalSpentText ?? "0đ";
+    public string MemberTierText => SelectedUser?.TierDisplay ?? "Member";
+    public string MemberPointsText => SelectedUser?.LoyaltyPointsText ?? "0 điểm";
+    public string MemberTotalSpentText => SelectedUser?.TotalSpentText ?? "0đ";
 
     private static int CurrentAdminId => App.CurrentUser?.UserId ?? 0;
 
-    public override void LoadData() => ReloadUsers(_editingUserId ?? _selectedUser?.UserId, clearMessages: false);
+    partial void OnSearchKeywordChanged(string value)
+    {
+        if (!_isResettingFilters)
+        {
+            ApplyFilters();
+        }
+    }
+
+    partial void OnSelectedRoleFilterOptionChanged(UserFilterOption? value)
+    {
+        if (!_isResettingFilters)
+        {
+            ApplyFilters();
+        }
+    }
+
+    partial void OnSelectedStatusFilterOptionChanged(UserFilterOption? value)
+    {
+        if (!_isResettingFilters)
+        {
+            ApplyFilters();
+        }
+    }
+
+    partial void OnSelectedUserChanged(AdminUserRow? value)
+    {
+        if (_suppressSelectionPopulate)
+        {
+            return;
+        }
+
+        if (value is not null)
+        {
+            PopulateFormFromUser(value, clearMessages: true);
+        }
+        else
+        {
+            NotifyFormStateProperties();
+        }
+    }
+
+    public override void LoadData() => ReloadUsers(_editingUserId ?? SelectedUser?.UserId, clearMessages: false);
 
     public void ResetFilters()
     {
         _isResettingFilters = true;
         try
         {
-            _searchKeyword = string.Empty;
-            _selectedRoleFilterOption = RoleFilterOptions[0];
-            _selectedStatusFilterOption = StatusFilterOptions[0];
-
-            OnPropertyChanged(nameof(SearchKeyword));
-            OnPropertyChanged(nameof(SelectedRoleFilterOption));
-            OnPropertyChanged(nameof(SelectedStatusFilterOption));
+            SearchKeyword = string.Empty;
+            SelectedRoleFilterOption = RoleFilterOptions[0];
+            SelectedStatusFilterOption = StatusFilterOptions[0];
         }
         finally
         {
@@ -353,25 +243,24 @@ public sealed class AdminUsersViewModel : ViewModelBase
             SuccessMessage = null;
         }
 
-        _selectedUser = null;
         _editingUserId = null;
 
-        _selectedFormRoleOption = RoleFormOptions[0];
-        _username = string.Empty;
-        _fullName = string.Empty;
-        _phone = string.Empty;
-        _email = string.Empty;
-        _dateOfBirthText = string.Empty;
-        _isActiveAccount = true;
-
-        OnPropertyChanged(nameof(SelectedUser));
-        OnPropertyChanged(nameof(SelectedFormRoleOption));
-        OnPropertyChanged(nameof(Username));
-        OnPropertyChanged(nameof(FullName));
-        OnPropertyChanged(nameof(Phone));
-        OnPropertyChanged(nameof(Email));
-        OnPropertyChanged(nameof(DateOfBirthText));
-        OnPropertyChanged(nameof(IsActiveAccount));
+        _suppressSelectionPopulate = true;
+        try
+        {
+            SelectedUser = null;
+            SelectedFormRoleOption = RoleFormOptions[0];
+            Username = string.Empty;
+            FullName = string.Empty;
+            Phone = string.Empty;
+            Email = string.Empty;
+            DateOfBirthText = string.Empty;
+            IsActiveAccount = true;
+        }
+        finally
+        {
+            _suppressSelectionPopulate = false;
+        }
 
         NotifyFormStateProperties();
         PasswordClearRequested?.Invoke();
@@ -382,9 +271,9 @@ public sealed class AdminUsersViewModel : ViewModelBase
         ErrorMessage = null;
         SuccessMessage = null;
 
-        if (_selectedUser is not null)
+        if (SelectedUser is not null)
         {
-            PopulateFormFromUser(_selectedUser, clearMessages: false);
+            PopulateFormFromUser(SelectedUser, clearMessages: false);
         }
         else
         {
@@ -404,8 +293,8 @@ public sealed class AdminUsersViewModel : ViewModelBase
         }
 
         string roleValue = IsEditMode
-            ? (_selectedUser?.Role ?? _selectedFormRoleOption?.Value ?? "Staff")
-            : (_selectedFormRoleOption?.Value ?? "Staff");
+            ? (SelectedUser?.Role ?? SelectedFormRoleOption?.Value ?? "Staff")
+            : (SelectedFormRoleOption?.Value ?? "Staff");
 
         string? dobSql = null;
         if (roleValue == "Customer" && !string.IsNullOrWhiteSpace(DateOfBirthText))
@@ -426,14 +315,14 @@ public sealed class AdminUsersViewModel : ViewModelBase
         }
 
         bool isCreating = !IsEditMode;
-        string savedUsername = Username.Trim();
+        string savedUsername = (Username ?? string.Empty).Trim();
         var input = new UserSaveInput(
             UserId: _editingUserId,
             Username: savedUsername,
             NewPassword: newPassword,
-            FullName: FullName,
-            Email: Email,
-            Phone: Phone,
+            FullName: FullName ?? string.Empty,
+            Email: Email ?? string.Empty,
+            Phone: Phone ?? string.Empty,
             Role: roleValue,
             IsActive: IsActiveAccount,
             DateOfBirthSql: dobSql);
@@ -457,22 +346,22 @@ public sealed class AdminUsersViewModel : ViewModelBase
         ErrorMessage = null;
         SuccessMessage = null;
 
-        if (_selectedUser is null)
+        if (SelectedUser is null)
         {
             ErrorMessage = "Vui lòng chọn một tài khoản trong danh sách.";
             return;
         }
 
-        bool nextActive = !_selectedUser.IsActive;
-        UserActionResult result = UserData.SetUserActive(_selectedUser.UserId, nextActive, CurrentAdminId);
+        bool nextActive = !SelectedUser.IsActive;
+        UserActionResult result = UserData.SetUserActive(SelectedUser.UserId, nextActive, CurrentAdminId);
         if (!result.Succeeded)
         {
             ErrorMessage = result.ErrorMessage ?? "Không thể thay đổi trạng thái tài khoản.";
             return;
         }
 
-        string targetName = _selectedUser.Username;
-        int targetId = _selectedUser.UserId;
+        string targetName = SelectedUser.Username;
+        int targetId = SelectedUser.UserId;
         ReloadUsers(targetId, clearMessages: false);
         SuccessMessage = nextActive
             ? $"Đã mở khóa tài khoản \"{targetName}\"."
@@ -485,33 +374,33 @@ public sealed class AdminUsersViewModel : ViewModelBase
         ErrorMessage = null;
         SuccessMessage = null;
 
-        if (_selectedUser is null)
+        if (SelectedUser is null)
         {
             ErrorMessage = "Vui lòng chọn một tài khoản trong danh sách để xóa.";
             return false;
         }
 
-        if (_selectedUser.IsAdminRole)
+        if (SelectedUser.IsAdminRole)
         {
             ErrorMessage = ProtectedAdminNotice;
             return false;
         }
 
-        if (_selectedUser.UserId == CurrentAdminId)
+        if (SelectedUser.UserId == CurrentAdminId)
         {
             ErrorMessage = "Không thể tự xóa tài khoản đang đăng nhập.";
             return false;
         }
 
-        if (_selectedUser.HasBlockingHistory)
+        if (SelectedUser.HasBlockingHistory)
         {
-            ErrorMessage = _selectedUser.Role == "Customer"
-                ? $"Khách hàng \"{_selectedUser.FullName}\" đã phát sinh {_selectedUser.CustomerOrdersCount} hóa đơn nên không thể xóa. Hãy dùng nút Khóa tài khoản."
-                : $"Nhân viên \"{_selectedUser.FullName}\" đã phát sinh {_selectedUser.StaffActivityCount} giao dịch/suất chiếu nên không thể xóa. Hãy dùng nút Khóa tài khoản.";
+            ErrorMessage = SelectedUser.Role == "Customer"
+                ? $"Khách hàng \"{SelectedUser.FullName}\" đã phát sinh {SelectedUser.CustomerOrdersCount} hóa đơn nên không thể xóa. Hãy dùng nút Khóa tài khoản."
+                : $"Nhân viên \"{SelectedUser.FullName}\" đã phát sinh {SelectedUser.StaffActivityCount} giao dịch/suất chiếu nên không thể xóa. Hãy dùng nút Khóa tài khoản.";
             return false;
         }
 
-        summary = $"{_selectedUser.FullName} (@{_selectedUser.Username} - {_selectedUser.RoleDisplay})";
+        summary = $"{SelectedUser.FullName} (@{SelectedUser.Username} - {SelectedUser.RoleDisplay})";
         return true;
     }
 
@@ -520,22 +409,25 @@ public sealed class AdminUsersViewModel : ViewModelBase
         ErrorMessage = null;
         SuccessMessage = null;
 
-        if (_selectedUser is null)
+        if (SelectedUser is null)
         {
             ErrorMessage = "Vui lòng chọn tài khoản cần xóa.";
             return;
         }
 
-        string deletedLabel = _selectedUser.Username;
-        UserActionResult result = UserData.DeleteUser(_selectedUser.UserId, CurrentAdminId);
+        string deletedLabel = SelectedUser.Username;
+        UserActionResult result = UserData.DeleteUser(SelectedUser.UserId, CurrentAdminId);
         if (!result.Succeeded)
         {
             ErrorMessage = result.ErrorMessage ?? "Không thể xóa tài khoản.";
             return;
         }
 
-        _selectedUser = null;
         _editingUserId = null;
+        _suppressSelectionPopulate = true;
+        SelectedUser = null;
+        _suppressSelectionPopulate = false;
+
         ReloadUsers(preferredUserId: null, clearMessages: false);
         if (Users.Count == 0)
         {
@@ -567,10 +459,10 @@ public sealed class AdminUsersViewModel : ViewModelBase
 
     private void ApplyFilters(int? preferredUserId = null, bool clearMessages = false)
     {
-        int? targetId = preferredUserId ?? _selectedUser?.UserId;
-        string keyword = _searchKeyword.Trim();
-        string roleFilter = _selectedRoleFilterOption?.Value ?? "All";
-        string statusFilter = _selectedStatusFilterOption?.Value ?? "All";
+        int? targetId = preferredUserId ?? SelectedUser?.UserId;
+        string keyword = (SearchKeyword ?? string.Empty).Trim();
+        string roleFilter = SelectedRoleFilterOption?.Value ?? "All";
+        string statusFilter = SelectedStatusFilterOption?.Value ?? "All";
 
         List<AdminUserRow> filtered = [];
         foreach (AdminUserRow user in _allUsers)
@@ -612,8 +504,9 @@ public sealed class AdminUsersViewModel : ViewModelBase
             : null;
         nextSelected ??= Users.FirstOrDefault();
 
-        _selectedUser = nextSelected;
-        OnPropertyChanged(nameof(SelectedUser));
+        _suppressSelectionPopulate = true;
+        SelectedUser = nextSelected;
+        _suppressSelectionPopulate = false;
 
         if (nextSelected is not null)
         {
@@ -638,21 +531,13 @@ public sealed class AdminUsersViewModel : ViewModelBase
         }
 
         _editingUserId = user.UserId;
-        _selectedFormRoleOption = RoleFormOptions.FirstOrDefault(r => r.Value == user.Role) ?? RoleFormOptions[0];
-        _username = user.Username;
-        _fullName = user.FullName;
-        _phone = user.Phone;
-        _email = user.Email;
-        _dateOfBirthText = user.DateOfBirthDisplay;
-        _isActiveAccount = user.IsActive;
-
-        OnPropertyChanged(nameof(SelectedFormRoleOption));
-        OnPropertyChanged(nameof(Username));
-        OnPropertyChanged(nameof(FullName));
-        OnPropertyChanged(nameof(Phone));
-        OnPropertyChanged(nameof(Email));
-        OnPropertyChanged(nameof(DateOfBirthText));
-        OnPropertyChanged(nameof(IsActiveAccount));
+        SelectedFormRoleOption = RoleFormOptions.FirstOrDefault(r => r.Value == user.Role) ?? RoleFormOptions[0];
+        Username = user.Username;
+        FullName = user.FullName;
+        Phone = user.Phone;
+        Email = user.Email;
+        DateOfBirthText = user.DateOfBirthDisplay;
+        IsActiveAccount = user.IsActive;
 
         NotifyFormStateProperties();
         PasswordClearRequested?.Invoke();

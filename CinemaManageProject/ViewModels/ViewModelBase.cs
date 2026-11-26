@@ -1,16 +1,11 @@
-using System.ComponentModel;
+using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace CinemaManageProject.ViewModels;
 
 /// <summary>
-/// Lớp nền MVVM cài đặt INotifyPropertyChanged và cổng LoadData dùng chung cho các màn hình.
+/// Lớp nền MVVM kế thừa ObservableObject của CommunityToolkit.Mvvm và cổng LoadData dùng chung cho các màn hình.
 /// </summary>
-public abstract class ViewModelBase : INotifyPropertyChanged
+public abstract class ViewModelBase : ObservableObject
 {
-    public event PropertyChangedEventHandler? PropertyChanged;
-
     public virtual void LoadData() { }
-
-    protected void OnPropertyChanged(string propertyName)
-        => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 }

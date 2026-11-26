@@ -4,6 +4,7 @@ using System.IO;
 using System.Windows.Media;
 using CinemaManageProject.Data;
 using CinemaManageProject.Helpers;
+using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace CinemaManageProject.ViewModels.Admin;
 
@@ -17,26 +18,21 @@ public sealed record GenreFilterOption(int? GenreId, string Name)
     public override string ToString() => Name;
 }
 
-public sealed class GenreSelectionItem : ViewModelBase
+public sealed partial class GenreSelectionItem : ViewModelBase
 {
+    [ObservableProperty]
     private bool _isSelected;
 
     public GenreSelectionItem(int genreId, string name) { GenreId = genreId; Name = name; }
 
     public int GenreId { get; }
     public string Name { get; }
-
-    public bool IsSelected
-    {
-        get => _isSelected;
-        set { _isSelected = value; OnPropertyChanged(nameof(IsSelected)); }
-    }
 }
 
 /// <summary>
 /// ViewModel Quản lý Phim &amp; Thể loại cho vai trò Admin.
 /// </summary>
-public sealed class AdminMoviesViewModel : ViewModelBase
+public sealed partial class AdminMoviesViewModel : ViewModelBase
 {
     private static readonly string[] DateFormats = ["dd/MM/yyyy", "d/M/yyyy", "yyyy-MM-dd"];
 
@@ -44,29 +40,74 @@ public sealed class AdminMoviesViewModel : ViewModelBase
     private int? _editingMovieId;
     private string? _posterPath;
     private string? _pendingPosterSourcePath;
+    private bool _suppressFilters;
+    private bool _suppressSelectionPopulate;
 
+    [ObservableProperty]
     private string _searchKeyword = string.Empty;
+
+    [ObservableProperty]
     private GenreFilterOption? _selectedGenreFilter;
+
+    [ObservableProperty]
     private string _selectedAgeRatingFilter = "Tất cả";
+
+    [ObservableProperty]
     private MovieStatusOption? _selectedStatusFilterOption;
+
+    [ObservableProperty]
     private string _resultCountText = "0 phim";
+
     private AdminMovieRow? _selectedMovie;
 
+    [ObservableProperty]
     private string _title = string.Empty;
+
+    [ObservableProperty]
     private string _originalTitle = string.Empty;
+
+    [ObservableProperty]
     private string _director = string.Empty;
+
+    [ObservableProperty]
     private string _cast = string.Empty;
+
+    [ObservableProperty]
     private string _durationText = string.Empty;
+
+    [ObservableProperty]
     private string _language = "Phụ đề Tiếng Việt";
+
+    [ObservableProperty]
     private string _releaseDateText = DateTime.Today.ToString("dd/MM/yyyy");
+
+    [ObservableProperty]
     private string _endDateText = string.Empty;
+
+    [ObservableProperty]
     private string _selectedAgeRating = "P";
+
+    [ObservableProperty]
     private MovieStatusOption? _selectedStatusOption;
+
+    [ObservableProperty]
     private string _newGenreName = string.Empty;
+
+    [ObservableProperty]
     private string _description = string.Empty;
+
+    [ObservableProperty]
     private ImageSource? _posterPreview;
+
+    [ObservableProperty]
     private string _posterFileName = "Chưa chọn ảnh (JPG, PNG)";
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasError))]
     private string? _errorMessage;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasSuccess))]
     private string? _successMessage;
 
     public AdminMoviesViewModel()
@@ -101,70 +142,31 @@ public sealed class AdminMoviesViewModel : ViewModelBase
     public ObservableCollection<GenreSelectionItem> GenreOptions { get; } = [];
     public ObservableCollection<GenreFilterOption> GenreFilterOptions { get; } = [];
 
-    public string SearchKeyword
-    {
-        get => _searchKeyword;
-        set { if (_searchKeyword == value) return; _searchKeyword = value; OnPropertyChanged(nameof(SearchKeyword)); ApplyFilter(); }
-    }
-
-    public GenreFilterOption? SelectedGenreFilter
-    {
-        get => _selectedGenreFilter;
-        set { if (Equals(_selectedGenreFilter, value)) return; _selectedGenreFilter = value; OnPropertyChanged(nameof(SelectedGenreFilter)); ApplyFilter(); }
-    }
-
-    public string SelectedAgeRatingFilter
-    {
-        get => _selectedAgeRatingFilter;
-        set { if (_selectedAgeRatingFilter == value) return; _selectedAgeRatingFilter = value; OnPropertyChanged(nameof(SelectedAgeRatingFilter)); ApplyFilter(); }
-    }
-
-    public MovieStatusOption? SelectedStatusFilterOption
-    {
-        get => _selectedStatusFilterOption;
-        set { if (Equals(_selectedStatusFilterOption, value)) return; _selectedStatusFilterOption = value; OnPropertyChanged(nameof(SelectedStatusFilterOption)); ApplyFilter(); }
-    }
-
     public AdminMovieRow? SelectedMovie
     {
         get => _selectedMovie;
-        set { _selectedMovie = value; OnPropertyChanged(nameof(SelectedMovie)); if (value is not null) PopulateForm(value); }
+        set
+        {
+            _selectedMovie = value;
+            OnPropertyChanged();
+            if (!_suppressSelectionPopulate && value is not null)
+            {
+                PopulateForm(value);
+            }
+        }
     }
 
-    public string ResultCountText { get => _resultCountText; private set { _resultCountText = value; OnPropertyChanged(nameof(ResultCountText)); } }
     public bool IsEditMode => _editingMovieId.HasValue;
     public string FormHeaderText => IsEditMode ? "Chỉnh sửa phim" : "Thêm phim mới";
     public string FormModeBadge => IsEditMode ? $"MÃ #{_editingMovieId}" : "THÊM MỚI";
-
-    public string Title { get => _title; set { _title = value; OnPropertyChanged(nameof(Title)); } }
-    public string OriginalTitle { get => _originalTitle; set { _originalTitle = value; OnPropertyChanged(nameof(OriginalTitle)); } }
-    public string Director { get => _director; set { _director = value; OnPropertyChanged(nameof(Director)); } }
-    public string Cast { get => _cast; set { _cast = value; OnPropertyChanged(nameof(Cast)); } }
-    public string DurationText { get => _durationText; set { _durationText = value; OnPropertyChanged(nameof(DurationText)); } }
-    public string Language { get => _language; set { _language = value; OnPropertyChanged(nameof(Language)); } }
-    public string ReleaseDateText { get => _releaseDateText; set { _releaseDateText = value; OnPropertyChanged(nameof(ReleaseDateText)); } }
-    public string EndDateText { get => _endDateText; set { _endDateText = value; OnPropertyChanged(nameof(EndDateText)); } }
-    public string SelectedAgeRating { get => _selectedAgeRating; set { _selectedAgeRating = value; OnPropertyChanged(nameof(SelectedAgeRating)); } }
-    public MovieStatusOption? SelectedStatusOption { get => _selectedStatusOption; set { _selectedStatusOption = value; OnPropertyChanged(nameof(SelectedStatusOption)); } }
-    public string NewGenreName { get => _newGenreName; set { _newGenreName = value; OnPropertyChanged(nameof(NewGenreName)); } }
-    public string Description { get => _description; set { _description = value; OnPropertyChanged(nameof(Description)); } }
-    public ImageSource? PosterPreview { get => _posterPreview; private set { _posterPreview = value; OnPropertyChanged(nameof(PosterPreview)); } }
-    public string PosterFileName { get => _posterFileName; private set { _posterFileName = value; OnPropertyChanged(nameof(PosterFileName)); } }
     public bool HasPoster => !string.IsNullOrWhiteSpace(_pendingPosterSourcePath) || !string.IsNullOrWhiteSpace(_posterPath);
-
-    public string? ErrorMessage
-    {
-        get => _errorMessage;
-        private set { _errorMessage = value; OnPropertyChanged(nameof(ErrorMessage)); OnPropertyChanged(nameof(HasError)); }
-    }
     public bool HasError => !string.IsNullOrWhiteSpace(ErrorMessage);
-
-    public string? SuccessMessage
-    {
-        get => _successMessage;
-        private set { _successMessage = value; OnPropertyChanged(nameof(SuccessMessage)); OnPropertyChanged(nameof(HasSuccess)); }
-    }
     public bool HasSuccess => !string.IsNullOrWhiteSpace(SuccessMessage);
+
+    partial void OnSearchKeywordChanged(string value) { if (!_suppressFilters) ApplyFilter(); }
+    partial void OnSelectedGenreFilterChanged(GenreFilterOption? value) { if (!_suppressFilters) ApplyFilter(); }
+    partial void OnSelectedAgeRatingFilterChanged(string value) { if (!_suppressFilters) ApplyFilter(); }
+    partial void OnSelectedStatusFilterOptionChanged(MovieStatusOption? value) { if (!_suppressFilters) ApplyFilter(); }
 
     public override void LoadData()
     {
@@ -177,7 +179,10 @@ public sealed class AdminMoviesViewModel : ViewModelBase
 
         if (selectedId.HasValue && _allMovies.FirstOrDefault(m => m.MovieId == selectedId.Value) is { } matched)
         {
+            _suppressSelectionPopulate = true;
             SelectedMovie = matched;
+            _suppressSelectionPopulate = false;
+            PopulateForm(matched);
             return;
         }
 
@@ -189,15 +194,19 @@ public sealed class AdminMoviesViewModel : ViewModelBase
 
     public void ResetFilters()
     {
-        _searchKeyword = string.Empty;
-        _selectedGenreFilter = GenreFilterOptions.FirstOrDefault();
-        _selectedAgeRatingFilter = "Tất cả";
-        _selectedStatusFilterOption = StatusFilterOptions[0];
+        _suppressFilters = true;
+        try
+        {
+            SearchKeyword = string.Empty;
+            SelectedGenreFilter = GenreFilterOptions.FirstOrDefault();
+            SelectedAgeRatingFilter = "Tất cả";
+            SelectedStatusFilterOption = StatusFilterOptions[0];
+        }
+        finally
+        {
+            _suppressFilters = false;
+        }
 
-        OnPropertyChanged(nameof(SearchKeyword));
-        OnPropertyChanged(nameof(SelectedGenreFilter));
-        OnPropertyChanged(nameof(SelectedAgeRatingFilter));
-        OnPropertyChanged(nameof(SelectedStatusFilterOption));
         ApplyFilter();
     }
 
@@ -244,7 +253,7 @@ public sealed class AdminMoviesViewModel : ViewModelBase
     public void AddGenre()
     {
         ClearMessages();
-        string name = NewGenreName.Trim();
+        string name = (NewGenreName ?? string.Empty).Trim();
         if (string.IsNullOrWhiteSpace(name))
         {
             ErrorMessage = "Vui lòng nhập tên thể loại mới.";
@@ -293,7 +302,7 @@ public sealed class AdminMoviesViewModel : ViewModelBase
     public bool CanDeleteSelectedMovie(out string movieTitle)
     {
         ClearMessages();
-        movieTitle = Title.Trim();
+        movieTitle = (Title ?? string.Empty).Trim();
         if (!_editingMovieId.HasValue)
         {
             ErrorMessage = "Vui lòng chọn một phim trong danh sách để xóa.";
@@ -317,7 +326,7 @@ public sealed class AdminMoviesViewModel : ViewModelBase
             return;
         }
 
-        string deletedTitle = Title.Trim();
+        string deletedTitle = (Title ?? string.Empty).Trim();
         MovieData.DeleteMovie(_editingMovieId.Value);
 
         SelectedMovie = null;
@@ -329,7 +338,7 @@ public sealed class AdminMoviesViewModel : ViewModelBase
     private void RefreshGenres()
     {
         HashSet<int> checkedIds = GenreOptions.Where(g => g.IsSelected).Select(g => g.GenreId).ToHashSet();
-        int? activeFilterId = _selectedGenreFilter?.GenreId;
+        int? activeFilterId = SelectedGenreFilter?.GenreId;
 
         GenreOptions.Clear();
         GenreFilterOptions.Clear();
@@ -341,18 +350,19 @@ public sealed class AdminMoviesViewModel : ViewModelBase
             GenreFilterOptions.Add(new GenreFilterOption(id, name));
         }
 
-        _selectedGenreFilter = activeFilterId.HasValue
+        _suppressFilters = true;
+        SelectedGenreFilter = activeFilterId.HasValue
             ? GenreFilterOptions.FirstOrDefault(g => g.GenreId == activeFilterId.Value) ?? GenreFilterOptions[0]
             : GenreFilterOptions[0];
-        OnPropertyChanged(nameof(SelectedGenreFilter));
+        _suppressFilters = false;
     }
 
     private void ApplyFilter()
     {
         Movies.Clear();
-        string keyword = SearchKeyword.Trim();
+        string keyword = (SearchKeyword ?? string.Empty).Trim();
         int? genreId = SelectedGenreFilter?.GenreId;
-        string age = SelectedAgeRatingFilter;
+        string age = SelectedAgeRatingFilter ?? "Tất cả";
         string status = SelectedStatusFilterOption?.Value ?? "All";
 
         foreach (AdminMovieRow m in _allMovies)
@@ -439,10 +449,10 @@ public sealed class AdminMoviesViewModel : ViewModelBase
         List<int> genreIds = GenreOptions.Where(g => g.IsSelected).Select(g => g.GenreId).ToList();
 
         if (string.IsNullOrWhiteSpace(Title)) { ErrorMessage = "Tên phim không được để trống."; return false; }
-        if (!int.TryParse(DurationText.Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out int duration) || duration <= 0)
+        if (!int.TryParse((DurationText ?? string.Empty).Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out int duration) || duration <= 0)
         { ErrorMessage = "Thời lượng phim phải là số nguyên lớn hơn 0 (phút)."; return false; }
         if (string.IsNullOrWhiteSpace(Language)) { ErrorMessage = "Ngôn ngữ phim không được để trống."; return false; }
-        if (!TryParseDate(ReleaseDateText, out DateOnly releaseDate))
+        if (!TryParseDate(ReleaseDateText ?? string.Empty, out DateOnly releaseDate))
         { ErrorMessage = "Ngày khởi chiếu không hợp lệ (hãy nhập dạng dd/MM/yyyy hoặc yyyy-MM-dd)."; return false; }
 
         string? endSql = null;
@@ -519,6 +529,6 @@ public sealed class AdminMoviesViewModel : ViewModelBase
             ? d.ToString("dd/MM/yyyy", CultureInfo.InvariantCulture)
             : sqlDate;
 
-    private static string? TrimOrNull(string value)
+    private static string? TrimOrNull(string? value)
         => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 }

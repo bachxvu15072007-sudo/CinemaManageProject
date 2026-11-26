@@ -1,4 +1,6 @@
-﻿using System.Windows;
+﻿using System.Runtime.InteropServices;
+using System.Windows;
+using System.Windows.Interop;
 using CinemaManageProject.Models;
 using CinemaManageProject.Views;
 
@@ -74,4 +76,32 @@ public partial class App : Application
 
         _isSwitching = false;
     }
+
+    /// <summary>
+    /// Bật thanh tiêu đề tối thuần Windows 10/11 (DWM) cho Window chuẩn mà không dùng WindowChrome/FluentWindow.
+    /// </summary>
+    public static void ApplyDarkTitleBar(Window window)
+    {
+        window.SourceInitialized += (_, _) =>
+        {
+            nint hwnd = new WindowInteropHelper(window).Handle;
+            if (hwnd == nint.Zero)
+            {
+                return;
+            }
+
+            int useDarkMode = 1;
+            _ = DwmSetWindowAttribute(hwnd, 20, ref useDarkMode, sizeof(int));
+
+            // COLORREF (0x00BBGGRR) cho màu nền #0F1011 và viền #23252A trên Windows 11
+            int captionColor = 0x0011100F;
+            _ = DwmSetWindowAttribute(hwnd, 35, ref captionColor, sizeof(int));
+
+            int borderColor = 0x002A2523;
+            _ = DwmSetWindowAttribute(hwnd, 34, ref borderColor, sizeof(int));
+        };
+    }
+
+    [DllImport("dwmapi.dll")]
+    private static extern int DwmSetWindowAttribute(nint hwnd, int attr, ref int attrValue, int attrSize);
 }

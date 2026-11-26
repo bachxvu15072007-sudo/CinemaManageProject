@@ -20,6 +20,7 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        App.ApplyDarkTitleBar(this);
         _viewModel = new MainViewModel();
         _viewModel.PropertyChanged += (_, e) =>
         {

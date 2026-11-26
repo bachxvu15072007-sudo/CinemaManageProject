@@ -1,24 +1,46 @@
 using System.Collections.ObjectModel;
 using CinemaManageProject.Data;
+using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace CinemaManageProject.ViewModels.Staff;
 
 /// <summary>
 /// ViewModel màn hình Soát vé Check-in cho vai trò Staff.
 /// </summary>
-public sealed class StaffCheckInViewModel : ViewModelBase
+public sealed partial class StaffCheckInViewModel : ViewModelBase
 {
     private readonly List<CheckInTicketRow> _allTickets = [];
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasCurrentTicket))]
+    [NotifyPropertyChangedFor(nameof(CanConfirmCheckIn))]
+    [NotifyPropertyChangedFor(nameof(IsCurrentValid))]
+    [NotifyPropertyChangedFor(nameof(IsCurrentAlreadyCheckedIn))]
+    [NotifyPropertyChangedFor(nameof(IsCurrentBlocked))]
     private CheckInTicketRow? _currentTicket;
-    private CheckInTicketRow? _selectedQueueTicket;
-    private string _ticketCodeInput = string.Empty;
-    private string _searchKeyword = string.Empty;
+
+    [ObservableProperty] private CheckInTicketRow? _selectedQueueTicket;
+    [ObservableProperty] private string _ticketCodeInput = string.Empty;
+    [ObservableProperty] private string _searchKeyword = string.Empty;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(BookedFilterTag))]
+    [NotifyPropertyChangedFor(nameof(CheckedInFilterTag))]
+    [NotifyPropertyChangedFor(nameof(CancelledFilterTag))]
+    [NotifyPropertyChangedFor(nameof(AllFilterTag))]
     private string _statusFilter = "Booked";
-    private string _pendingCountText = "0 vé";
-    private string _checkedInTodayText = "0 vé";
-    private string _checkedInTotalText = "0 vé";
-    private string _cancelledCountText = "0 vé";
+
+    [ObservableProperty] private string _pendingCountText = "0 vé";
+    [ObservableProperty] private string _checkedInTodayText = "0 vé";
+    [ObservableProperty] private string _checkedInTotalText = "0 vé";
+    [ObservableProperty] private string _cancelledCountText = "0 vé";
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasError))]
     private string? _errorMessage;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasSuccess))]
     private string? _successMessage;
 
     public StaffCheckInViewModel()
@@ -28,80 +50,10 @@ public sealed class StaffCheckInViewModel : ViewModelBase
 
     public ObservableCollection<CheckInTicketRow> FilteredTickets { get; } = [];
 
-    public string PendingCountText { get => _pendingCountText; private set { _pendingCountText = value; OnPropertyChanged(nameof(PendingCountText)); } }
-    public string CheckedInTodayText { get => _checkedInTodayText; private set { _checkedInTodayText = value; OnPropertyChanged(nameof(CheckedInTodayText)); } }
-    public string CheckedInTotalText { get => _checkedInTotalText; private set { _checkedInTotalText = value; OnPropertyChanged(nameof(CheckedInTotalText)); } }
-    public string CancelledCountText { get => _cancelledCountText; private set { _cancelledCountText = value; OnPropertyChanged(nameof(CancelledCountText)); } }
-
-    public string TicketCodeInput
-    {
-        get => _ticketCodeInput;
-        set { _ticketCodeInput = value ?? string.Empty; OnPropertyChanged(nameof(TicketCodeInput)); }
-    }
-
-    public string SearchKeyword
-    {
-        get => _searchKeyword;
-        set
-        {
-            if (_searchKeyword == value) return;
-            _searchKeyword = value ?? string.Empty;
-            OnPropertyChanged(nameof(SearchKeyword));
-            ApplyFilter();
-        }
-    }
-
-    public string StatusFilter
-    {
-        get => _statusFilter;
-        private set
-        {
-            if (_statusFilter == value) return;
-            _statusFilter = value;
-            OnPropertyChanged(nameof(StatusFilter));
-            OnPropertyChanged(nameof(BookedFilterTag));
-            OnPropertyChanged(nameof(CheckedInFilterTag));
-            OnPropertyChanged(nameof(CancelledFilterTag));
-            OnPropertyChanged(nameof(AllFilterTag));
-            ApplyFilter();
-        }
-    }
-
     public string? BookedFilterTag => StatusFilter == "Booked" ? "Active" : null;
     public string? CheckedInFilterTag => StatusFilter == "CheckedIn" ? "Active" : null;
     public string? CancelledFilterTag => StatusFilter == "Cancelled" ? "Active" : null;
     public string? AllFilterTag => StatusFilter == "All" ? "Active" : null;
-
-    public CheckInTicketRow? CurrentTicket
-    {
-        get => _currentTicket;
-        private set
-        {
-            _currentTicket = value;
-            OnPropertyChanged(nameof(CurrentTicket));
-            OnPropertyChanged(nameof(HasCurrentTicket));
-            OnPropertyChanged(nameof(CanConfirmCheckIn));
-            OnPropertyChanged(nameof(IsCurrentValid));
-            OnPropertyChanged(nameof(IsCurrentAlreadyCheckedIn));
-            OnPropertyChanged(nameof(IsCurrentBlocked));
-        }
-    }
-
-    public CheckInTicketRow? SelectedQueueTicket
-    {
-        get => _selectedQueueTicket;
-        set
-        {
-            _selectedQueueTicket = value;
-            OnPropertyChanged(nameof(SelectedQueueTicket));
-            if (value is not null)
-            {
-                ClearMessages();
-                TicketCodeInput = value.TicketCode;
-                CurrentTicket = value;
-            }
-        }
-    }
 
     public bool HasCurrentTicket => CurrentTicket is not null;
     public bool CanConfirmCheckIn => CurrentTicket?.CanCheckIn == true;
@@ -109,20 +61,21 @@ public sealed class StaffCheckInViewModel : ViewModelBase
     public bool IsCurrentAlreadyCheckedIn => CurrentTicket?.ValidationState == "AlreadyCheckedIn";
     public bool IsCurrentBlocked => CurrentTicket?.ValidationState == "Blocked";
     public bool HasNoFilteredTickets => FilteredTickets.Count == 0;
-
-    public string? ErrorMessage
-    {
-        get => _errorMessage;
-        private set { _errorMessage = value; OnPropertyChanged(nameof(ErrorMessage)); OnPropertyChanged(nameof(HasError)); }
-    }
     public bool HasError => !string.IsNullOrWhiteSpace(ErrorMessage);
-
-    public string? SuccessMessage
-    {
-        get => _successMessage;
-        private set { _successMessage = value; OnPropertyChanged(nameof(SuccessMessage)); OnPropertyChanged(nameof(HasSuccess)); }
-    }
     public bool HasSuccess => !string.IsNullOrWhiteSpace(SuccessMessage);
+
+    partial void OnSearchKeywordChanged(string value) => ApplyFilter();
+    partial void OnStatusFilterChanged(string value) => ApplyFilter();
+
+    partial void OnSelectedQueueTicketChanged(CheckInTicketRow? value)
+    {
+        if (value is not null)
+        {
+            ClearMessages();
+            TicketCodeInput = value.TicketCode;
+            CurrentTicket = value;
+        }
+    }
 
     public override void LoadData()
     {
@@ -156,7 +109,7 @@ public sealed class StaffCheckInViewModel : ViewModelBase
     public void LookupTicket()
     {
         ClearMessages();
-        string code = TicketCodeInput.Trim();
+        string code = (TicketCodeInput ?? string.Empty).Trim();
         if (string.IsNullOrWhiteSpace(code))
         {
             ErrorMessage = "Vui lòng nhập hoặc quét mã vé (ví dụ: VE-KHACH101).";
@@ -215,13 +168,12 @@ public sealed class StaffCheckInViewModel : ViewModelBase
         ClearMessages();
         TicketCodeInput = string.Empty;
         CurrentTicket = null;
-        _selectedQueueTicket = null;
-        OnPropertyChanged(nameof(SelectedQueueTicket));
+        SelectedQueueTicket = null;
     }
 
     private void ApplyFilter()
     {
-        string kw = SearchKeyword.Trim();
+        string kw = (SearchKeyword ?? string.Empty).Trim();
         FilteredTickets.Clear();
 
         IEnumerable<CheckInTicketRow> query = _allTickets;

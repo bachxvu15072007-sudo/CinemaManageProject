@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using System.Globalization;
 using CinemaManageProject.Data;
 using CinemaManageProject.Helpers;
+using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace CinemaManageProject.ViewModels.Admin;
 
@@ -31,7 +32,7 @@ public sealed record MovieRevenueRow(
 /// <summary>
 /// ViewModel tra cứu hóa đơn và phân tích doanh thu cho vai trò Admin (chỉ đọc).
 /// </summary>
-public sealed class AdminOrdersViewModel : ViewModelBase
+public sealed partial class AdminOrdersViewModel : ViewModelBase
 {
     private static readonly string[] PaymentMethodOrder = ["Cash", "BankTransfer", "Card", "EWallet"];
     private static readonly string[] SqlDateFormats =
@@ -46,23 +47,52 @@ public sealed class AdminOrdersViewModel : ViewModelBase
     private List<AdminOrderSummaryRow> _allOrders = [];
     private Dictionary<int, IReadOnlyList<OrderTicketDetailRow>> _ticketsByOrder = [];
     private bool _isResetting;
+    private bool _suppressOrderTickets;
 
+    [ObservableProperty]
     private string _searchKeyword = string.Empty;
+
+    [ObservableProperty]
     private OrderFilterOption? _selectedDateRangeOption;
+
+    [ObservableProperty]
     private OrderFilterOption? _selectedChannelFilterOption;
+
+    [ObservableProperty]
     private OrderFilterOption? _selectedPaymentFilterOption;
+
+    [ObservableProperty]
     private OrderFilterOption? _selectedStatusFilterOption;
 
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasSelectedOrder))]
     private AdminOrderSummaryRow? _selectedOrder;
 
+    [ObservableProperty]
     private string _filteredRevenueText = "0đ";
+
+    [ObservableProperty]
     private string _globalRevenueSubText = "Toàn rạp: 0đ • Hôm nay: 0đ";
+
+    [ObservableProperty]
     private string _counterRevenueText = "0đ";
+
+    [ObservableProperty]
     private string _counterOrdersSubText = "0 đơn hiệu lực";
+
+    [ObservableProperty]
     private string _selfServiceRevenueText = "0đ";
+
+    [ObservableProperty]
     private string _selfServiceOrdersSubText = "0 đơn hiệu lực";
+
+    [ObservableProperty]
     private string _filteredOrdersTicketsText = "0 đơn • 0 vé hiệu lực";
+
+    [ObservableProperty]
     private string _cancelledOrdersSubText = "0 đơn hủy (0đ)";
+
+    [ObservableProperty]
     private string _resultCountText = "0 hóa đơn";
 
     public AdminOrdersViewModel()
@@ -117,167 +147,56 @@ public sealed class AdminOrdersViewModel : ViewModelBase
     public ObservableCollection<PaymentBreakdownRow> PaymentBreakdowns { get; } = [];
     public ObservableCollection<MovieRevenueRow> MovieRevenues { get; } = [];
 
-    public string SearchKeyword
-    {
-        get => _searchKeyword;
-        set
-        {
-            if (_searchKeyword == value)
-            {
-                return;
-            }
-
-            _searchKeyword = value ?? string.Empty;
-            OnPropertyChanged(nameof(SearchKeyword));
-            if (!_isResetting)
-            {
-                ApplyFilters();
-            }
-        }
-    }
-
-    public OrderFilterOption? SelectedDateRangeOption
-    {
-        get => _selectedDateRangeOption;
-        set => SetFilterOption(ref _selectedDateRangeOption, value, nameof(SelectedDateRangeOption));
-    }
-
-    public OrderFilterOption? SelectedChannelFilterOption
-    {
-        get => _selectedChannelFilterOption;
-        set => SetFilterOption(ref _selectedChannelFilterOption, value, nameof(SelectedChannelFilterOption));
-    }
-
-    public OrderFilterOption? SelectedPaymentFilterOption
-    {
-        get => _selectedPaymentFilterOption;
-        set => SetFilterOption(ref _selectedPaymentFilterOption, value, nameof(SelectedPaymentFilterOption));
-    }
-
-    public OrderFilterOption? SelectedStatusFilterOption
-    {
-        get => _selectedStatusFilterOption;
-        set => SetFilterOption(ref _selectedStatusFilterOption, value, nameof(SelectedStatusFilterOption));
-    }
-
-    public AdminOrderSummaryRow? SelectedOrder
-    {
-        get => _selectedOrder;
-        set
-        {
-            if (Equals(_selectedOrder, value))
-            {
-                return;
-            }
-
-            _selectedOrder = value;
-            OnPropertyChanged(nameof(SelectedOrder));
-            OnPropertyChanged(nameof(HasSelectedOrder));
-            UpdateSelectedOrderTickets();
-        }
-    }
-
     public bool HasSelectedOrder => SelectedOrder is not null;
     public bool HasNoOrders => Orders.Count == 0;
     public bool HasNoSelectedOrderTickets => SelectedOrderTickets.Count == 0;
     public bool HasNoMovieRevenues => MovieRevenues.Count == 0;
 
-    public string FilteredRevenueText
+    partial void OnSearchKeywordChanged(string value)
     {
-        get => _filteredRevenueText;
-        private set
+        if (!_isResetting)
         {
-            if (_filteredRevenueText == value) return;
-            _filteredRevenueText = value;
-            OnPropertyChanged(nameof(FilteredRevenueText));
+            ApplyFilters();
         }
     }
 
-    public string GlobalRevenueSubText
+    partial void OnSelectedDateRangeOptionChanged(OrderFilterOption? value)
     {
-        get => _globalRevenueSubText;
-        private set
+        if (!_isResetting)
         {
-            if (_globalRevenueSubText == value) return;
-            _globalRevenueSubText = value;
-            OnPropertyChanged(nameof(GlobalRevenueSubText));
+            ApplyFilters();
         }
     }
 
-    public string CounterRevenueText
+    partial void OnSelectedChannelFilterOptionChanged(OrderFilterOption? value)
     {
-        get => _counterRevenueText;
-        private set
+        if (!_isResetting)
         {
-            if (_counterRevenueText == value) return;
-            _counterRevenueText = value;
-            OnPropertyChanged(nameof(CounterRevenueText));
+            ApplyFilters();
         }
     }
 
-    public string CounterOrdersSubText
+    partial void OnSelectedPaymentFilterOptionChanged(OrderFilterOption? value)
     {
-        get => _counterOrdersSubText;
-        private set
+        if (!_isResetting)
         {
-            if (_counterOrdersSubText == value) return;
-            _counterOrdersSubText = value;
-            OnPropertyChanged(nameof(CounterOrdersSubText));
+            ApplyFilters();
         }
     }
 
-    public string SelfServiceRevenueText
+    partial void OnSelectedStatusFilterOptionChanged(OrderFilterOption? value)
     {
-        get => _selfServiceRevenueText;
-        private set
+        if (!_isResetting)
         {
-            if (_selfServiceRevenueText == value) return;
-            _selfServiceRevenueText = value;
-            OnPropertyChanged(nameof(SelfServiceRevenueText));
+            ApplyFilters();
         }
     }
 
-    public string SelfServiceOrdersSubText
+    partial void OnSelectedOrderChanged(AdminOrderSummaryRow? value)
     {
-        get => _selfServiceOrdersSubText;
-        private set
+        if (!_suppressOrderTickets)
         {
-            if (_selfServiceOrdersSubText == value) return;
-            _selfServiceOrdersSubText = value;
-            OnPropertyChanged(nameof(SelfServiceOrdersSubText));
-        }
-    }
-
-    public string FilteredOrdersTicketsText
-    {
-        get => _filteredOrdersTicketsText;
-        private set
-        {
-            if (_filteredOrdersTicketsText == value) return;
-            _filteredOrdersTicketsText = value;
-            OnPropertyChanged(nameof(FilteredOrdersTicketsText));
-        }
-    }
-
-    public string CancelledOrdersSubText
-    {
-        get => _cancelledOrdersSubText;
-        private set
-        {
-            if (_cancelledOrdersSubText == value) return;
-            _cancelledOrdersSubText = value;
-            OnPropertyChanged(nameof(CancelledOrdersSubText));
-        }
-    }
-
-    public string ResultCountText
-    {
-        get => _resultCountText;
-        private set
-        {
-            if (_resultCountText == value) return;
-            _resultCountText = value;
-            OnPropertyChanged(nameof(ResultCountText));
+            UpdateSelectedOrderTickets();
         }
     }
 
@@ -293,17 +212,11 @@ public sealed class AdminOrdersViewModel : ViewModelBase
         _isResetting = true;
         try
         {
-            _searchKeyword = string.Empty;
-            _selectedDateRangeOption = DateRangeOptions[0];
-            _selectedChannelFilterOption = ChannelFilterOptions[0];
-            _selectedPaymentFilterOption = PaymentFilterOptions[0];
-            _selectedStatusFilterOption = StatusFilterOptions[0];
-
-            OnPropertyChanged(nameof(SearchKeyword));
-            OnPropertyChanged(nameof(SelectedDateRangeOption));
-            OnPropertyChanged(nameof(SelectedChannelFilterOption));
-            OnPropertyChanged(nameof(SelectedPaymentFilterOption));
-            OnPropertyChanged(nameof(SelectedStatusFilterOption));
+            SearchKeyword = string.Empty;
+            SelectedDateRangeOption = DateRangeOptions[0];
+            SelectedChannelFilterOption = ChannelFilterOptions[0];
+            SelectedPaymentFilterOption = PaymentFilterOptions[0];
+            SelectedStatusFilterOption = StatusFilterOptions[0];
         }
         finally
         {
@@ -313,29 +226,14 @@ public sealed class AdminOrdersViewModel : ViewModelBase
         ApplyFilters();
     }
 
-    private void SetFilterOption(ref OrderFilterOption? field, OrderFilterOption? value, string propertyName)
-    {
-        if (Equals(field, value))
-        {
-            return;
-        }
-
-        field = value;
-        OnPropertyChanged(propertyName);
-        if (!_isResetting)
-        {
-            ApplyFilters();
-        }
-    }
-
     private void ApplyFilters()
     {
-        int? previousOrderId = _selectedOrder?.OrderId;
-        string keyword = _searchKeyword.Trim();
-        string dateRange = _selectedDateRangeOption?.Value ?? "All";
-        string channel = _selectedChannelFilterOption?.Value ?? "All";
-        string payment = _selectedPaymentFilterOption?.Value ?? "All";
-        string status = _selectedStatusFilterOption?.Value ?? "All";
+        int? previousOrderId = SelectedOrder?.OrderId;
+        string keyword = (SearchKeyword ?? string.Empty).Trim();
+        string dateRange = SelectedDateRangeOption?.Value ?? "All";
+        string channel = SelectedChannelFilterOption?.Value ?? "All";
+        string payment = SelectedPaymentFilterOption?.Value ?? "All";
+        string status = SelectedStatusFilterOption?.Value ?? "All";
         DateTime today = DateTime.Today;
 
         List<AdminOrderSummaryRow> filtered = [];
@@ -387,9 +285,9 @@ public sealed class AdminOrdersViewModel : ViewModelBase
             : null;
         nextSelected ??= Orders.FirstOrDefault();
 
-        _selectedOrder = nextSelected;
-        OnPropertyChanged(nameof(SelectedOrder));
-        OnPropertyChanged(nameof(HasSelectedOrder));
+        _suppressOrderTickets = true;
+        SelectedOrder = nextSelected;
+        _suppressOrderTickets = false;
         UpdateSelectedOrderTickets();
     }
 
@@ -566,8 +464,8 @@ public sealed class AdminOrdersViewModel : ViewModelBase
     private void UpdateSelectedOrderTickets()
     {
         SelectedOrderTickets.Clear();
-        if (_selectedOrder is not null &&
-            _ticketsByOrder.TryGetValue(_selectedOrder.OrderId, out IReadOnlyList<OrderTicketDetailRow>? tickets))
+        if (SelectedOrder is not null &&
+            _ticketsByOrder.TryGetValue(SelectedOrder.OrderId, out IReadOnlyList<OrderTicketDetailRow>? tickets))
         {
             foreach (OrderTicketDetailRow ticket in tickets)
             {

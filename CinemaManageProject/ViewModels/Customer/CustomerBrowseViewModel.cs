@@ -5,6 +5,7 @@ using System.Windows.Media;
 using CinemaManageProject.Data;
 using CinemaManageProject.Helpers;
 using CinemaManageProject.Models;
+using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace CinemaManageProject.ViewModels.Customer;
 
@@ -13,8 +14,10 @@ public sealed record OnlinePaymentOption(string Code, string Label)
     public override string ToString() => Label;
 }
 
-public sealed class BrowseMovieCardItem : ViewModelBase
+public sealed partial class BrowseMovieCardItem : ViewModelBase
 {
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ActiveTag))]
     private bool _isSelected;
 
     public BrowseMovieCardItem(BrowseMovieRow row, ImageSource? posterImage)
@@ -62,41 +65,65 @@ public sealed class BrowseMovieCardItem : ViewModelBase
     public string MetaLine => $"{DurationMinutes} phút • {Language} • {AgeRating}";
     public string ShowtimeBadgeText => OpenShowtimesCount > 0 ? $"{OpenShowtimesCount} suất mở bán" : "Chưa mở bán";
     public string? ActiveTag => IsSelected ? "Active" : null;
-
-    public bool IsSelected
-    {
-        get => _isSelected;
-        set
-        {
-            if (_isSelected == value) return;
-            _isSelected = value;
-            OnPropertyChanged(nameof(IsSelected));
-            OnPropertyChanged(nameof(ActiveTag));
-        }
-    }
 }
 
 /// <summary>
 /// ViewModel màn hình Phim &amp; Lịch chiếu (Tự đặt vé trực tuyến) cho vai trò Customer.
 /// </summary>
-public sealed class CustomerBrowseViewModel : ViewModelBase
+public sealed partial class CustomerBrowseViewModel : ViewModelBase
 {
     private const string AllGenresLabel = "Tất cả thể loại";
 
     private readonly List<BrowseMovieCardItem> _allMovies = [];
     private BookingCustomerSummary? _memberProfile;
+    private bool _suppressFilters;
+    private bool _suppressSelectionSideEffects;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasSelectedMovie))]
     private BrowseMovieCardItem? _selectedMovie;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasSelectedShowtime))]
     private OpenShowtimeOption? _selectedShowtime;
+
+    [ObservableProperty]
     private OnlinePaymentOption _selectedPaymentMethod;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(NowShowingTag))]
+    [NotifyPropertyChangedFor(nameof(ComingSoonTag))]
+    [NotifyPropertyChangedFor(nameof(AllStatusTag))]
     private string _statusFilter = "NowShowing";
+
+    [ObservableProperty]
     private string _selectedGenre = AllGenresLabel;
+
+    [ObservableProperty]
     private string _searchKeyword = string.Empty;
+
+    [ObservableProperty]
     private string _pointsToUseText = "0";
+
+    [ObservableProperty]
     private string _orderNote = string.Empty;
+
+    [ObservableProperty]
     private string _seatMapHeader = "Sơ đồ Ghế suất chiếu";
+
+    [ObservableProperty]
     private string _seatMapSubtitle = "Chọn phim và suất chiếu mở bán để chọn ghế.";
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasError))]
     private string? _errorMessage;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasSuccess))]
     private string? _successMessage;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasLastBooking))]
     private string? _lastBookingSummary;
 
     public CustomerBrowseViewModel()
@@ -126,115 +153,15 @@ public sealed class CustomerBrowseViewModel : ViewModelBase
         ? "Đăng nhập tài khoản hội viên để đổi điểm."
         : $"Đang có {_memberProfile.LoyaltyPointsText} • Tối đa dùng {MaxRedeemablePoints} điểm cho đơn này";
 
-    public string StatusFilter
-    {
-        get => _statusFilter;
-        private set
-        {
-            if (_statusFilter == value) return;
-            _statusFilter = value;
-            OnPropertyChanged(nameof(StatusFilter));
-            OnPropertyChanged(nameof(NowShowingTag));
-            OnPropertyChanged(nameof(ComingSoonTag));
-            OnPropertyChanged(nameof(AllStatusTag));
-            ApplyMovieFilter();
-        }
-    }
-
     public string? NowShowingTag => StatusFilter == "NowShowing" ? "Active" : null;
     public string? ComingSoonTag => StatusFilter == "ComingSoon" ? "Active" : null;
     public string? AllStatusTag => StatusFilter == "All" ? "Active" : null;
-
-    public string SelectedGenre
-    {
-        get => _selectedGenre;
-        set
-        {
-            string next = string.IsNullOrWhiteSpace(value) ? AllGenresLabel : value;
-            if (_selectedGenre == next) return;
-            _selectedGenre = next;
-            OnPropertyChanged(nameof(SelectedGenre));
-            ApplyMovieFilter();
-        }
-    }
-
-    public string SearchKeyword
-    {
-        get => _searchKeyword;
-        set
-        {
-            if (_searchKeyword == value) return;
-            _searchKeyword = value ?? string.Empty;
-            OnPropertyChanged(nameof(SearchKeyword));
-            ApplyMovieFilter();
-        }
-    }
-
-    public BrowseMovieCardItem? SelectedMovie
-    {
-        get => _selectedMovie;
-        private set
-        {
-            if (ReferenceEquals(_selectedMovie, value)) return;
-            if (_selectedMovie is not null) _selectedMovie.IsSelected = false;
-            _selectedMovie = value;
-            if (_selectedMovie is not null) _selectedMovie.IsSelected = true;
-
-            OnPropertyChanged(nameof(SelectedMovie));
-            OnPropertyChanged(nameof(HasSelectedMovie));
-            LoadShowtimesForSelectedMovie();
-        }
-    }
-
-    public OpenShowtimeOption? SelectedShowtime
-    {
-        get => _selectedShowtime;
-        set
-        {
-            if (ReferenceEquals(_selectedShowtime, value)) return;
-            _selectedShowtime = value;
-            OnPropertyChanged(nameof(SelectedShowtime));
-            OnPropertyChanged(nameof(HasSelectedShowtime));
-            LoadSeatMapForSelectedShowtime();
-        }
-    }
-
-    public OnlinePaymentOption SelectedPaymentMethod
-    {
-        get => _selectedPaymentMethod;
-        set
-        {
-            if (value is null || ReferenceEquals(_selectedPaymentMethod, value)) return;
-            _selectedPaymentMethod = value;
-            OnPropertyChanged(nameof(SelectedPaymentMethod));
-        }
-    }
-
-    public string PointsToUseText
-    {
-        get => _pointsToUseText;
-        set
-        {
-            _pointsToUseText = value ?? "0";
-            OnPropertyChanged(nameof(PointsToUseText));
-            RecalculateTotals();
-        }
-    }
-
-    public string OrderNote
-    {
-        get => _orderNote;
-        set { _orderNote = value ?? string.Empty; OnPropertyChanged(nameof(OrderNote)); }
-    }
 
     public bool HasSelectedMovie => SelectedMovie is not null;
     public bool HasNoMovies => Movies.Count == 0;
     public bool HasMovieShowtimes => MovieShowtimes.Count > 0;
     public bool HasNoMovieShowtimes => HasSelectedMovie && MovieShowtimes.Count == 0;
     public bool HasSelectedShowtime => SelectedShowtime is not null;
-
-    public string SeatMapHeader { get => _seatMapHeader; private set { _seatMapHeader = value; OnPropertyChanged(nameof(SeatMapHeader)); } }
-    public string SeatMapSubtitle { get => _seatMapSubtitle; private set { _seatMapSubtitle = value; OnPropertyChanged(nameof(SeatMapSubtitle)); } }
 
     public decimal SubTotalAmount => SelectedSeats.Sum(s => s.UnitPrice);
     public int MaxRedeemablePoints => _memberProfile is null
@@ -246,7 +173,7 @@ public sealed class CustomerBrowseViewModel : ViewModelBase
         get
         {
             if (_memberProfile is null) return 0;
-            if (!int.TryParse(PointsToUseText.Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out int pts) || pts < 0)
+            if (!int.TryParse((PointsToUseText ?? string.Empty).Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out int pts) || pts < 0)
             {
                 return 0;
             }
@@ -271,26 +198,72 @@ public sealed class CustomerBrowseViewModel : ViewModelBase
     public string TotalAmountText => FormatHelper.FormatVnd(TotalAmount);
     public string EstimatedPointsText => $"+{EstimatedEarnedPoints} điểm";
 
-    public string? ErrorMessage
-    {
-        get => _errorMessage;
-        private set { _errorMessage = value; OnPropertyChanged(nameof(ErrorMessage)); OnPropertyChanged(nameof(HasError)); }
-    }
     public bool HasError => !string.IsNullOrWhiteSpace(ErrorMessage);
-
-    public string? SuccessMessage
-    {
-        get => _successMessage;
-        private set { _successMessage = value; OnPropertyChanged(nameof(SuccessMessage)); OnPropertyChanged(nameof(HasSuccess)); }
-    }
     public bool HasSuccess => !string.IsNullOrWhiteSpace(SuccessMessage);
-
-    public string? LastBookingSummary
-    {
-        get => _lastBookingSummary;
-        private set { _lastBookingSummary = value; OnPropertyChanged(nameof(LastBookingSummary)); OnPropertyChanged(nameof(HasLastBooking)); }
-    }
     public bool HasLastBooking => !string.IsNullOrWhiteSpace(LastBookingSummary);
+
+    partial void OnStatusFilterChanged(string value)
+    {
+        if (!_suppressFilters)
+        {
+            ApplyMovieFilter();
+        }
+    }
+
+    partial void OnSelectedGenreChanged(string value)
+    {
+        if (_suppressFilters)
+        {
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            SelectedGenre = AllGenresLabel;
+            return;
+        }
+
+        ApplyMovieFilter();
+    }
+
+    partial void OnSearchKeywordChanged(string value)
+    {
+        if (!_suppressFilters)
+        {
+            ApplyMovieFilter();
+        }
+    }
+
+    partial void OnSelectedMovieChanging(BrowseMovieCardItem? oldValue, BrowseMovieCardItem? newValue)
+    {
+        if (oldValue is not null)
+        {
+            oldValue.IsSelected = false;
+        }
+    }
+
+    partial void OnSelectedMovieChanged(BrowseMovieCardItem? value)
+    {
+        if (value is not null)
+        {
+            value.IsSelected = true;
+        }
+
+        if (!_suppressSelectionSideEffects)
+        {
+            LoadShowtimesForSelectedMovie();
+        }
+    }
+
+    partial void OnSelectedShowtimeChanged(OpenShowtimeOption? value)
+    {
+        if (!_suppressSelectionSideEffects)
+        {
+            LoadSeatMapForSelectedShowtime();
+        }
+    }
+
+    partial void OnPointsToUseTextChanged(string value) => RecalculateTotals();
 
     public override void LoadData()
     {
@@ -307,8 +280,9 @@ public sealed class CustomerBrowseViewModel : ViewModelBase
         }
         if (!GenreOptions.Contains(SelectedGenre))
         {
-            _selectedGenre = AllGenresLabel;
-            OnPropertyChanged(nameof(SelectedGenre));
+            _suppressFilters = true;
+            SelectedGenre = AllGenresLabel;
+            _suppressFilters = false;
         }
 
         _allMovies.Clear();
@@ -403,7 +377,7 @@ public sealed class CustomerBrowseViewModel : ViewModelBase
             return;
         }
 
-        if (!int.TryParse(PointsToUseText.Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out int pointsToUse) || pointsToUse < 0)
+        if (!int.TryParse((PointsToUseText ?? string.Empty).Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out int pointsToUse) || pointsToUse < 0)
         {
             ErrorMessage = "Số điểm đổi thưởng phải là số nguyên không âm.";
             return;
@@ -415,6 +389,7 @@ public sealed class CustomerBrowseViewModel : ViewModelBase
             return;
         }
 
+        OnlinePaymentOption paymentMethod = SelectedPaymentMethod ?? PaymentOptions[0];
         var input = new BookingCreateInput(
             ShowtimeId: SelectedShowtime.ShowtimeId,
             SeatIds: SelectedSeats.Select(s => s.SeatId).ToList(),
@@ -422,7 +397,7 @@ public sealed class CustomerBrowseViewModel : ViewModelBase
             CustomerId: _memberProfile.CustomerId,
             BookingChannel: "SelfService",
             PointsUsed: pointsToUse,
-            PaymentMethod: SelectedPaymentMethod.Code,
+            PaymentMethod: paymentMethod.Code,
             CashReceived: 0m,
             Note: string.IsNullOrWhiteSpace(OrderNote)
                 ? $"Đặt vé trực tuyến {SelectedShowtime.MovieTitle}"
@@ -437,7 +412,7 @@ public sealed class CustomerBrowseViewModel : ViewModelBase
         }
 
         LastBookingSummary =
-            $"Đặt vé thành công • Mã đơn {result.OrderCode} | Vé: {string.Join(", ", result.TicketCodes)} | Đã thanh toán {FormatHelper.FormatVnd(result.TotalAmount)} ({SelectedPaymentMethod.Label}) | +{result.EarnedPoints} điểm (Còn {result.UpdatedCustomerPoints ?? 0} điểm, hạng {result.UpdatedCustomerTier ?? _memberProfile.Tier})";
+            $"Đặt vé thành công • Mã đơn {result.OrderCode} | Vé: {string.Join(", ", result.TicketCodes)} | Đã thanh toán {FormatHelper.FormatVnd(result.TotalAmount)} ({paymentMethod.Label}) | +{result.EarnedPoints} điểm (Còn {result.UpdatedCustomerPoints ?? 0} điểm, hạng {result.UpdatedCustomerTier ?? _memberProfile.Tier})";
 
         PointsToUseText = "0";
         OrderNote = string.Empty;
@@ -479,7 +454,7 @@ public sealed class CustomerBrowseViewModel : ViewModelBase
     private void ApplyMovieFilter(int? preferredMovieId = null, int? preferredShowtimeId = null)
     {
         int? keepMovieId = preferredMovieId ?? SelectedMovie?.MovieId;
-        string kw = SearchKeyword.Trim();
+        string kw = (SearchKeyword ?? string.Empty).Trim();
 
         Movies.Clear();
         IEnumerable<BrowseMovieCardItem> query = _allMovies;
@@ -514,12 +489,11 @@ public sealed class CustomerBrowseViewModel : ViewModelBase
             ? Movies.FirstOrDefault(m => m.MovieId == keepMovieId.Value) ?? Movies.FirstOrDefault()
             : Movies.FirstOrDefault();
 
-        if (_selectedMovie is not null) _selectedMovie.IsSelected = false;
-        _selectedMovie = target;
-        if (_selectedMovie is not null) _selectedMovie.IsSelected = true;
+        _suppressSelectionSideEffects = true;
+        SelectedMovie = target;
+        _suppressSelectionSideEffects = false;
+        if (SelectedMovie is not null) SelectedMovie.IsSelected = true;
 
-        OnPropertyChanged(nameof(SelectedMovie));
-        OnPropertyChanged(nameof(HasSelectedMovie));
         LoadShowtimesForSelectedMovie(preferredShowtimeId);
     }
 
@@ -541,9 +515,9 @@ public sealed class CustomerBrowseViewModel : ViewModelBase
             ? MovieShowtimes.FirstOrDefault(s => s.ShowtimeId == preferredShowtimeId.Value) ?? MovieShowtimes.FirstOrDefault()
             : MovieShowtimes.FirstOrDefault();
 
-        _selectedShowtime = nextShowtime;
-        OnPropertyChanged(nameof(SelectedShowtime));
-        OnPropertyChanged(nameof(HasSelectedShowtime));
+        _suppressSelectionSideEffects = true;
+        SelectedShowtime = nextShowtime;
+        _suppressSelectionSideEffects = false;
         LoadSeatMapForSelectedShowtime();
     }
 
