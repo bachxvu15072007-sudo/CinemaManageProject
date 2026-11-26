@@ -13,7 +13,7 @@ namespace CinemaManageProject.Views;
 /// <summary>
 /// Cửa sổ khung chính (Shell) hiển thị Sidebar phân quyền và Dashboard theo từng vai trò.
 /// </summary>
-public partial class MainWindow : Window
+public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
 {
     private readonly MainViewModel _viewModel;
 

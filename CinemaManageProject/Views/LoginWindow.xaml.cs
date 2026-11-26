@@ -8,7 +8,7 @@ namespace CinemaManageProject.Views;
 /// <summary>
 /// Cửa sổ đăng nhập tách rời trước khi vào MainWindow Shell.
 /// </summary>
-public partial class LoginWindow : Window
+public partial class LoginWindow : Wpf.Ui.Controls.FluentWindow
 {
     private readonly LoginViewModel _viewModel;
 

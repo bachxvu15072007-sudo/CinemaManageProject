@@ -43,6 +43,7 @@ public sealed partial class MainViewModel : ViewModelBase
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(SidebarToggleLabel))]
+    [NotifyPropertyChangedFor(nameof(SidebarToggleSymbol))]
     [NotifyPropertyChangedFor(nameof(SidebarToggleToolTip))]
     private bool _isSidebarOpen = true;
 
@@ -69,6 +70,9 @@ public sealed partial class MainViewModel : ViewModelBase
     public string RoleDisplay { get; }
 
     public string SidebarToggleLabel => IsSidebarOpen ? "‹" : "☰";
+    public SymbolRegular SidebarToggleSymbol => IsSidebarOpen
+        ? SymbolRegular.PanelLeftContract24
+        : SymbolRegular.PanelLeftExpand24;
     public string SidebarToggleToolTip => IsSidebarOpen ? "Thu gọn thanh bên" : "Mở thanh bên";
 
     public ObservableCollection<SidebarMenuItem> MenuItems { get; } = [];
