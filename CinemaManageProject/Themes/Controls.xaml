@@ -245,6 +245,38 @@
         </Style.Triggers>
     </Style>
 
+    <Style x:Key="ShowtimeCardItemStyle" TargetType="ListBoxItem">
+        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="Margin" Value="0,0,0,8" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ListBoxItem">
+                    <Border x:Name="CardBorder"
+                            Background="#18181B"
+                            BorderBrush="#27272A"
+                            BorderThickness="1"
+                            CornerRadius="10"
+                            Padding="12,10">
+                        <ContentPresenter />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="CardBorder" Property="Background" Value="#202026" />
+                            <Setter TargetName="CardBorder" Property="BorderBrush" Value="#3F3F46" />
+                        </Trigger>
+                        <Trigger Property="IsSelected" Value="True">
+                            <Setter TargetName="CardBorder" Property="Background" Value="#265E6AD2" />
+                            <Setter TargetName="CardBorder" Property="BorderBrush" Value="#5E6AD2" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
     <!-- ==================== INPUT CONTROLS (KẾ THỪA TỪ WPF-UI) ==================== -->
 
     <Style x:Key="ModernTextBoxStyle" TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">

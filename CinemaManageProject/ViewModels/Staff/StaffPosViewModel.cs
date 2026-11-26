@@ -1,5 +1,7 @@
 using System.Collections.ObjectModel;
 using System.Globalization;
+using System.IO;
+using System.Windows.Media;
 using CinemaManageProject.Data;
 using CinemaManageProject.Helpers;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -11,13 +13,60 @@ public sealed record PosPaymentOption(string Code, string Label)
     public override string ToString() => Label;
 }
 
+public sealed partial class PosMoviePosterItem : ViewModelBase
+{
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ActiveTag))]
+    private bool _isSelected;
+
+    public PosMoviePosterItem(
+        int movieId,
+        string title,
+        string ageRating,
+        int durationMinutes,
+        string language,
+        string genresText,
+        int openShowtimesCount,
+        decimal minStandardPrice,
+        ImageSource? posterImage)
+    {
+        MovieId = movieId;
+        Title = title;
+        AgeRating = ageRating;
+        MetaLine = $"{durationMinutes} phút • {language} • {ageRating}";
+        GenresText = genresText;
+        OpenShowtimesCount = openShowtimesCount;
+        ShowtimeBadgeText = $"{openShowtimesCount} suất mở bán";
+        PriceText = $"Từ {FormatHelper.FormatVnd(minStandardPrice)}";
+        PosterImage = posterImage;
+    }
+
+    public int MovieId { get; }
+    public string Title { get; }
+    public string AgeRating { get; }
+    public string MetaLine { get; }
+    public string GenresText { get; }
+    public int OpenShowtimesCount { get; }
+    public string ShowtimeBadgeText { get; }
+    public string PriceText { get; }
+    public ImageSource? PosterImage { get; }
+    public string? ActiveTag => IsSelected ? "Active" : null;
+}
+
 /// <summary>
 /// ViewModel màn hình Bán vé tại quầy (POS) cho vai trò Staff.
 /// </summary>
 public sealed partial class StaffPosViewModel : ViewModelBase
 {
     private readonly List<OpenShowtimeOption> _allShowtimes = [];
+    private readonly List<PosMoviePosterItem> _allMovies = [];
     private bool _suppressShowtimeLoad;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasSelectedMovie))]
+    [NotifyPropertyChangedFor(nameof(AllMoviesTag))]
+    [NotifyPropertyChangedFor(nameof(ShowtimeListSubtitle))]
+    private PosMoviePosterItem? _selectedMovie;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasSelectedShowtime))]
@@ -52,7 +101,7 @@ public sealed partial class StaffPosViewModel : ViewModelBase
     private string _seatMapHeader = "Sơ đồ Ghế suất chiếu";
 
     [ObservableProperty]
-    private string _seatMapSubtitle = "Chọn một suất chiếu đang mở bán phía trên để chọn ghế.";
+    private string _seatMapSubtitle = "Chọn một suất chiếu đang mở bán bên trái để chọn ghế.";
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasError))]
@@ -80,9 +129,18 @@ public sealed partial class StaffPosViewModel : ViewModelBase
     }
 
     public IReadOnlyList<PosPaymentOption> PaymentOptions { get; }
+    public ObservableCollection<PosMoviePosterItem> Movies { get; } = [];
     public ObservableCollection<OpenShowtimeOption> Showtimes { get; } = [];
     public ObservableCollection<BookingSeatRowGroup> SeatRows { get; } = [];
     public ObservableCollection<BookingSeatCellItem> SelectedSeats { get; } = [];
+
+    public bool HasSelectedMovie => SelectedMovie is not null;
+    public bool HasNoMovies => Movies.Count == 0;
+    public string? AllMoviesTag => SelectedMovie is null ? "Active" : null;
+    public string AllMoviesButtonText => $"Tất cả phim ({_allShowtimes.Count} suất)";
+    public string ShowtimeListSubtitle => SelectedMovie is null
+        ? $"Hiển thị {Showtimes.Count} suất chiếu đang mở bán"
+        : $"{SelectedMovie.Title} • {Showtimes.Count} suất mở bán";
 
     public bool HasSelectedShowtime => SelectedShowtime is not null;
     public bool HasNoShowtimes => Showtimes.Count == 0;
@@ -146,7 +204,32 @@ public sealed partial class StaffPosViewModel : ViewModelBase
     public bool HasSuccess => !string.IsNullOrWhiteSpace(SuccessMessage);
     public bool HasLastReceipt => !string.IsNullOrWhiteSpace(LastReceiptSummary);
 
-    partial void OnSearchKeywordChanged(string value) => ApplyShowtimeFilter();
+    partial void OnSearchKeywordChanged(string value)
+    {
+        ApplyMovieFilter();
+        ApplyShowtimeFilter();
+    }
+
+    partial void OnSelectedMovieChanging(PosMoviePosterItem? oldValue, PosMoviePosterItem? newValue)
+    {
+        if (oldValue is not null)
+        {
+            oldValue.IsSelected = false;
+        }
+    }
+
+    partial void OnSelectedMovieChanged(PosMoviePosterItem? value)
+    {
+        if (value is not null)
+        {
+            value.IsSelected = true;
+        }
+
+        if (!_suppressShowtimeLoad)
+        {
+            ApplyShowtimeFilter();
+        }
+    }
 
     partial void OnSelectedShowtimeChanged(OpenShowtimeOption? value)
     {
@@ -172,17 +255,56 @@ public sealed partial class StaffPosViewModel : ViewModelBase
 
     public override void LoadData()
     {
+        int? preferredMovieId = SelectedMovie?.MovieId;
         int? preferredShowtimeId = SelectedShowtime?.ShowtimeId;
 
         _allShowtimes.Clear();
         _allShowtimes.AddRange(BookingData.LoadOpenShowtimes());
+
+        _allMovies.Clear();
+        foreach (IGrouping<int, OpenShowtimeOption> group in _allShowtimes
+                     .GroupBy(s => s.MovieId)
+                     .OrderByDescending(g => g.Count())
+                     .ThenBy(g => g.First().MovieTitle, StringComparer.OrdinalIgnoreCase))
+        {
+            OpenShowtimeOption first = group.First();
+            decimal minPrice = group.Min(x => x.StandardPrice);
+            _allMovies.Add(new PosMoviePosterItem(
+                first.MovieId,
+                first.MovieTitle,
+                first.AgeRating,
+                first.DurationMinutes,
+                first.Language,
+                first.GenresText,
+                group.Count(),
+                minPrice,
+                TryLoadPoster(first.PosterPath)));
+        }
+
+        OnPropertyChanged(nameof(AllMoviesButtonText));
 
         if (SelectedCustomer is not null)
         {
             SelectedCustomer = BookingData.FindCustomerById(SelectedCustomer.CustomerId);
         }
 
+        _suppressShowtimeLoad = true;
+        ApplyMovieFilter(preferredMovieId);
+        _suppressShowtimeLoad = false;
+
         ApplyShowtimeFilter(preferredShowtimeId);
+    }
+
+    public void SelectMovie(PosMoviePosterItem? movie)
+    {
+        ClearMessages();
+        SelectedMovie = ReferenceEquals(SelectedMovie, movie) ? null : movie;
+    }
+
+    public void ShowAllMovies()
+    {
+        ClearMessages();
+        SelectedMovie = null;
     }
 
     public void ToggleSeat(BookingSeatCellItem? seat)
@@ -374,6 +496,41 @@ public sealed partial class StaffPosViewModel : ViewModelBase
         SuccessMessage = $"Xuất thành công {result.TicketCodes.Count} vé — Mã hóa đơn {result.OrderCode}.";
     }
 
+    private void ApplyMovieFilter(int? preferredMovieId = null)
+    {
+        int? keepMovieId = preferredMovieId ?? SelectedMovie?.MovieId;
+        string kw = (SearchKeyword ?? string.Empty).Trim();
+
+        Movies.Clear();
+        IEnumerable<PosMoviePosterItem> query = _allMovies;
+        if (!string.IsNullOrWhiteSpace(kw))
+        {
+            query = query.Where(m =>
+                m.Title.Contains(kw, StringComparison.OrdinalIgnoreCase)
+                || m.GenresText.Contains(kw, StringComparison.OrdinalIgnoreCase)
+                || _allShowtimes.Any(s =>
+                    s.MovieId == m.MovieId
+                    && (s.RoomName.Contains(kw, StringComparison.OrdinalIgnoreCase)
+                        || s.Format.Contains(kw, StringComparison.OrdinalIgnoreCase))));
+        }
+
+        foreach (PosMoviePosterItem movie in query)
+        {
+            Movies.Add(movie);
+        }
+
+        OnPropertyChanged(nameof(HasNoMovies));
+
+        PosMoviePosterItem? nextMovie = keepMovieId.HasValue
+            ? Movies.FirstOrDefault(m => m.MovieId == keepMovieId.Value)
+            : null;
+
+        bool prevSuppress = _suppressShowtimeLoad;
+        _suppressShowtimeLoad = true;
+        SelectedMovie = nextMovie;
+        _suppressShowtimeLoad = prevSuppress;
+    }
+
     private void ApplyShowtimeFilter(int? preferredShowtimeId = null)
     {
         int? keepId = preferredShowtimeId ?? SelectedShowtime?.ShowtimeId;
@@ -381,6 +538,11 @@ public sealed partial class StaffPosViewModel : ViewModelBase
 
         Showtimes.Clear();
         IEnumerable<OpenShowtimeOption> query = _allShowtimes;
+        if (SelectedMovie is not null)
+        {
+            query = query.Where(s => s.MovieId == SelectedMovie.MovieId);
+        }
+
         if (!string.IsNullOrWhiteSpace(kw))
         {
             query = query.Where(s =>
@@ -395,6 +557,7 @@ public sealed partial class StaffPosViewModel : ViewModelBase
         }
 
         OnPropertyChanged(nameof(HasNoShowtimes));
+        OnPropertyChanged(nameof(ShowtimeListSubtitle));
 
         OpenShowtimeOption? next = keepId.HasValue
             ? Showtimes.FirstOrDefault(s => s.ShowtimeId == keepId.Value) ?? Showtimes.FirstOrDefault()
@@ -464,5 +627,23 @@ public sealed partial class StaffPosViewModel : ViewModelBase
     {
         string normalized = (raw ?? string.Empty).Replace(".", string.Empty).Replace(",", string.Empty).Trim();
         return decimal.TryParse(normalized, NumberStyles.Number, CultureInfo.InvariantCulture, out value) && value >= 0m;
+    }
+
+    private static ImageSource? TryLoadPoster(string? storedPath)
+    {
+        if (string.IsNullOrWhiteSpace(storedPath))
+        {
+            return null;
+        }
+
+        try
+        {
+            string fullPath = PosterHelper.ResolvePosterFullPath(storedPath);
+            return File.Exists(fullPath) ? PosterHelper.LoadPosterBitmap(fullPath) : null;
+        }
+        catch
+        {
+            return null;
+        }
     }
 }
