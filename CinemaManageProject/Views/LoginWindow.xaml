@@ -1,40 +1,23 @@
-<ui:FluentWindow x:Class="CinemaManageProject.Views.LoginWindow"
-                 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-                 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-                 xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
-                 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-                 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-                 mc:Ignorable="d"
-                 Style="{StaticResource CinemaWindowStyle}"
-                 Title="CINEVERSE CINEMA — Đăng nhập"
-                 Width="470"
-                 SizeToContent="Height"
-                 MinHeight="574"
-                 ResizeMode="CanMinimize"
-                 WindowStartupLocation="CenterScreen">
+<Window x:Class="CinemaManageProject.Views.LoginWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d"
+        Style="{StaticResource CinemaWindowStyle}"
+        Title="CINEVERSE CINEMA — Đăng nhập"
+        Width="470"
+        SizeToContent="Height"
+        MinHeight="540"
+        ResizeMode="CanMinimize"
+        WindowStartupLocation="CenterScreen">
 
-    <Grid Background="{StaticResource CinemaWindowBackgroundBrush}">
+    <Grid Margin="24">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
-
-        <ui:TitleBar Grid.Row="0"
-                     Title="CINEVERSE CINEMA — Đăng nhập"
-                     Height="34"
-                     ShowMaximize="False">
-            <ui:TitleBar.Icon>
-                <ui:SymbolIcon Symbol="MoviesAndTv24"
-                               FontSize="15"
-                               Foreground="#7C86FF" />
-            </ui:TitleBar.Icon>
-        </ui:TitleBar>
-
-        <Grid Grid.Row="1" Margin="24,10,24,24">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="Auto" />
-            </Grid.RowDefinitions>
 
         <!-- HỌA TIẾT CUỘN PHIM CHÌM -->
         <ui:SymbolIcon Grid.RowSpan="2"
@@ -236,6 +219,5 @@
                 </StackPanel>
             </StackPanel>
         </Border>
-        </Grid>
     </Grid>
-</ui:FluentWindow>
+</Window>

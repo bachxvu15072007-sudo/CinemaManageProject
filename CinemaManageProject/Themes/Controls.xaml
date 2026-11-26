@@ -71,16 +71,11 @@
         </DrawingBrush.Drawing>
     </DrawingBrush>
 
-    <Style x:Key="CinemaWindowStyle"
-           TargetType="{x:Type ui:FluentWindow}"
-           BasedOn="{StaticResource {x:Type ui:FluentWindow}}">
+    <Style x:Key="CinemaWindowStyle" TargetType="Window">
         <Setter Property="Background" Value="{StaticResource CinemaWindowBackgroundBrush}" />
         <Setter Property="Foreground" Value="#FAFAFA" />
         <Setter Property="FontFamily" Value="Segoe UI" />
         <Setter Property="FontSize" Value="14" />
-        <Setter Property="ExtendsContentIntoTitleBar" Value="True" />
-        <Setter Property="WindowBackdropType" Value="None" />
-        <Setter Property="WindowCornerPreference" Value="Round" />
     </Style>
 
     <Style TargetType="TextBlock">

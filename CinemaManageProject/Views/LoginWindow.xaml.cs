@@ -8,13 +8,14 @@ namespace CinemaManageProject.Views;
 /// <summary>
 /// Cửa sổ đăng nhập tách rời trước khi vào MainWindow Shell.
 /// </summary>
-public partial class LoginWindow : Wpf.Ui.Controls.FluentWindow
+public partial class LoginWindow : Window
 {
     private readonly LoginViewModel _viewModel;
 
     public LoginWindow()
     {
         InitializeComponent();
+        App.ApplyDarkTitleBar(this);
 
         _viewModel = new LoginViewModel();
         _viewModel.LoginSucceeded += OnLoginSucceeded;
