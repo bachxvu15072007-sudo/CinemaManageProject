@@ -19,6 +19,7 @@ Tài liệu này tổng hợp đầy đủ các câu hỏi và phần giải th�
 12. [Khai báo Icon Vector (`<Geometry>`), Nền điện ảnh (`DrawingBrush`) và Sidebar đóng/mở](#12-khai-báo-icon-vector-geometry-nền-điện-ảnh-drawingbrush-và-sidebar-đóngmở)
 13. [Hóa đơn & Doanh thu, Nhân sự & Tài khoản, và Chuẩn hóa Kiến trúc `Data/` – `Controls.xaml`](#13-hóa-đơn--doanh-thu-nhân-sự--tài-khoản-và-chuẩn-hóa-kiến-trúc-data--controlsxaml)
 14. [Hoàn thiện phân hệ Staff & Customer (POS, Check-in, Khách hàng, Tự đặt vé & Vé của tôi)](#14-hoàn-thiện-phân-hệ-staff--customer-pos-check-in-khách-hàng-tự-đặt-vé--vé-của-tôi)
+15. [Rút gọn mã nguồn với `CommunityToolkit.Mvvm` & `WPF-UI` (`refactor/mvvm-and-wpfui`)](#15-rút-gọn-mã-nguồn-với-communitytoolkitmvvm--wpf-ui-refactormvvm-and-wpfui)
 
 ---
 
@@ -369,3 +370,38 @@ Toàn bộ các icon (bảng quay phim Clapperboard, dải phim 35mm, vé rạp,
 ### 14.4. Bảo mật mật khẩu bằng `PBKDF2-HMAC-SHA256` (`feat/password-hashing`)
 - **[PasswordHelper.cs](CinemaManageProject/Helpers/PasswordHelper.cs):** Băm mật khẩu một chiều bằng `Rfc2898DeriveBytes.Pbkdf2` (`SHA-256`, `100.000` vòng lặp, salt ngẫu nhiên `16 byte`, khóa đầu ra `32 byte`), lưu ở định dạng `PBKDF2$100000$<saltBase64>$<hashBase64>` (~83 ký tự) và so sánh hằng thời gian bằng `CryptographicOperations.FixedTimeEquals`.
 - **Tích hợp & tự nâng cấp tài khoản cũ:** Áp dụng tại [AuthData.cs](CinemaManageProject/Data/AuthData.cs) (`Authenticate` xóa chuỗi hash khỏi `User.Password` trong RAM và tự nâng cấp tài khoản plain-text cũ khi đăng nhập đúng; `RegisterCustomer` băm trước khi ghi DB) và [UserData.cs](CinemaManageProject/Data/UserData.cs) (`SaveUser` băm khi tạo mới hoặc đặt lại mật khẩu). Toàn bộ 29 tài khoản mẫu trong [SeedData.sql](CinemaManageProject/Database/SeedData.sql) và `cinema.db` đều đã được băm với salt riêng biệt.
+
+---
+
+## 15. Rút gọn mã nguồn với `CommunityToolkit.Mvvm` & `WPF-UI` (`refactor/mvvm-and-wpfui`)
+
+Nhằm giảm tối đa mã lặp (`INotifyPropertyChanged` viết tay trong ViewModel, `ControlTemplate` và chuỗi SVG `<Geometry>` viết tay trong XAML) nhưng vẫn giữ kiến trúc gọn nhẹ và giao diện Dark Zinc nhất quán, dự án đã tích hợp thêm 2 thư viện chuẩn của hệ sinh thái .NET / WPF trên nhánh `refactor/mvvm-and-wpfui`.
+
+### 15.1. Thư viện 1 — `CommunityToolkit.Mvvm` (`8.4.2`) cho toàn bộ `ViewModels/`
+- **Cơ chế Source Generator:** Khác với các framework nặng dùng reflection lúc chạy, `CommunityToolkit.Mvvm` tự sinh mã C# ngay lúc biên dịch từ các attribute khai báo trên field.
+- **[ViewModelBase.cs](CinemaManageProject/ViewModels/ViewModelBase.cs):** Đổi sang kế thừa trực tiếp `ObservableObject` (bỏ khai báo thủ công `event PropertyChanged` và hàm gọi sự kiện).
+- **Chuyển đổi đồng bộ 17/17 file ViewModel:**
+  - Chuyển các lớp ViewModel sang `partial class`, dùng `[ObservableProperty]` để sinh tự động property `get`/`set` + `SetProperty`, dùng `[NotifyPropertyChangedFor(nameof(...))]` cho các thuộc tính phụ thuộc (như `HasError`, `HasSuccess`, `IsLoginMode`, `CanCheckout`, `VisualState`...) và dùng hook `partial void OnXxxChanged(...)` / `OnXxxChanging(...)` cho logic lọc, nạp lại form hoặc tính tổng tiền.
+  - Xử lý triệt để 100% cảnh báo phân tích tĩnh `MVVMTK0034` (luôn đọc/gán qua property sinh tự động kèm cờ chặn đệ quy gọn nhẹ khi reset bộ lọc, không tham chiếu trực tiếp backing field ngoài constructor).
+  - **Lưu ý thực tế về `EqualityComparer<T>.Default`:** Vì `SetProperty` bỏ qua `OnXxxChanged` nếu giá trị mới bằng giá trị cũ, các thuộc tính cần nạp lại form ngay cả khi người dùng bấm chọn lại chính dòng hiện tại (`AdminShowtimesViewModel.SelectedShowtime`, `AdminMoviesViewModel.SelectedMovie`) và các đoạn reload dữ liệu từ DB (`AdminRoomsViewModel.LoadData`) được gọi tường minh để bảo toàn 100% hành vi ban đầu.
+  - Giữ nguyên cơ chế code-behind tối giản (`Click` event gọi method public trên ViewModel) nên không phá vỡ XAML hay các kịch bản kiểm thử hiện có.
+
+### 15.2. Thư viện 2 — `WPF-UI` (`4.3.0`) cho `Themes/Controls.xaml` & Icon giao diện
+- **Tích hợp tập trung tại [Themes/Controls.xaml](CinemaManageProject/Themes/Controls.xaml):**
+  - Nạp sẵn `<ui:ThemesDictionary Theme="Dark" />` và `<ui:ControlsDictionary />` ngay trong `ResourceDictionary.MergedDictionaries` của `Controls.xaml` (nên cả `App.xaml` lẫn mọi harness kiểm thử nạp `Controls.xaml` đều tự có đủ tài nguyên `WPF-UI`).
+  - Kế thừa trực tiếp style control mặc định hiện đại của `WPF-UI` bằng `BasedOn="{StaticResource {x:Type ...}}"` cho `BaseButtonStyle`, `ModernTextBoxStyle`, `ModernPasswordBoxStyle`, `ModernCheckBoxStyle` và `ModernComboBoxStyle`. Nhờ đó **xóa bỏ hoàn toàn 5 `ControlTemplate` viết tay** (border, caret, dropdown popup, toggle button, checkmark) mà vẫn giữ nguyên bảng màu Dark Theme Zinc (`#09090B` / `#141516` / `#18181B` / `#23252A`) và điểm nhấn Indigo `#5E6AD2`.
+- **Thay toàn bộ icon SVG viết tay bằng `ui:SymbolIcon` (`SymbolRegular`):**
+  - Xóa 10 chuỗi `<Geometry>` SVG thủ công và `CinemaVectorIconStyle` khỏi `Controls.xaml`.
+  - Đổi `SidebarMenuItem` trong [MainViewModel.cs](CinemaManageProject/ViewModels/MainViewModel.cs) từ `IconResourceKey` / `TryFindResource(...)` sang enum kiểu an toàn `Wpf.Ui.Controls.SymbolRegular IconSymbol`.
+  - Cập nhật `<ui:SymbolIcon Symbol="..." />` trên 5 màn hình: [LoginWindow.xaml](CinemaManageProject/Views/LoginWindow.xaml), [MainWindow.xaml](CinemaManageProject/Views/MainWindow.xaml), [CustomerDashboardView.xaml](CinemaManageProject/Views/Customer/CustomerDashboardView.xaml), [AdminOrdersView.xaml](CinemaManageProject/Views/Admin/AdminOrdersView.xaml) và [AdminUsersView.xaml](CinemaManageProject/Views/Admin/AdminUsersView.xaml).
+
+### 15.3. Kết quả đo đạc thực tế & Cập nhật quy tắc `AGENTS.md`
+| Khu vực mã nguồn | Trước refactor | Sau refactor | Thay đổi |
+| :--- | :---: | :---: | :---: |
+| `CinemaManageProject/ViewModels/` (17 file) | 5.773 dòng | 4.988 dòng | **-785 dòng (-13,6%)** |
+| `CinemaManageProject/Themes/Controls.xaml` (1 file) | 698 dòng | 466 dòng | **-232 dòng (-33,2%)** |
+| `CinemaManageProject/Views/` (30 file) | 5.416 dòng | 5.403 dòng | **-13 dòng** |
+| **Tổng cộng phần bị tác động** | **11.887 dòng** | **10.857 dòng** | **-1.030 dòng mã lặp/template** |
+
+- **Kiểm chứng:** `dotnet build CinemaManageProject.slnx -p:UseSharedCompilation=false` đạt `0 Warning(s), 0 Error(s)`, `0` câu SQL trực tiếp trong `ViewModels/`, `0` tài nguyên SVG cũ còn sót, và toàn bộ **14/14 bộ kiểm thử hồi quy** (bao gồm render trực quan giao diện `WPF-UI`) đều đạt.
+- **Cập nhật [AGENTS.md](AGENTS.md):** Bổ sung danh sách thư viện đã duyệt (`Dapper`, `CommunityToolkit.Mvvm`, `WPF-UI`) và thêm **quy tắc bắt buộc**: *mỗi khi lên ý tưởng, thiết kế hoặc chuẩn bị viết tính năng/module mới, AI agent phải chủ động đề xuất các thư viện phù hợp (kèm công dụng, ưu/nhược điểm và mức độ rút gọn code) để người dùng lựa chọn trước khi triển khai.*
