@@ -1,4 +1,5 @@
 using CinemaManageProject.Helpers;
+using Dapper;
 using Microsoft.Data.Sqlite;
 
 namespace CinemaManageProject.Data;
@@ -51,18 +52,19 @@ public sealed record AdminOrderSummaryRow(
     public string ChangeAmountText => FormatHelper.FormatVnd(ChangeAmount);
 }
 
-public sealed record OrderTicketDetailRow(
-    int TicketId,
-    int OrderId,
-    string TicketCode,
-    int MovieId,
-    string MovieTitle,
-    string RoomName,
-    string SeatCode,
-    string ShowtimeStartSql,
-    decimal UnitPrice,
-    string Status)
+public sealed record OrderTicketDetailRow
 {
+    public int TicketId { get; init; }
+    public int OrderId { get; init; }
+    public string TicketCode { get; init; } = string.Empty;
+    public int MovieId { get; init; }
+    public string MovieTitle { get; init; } = string.Empty;
+    public string RoomName { get; init; } = string.Empty;
+    public string SeatCode { get; init; } = string.Empty;
+    public string ShowtimeStartSql { get; init; } = string.Empty;
+    public decimal UnitPrice { get; init; }
+    public string Status { get; init; } = string.Empty;
+
     public string RoomAndSeat => $"{RoomName} • Ghế {SeatCode}";
     public string ShowtimeDisplay => FormatHelper.FormatSqlDateTime(ShowtimeStartSql, "dd/MM/yyyy HH:mm");
     public string UnitPriceText => FormatHelper.FormatVnd(UnitPrice);
@@ -71,27 +73,51 @@ public sealed record OrderTicketDetailRow(
 }
 
 /// <summary>
-/// Truy vấn SQLite chỉ đọc cho quản lý Hóa đơn và thống kê Doanh thu Admin.
+/// Truy vấn SQLite bằng Dapper cho quản lý Hóa đơn và thống kê Doanh thu Admin.
 /// </summary>
 public static class OrderData
 {
+    private sealed class OrderSqlRow
+    {
+        public int OrderId { get; init; }
+        public string OrderCode { get; init; } = string.Empty;
+        public int? StaffUserId { get; init; }
+        public string? StaffFullName { get; init; }
+        public string? StaffUsername { get; init; }
+        public int? CustomerId { get; init; }
+        public string? CustomerFullName { get; init; }
+        public string? CustomerPhone { get; init; }
+        public string BookingChannel { get; init; } = string.Empty;
+        public int TotalTickets { get; init; }
+        public int ActiveTicketsCount { get; init; }
+        public decimal SubTotalAmount { get; init; }
+        public int PointsUsed { get; init; }
+        public decimal DiscountAmount { get; init; }
+        public decimal TotalAmount { get; init; }
+        public string PaymentMethod { get; init; } = string.Empty;
+        public decimal CashReceived { get; init; }
+        public decimal ChangeAmount { get; init; }
+        public string Status { get; init; } = string.Empty;
+        public string? Note { get; init; }
+        public string CreatedAtSql { get; init; } = string.Empty;
+        public string? PaidAtSql { get; init; }
+    }
+
     public static List<AdminOrderSummaryRow> LoadAllOrders()
     {
-        var orders = new List<AdminOrderSummaryRow>();
         using SqliteConnection conn = DatabaseHelper.OpenConnection();
-        using SqliteCommand cmd = conn.CreateCommand();
-        cmd.CommandText = """
+        const string sql = """
             SELECT o.OrderId,
                    o.OrderCode,
                    o.StaffUserId,
-                   u.FullName,
-                   u.Username,
+                   u.FullName AS StaffFullName,
+                   u.Username AS StaffUsername,
                    o.CustomerId,
-                   c.FullName,
-                   c.Phone,
+                   c.FullName AS CustomerFullName,
+                   c.Phone AS CustomerPhone,
                    o.BookingChannel,
                    o.TotalTickets,
-                   (SELECT COUNT(*) FROM Tickets t WHERE t.OrderId = o.OrderId AND t.Status != 'Cancelled'),
+                   (SELECT COUNT(*) FROM Tickets t WHERE t.OrderId = o.OrderId AND t.Status != 'Cancelled') AS ActiveTicketsCount,
                    o.SubTotalAmount,
                    o.PointsUsed,
                    o.DiscountAmount,
@@ -101,88 +127,79 @@ public static class OrderData
                    o.ChangeAmount,
                    o.Status,
                    o.Note,
-                   o.CreatedAt,
-                   o.PaidAt
+                   o.CreatedAt AS CreatedAtSql,
+                   o.PaidAt AS PaidAtSql
             FROM Orders o
             LEFT JOIN Customers c ON c.CustomerId = o.CustomerId
             LEFT JOIN Users u ON u.UserId = o.StaffUserId
             ORDER BY o.CreatedAt DESC, o.OrderId DESC;
             """;
 
-        using SqliteDataReader r = cmd.ExecuteReader();
-        while (r.Read())
-        {
-            int? staffId = r.IsDBNull(2) ? null : r.GetInt32(2);
-            int? customerId = r.IsDBNull(5) ? null : r.GetInt32(5);
-            string channel = r.GetString(8);
-            string paymentMethod = r.GetString(15);
-            string status = r.GetString(18);
-            string createdAtSql = r.GetString(20);
+        return conn.Query<OrderSqlRow>(sql)
+            .Select(r =>
+            {
+                string staffDisplay = r.BookingChannel == "SelfService"
+                    ? "Khách tự đặt (App)"
+                    : r.StaffUserId is null
+                        ? "Nhân viên quầy"
+                        : FormatStaffLabel(CleanOrFallback(r.StaffFullName, "Nhân viên quầy"), CleanOrNull(r.StaffUsername));
 
-            string staffDisplay = channel == "SelfService"
-                ? "Khách tự đặt (App)"
-                : staffId is null
-                    ? "Nhân viên quầy"
-                    : FormatStaffLabel(ReadOrFallback(r, 3, "Nhân viên quầy"), ReadOrNull(r, 4));
+                string customerName = r.CustomerId is null
+                    ? "Khách vãng lai"
+                    : CleanOrFallback(r.CustomerFullName, "Hội viên");
+                string customerPhone = r.CustomerId is null
+                    ? "Không có tài khoản"
+                    : CleanOrFallback(r.CustomerPhone, "Chưa cập nhật");
 
-            string customerName = customerId is null
-                ? "Khách vãng lai"
-                : ReadOrFallback(r, 6, "Hội viên");
-            string customerPhone = customerId is null
-                ? "Không có tài khoản"
-                : ReadOrFallback(r, 7, "Chưa cập nhật");
+                string? cleanPaidAt = CleanOrNull(r.PaidAtSql);
+                string paidAtDisplay = r.Status == "Cancelled"
+                    ? "Chưa thu tiền / Đã hủy"
+                    : cleanPaidAt is null
+                        ? "Chưa ghi nhận"
+                        : FormatHelper.FormatSqlDateTime(cleanPaidAt, "dd/MM/yyyy HH:mm");
 
-            string paidAtDisplay = status == "Cancelled"
-                ? "Chưa thu tiền / Đã hủy"
-                : r.IsDBNull(21)
-                    ? "Chưa ghi nhận"
-                    : FormatHelper.FormatSqlDateTime(r.GetString(21), "dd/MM/yyyy HH:mm");
-
-            orders.Add(new AdminOrderSummaryRow(
-                r.GetInt32(0),
-                r.GetString(1),
-                staffId,
-                staffDisplay,
-                customerId,
-                customerName,
-                customerPhone,
-                channel,
-                channel == "SelfService" ? "Tự đặt" : "Tại quầy",
-                r.GetInt32(9),
-                r.GetInt32(10),
-                DatabaseHelper.ReadDecimal(r, 11),
-                r.GetInt32(12),
-                DatabaseHelper.ReadDecimal(r, 13),
-                DatabaseHelper.ReadDecimal(r, 14),
-                paymentMethod,
-                FormatHelper.FormatPaymentMethod(paymentMethod),
-                DatabaseHelper.ReadDecimal(r, 16),
-                DatabaseHelper.ReadDecimal(r, 17),
-                status,
-                FormatHelper.FormatStatusLabel(status),
-                ReadOrFallback(r, 19, "Không có ghi chú"),
-                createdAtSql,
-                FormatHelper.FormatSqlDateTime(createdAtSql, "dd/MM/yyyy HH:mm"),
-                paidAtDisplay));
-        }
-
-        return orders;
+                return new AdminOrderSummaryRow(
+                    r.OrderId,
+                    r.OrderCode,
+                    r.StaffUserId,
+                    staffDisplay,
+                    r.CustomerId,
+                    customerName,
+                    customerPhone,
+                    r.BookingChannel,
+                    r.BookingChannel == "SelfService" ? "Tự đặt" : "Tại quầy",
+                    r.TotalTickets,
+                    r.ActiveTicketsCount,
+                    r.SubTotalAmount,
+                    r.PointsUsed,
+                    r.DiscountAmount,
+                    r.TotalAmount,
+                    r.PaymentMethod,
+                    FormatHelper.FormatPaymentMethod(r.PaymentMethod),
+                    r.CashReceived,
+                    r.ChangeAmount,
+                    r.Status,
+                    FormatHelper.FormatStatusLabel(r.Status),
+                    CleanOrFallback(r.Note, "Không có ghi chú"),
+                    r.CreatedAtSql,
+                    FormatHelper.FormatSqlDateTime(r.CreatedAtSql, "dd/MM/yyyy HH:mm"),
+                    paidAtDisplay);
+            })
+            .ToList();
     }
 
     public static Dictionary<int, IReadOnlyList<OrderTicketDetailRow>> LoadAllOrderTickets()
     {
-        var grouped = new Dictionary<int, List<OrderTicketDetailRow>>();
         using SqliteConnection conn = DatabaseHelper.OpenConnection();
-        using SqliteCommand cmd = conn.CreateCommand();
-        cmd.CommandText = """
+        const string sql = """
             SELECT t.TicketId,
                    t.OrderId,
                    t.TicketCode,
                    s.MovieId,
-                   m.Title,
-                   r.Name,
+                   m.Title AS MovieTitle,
+                   r.Name AS RoomName,
                    se.SeatCode,
-                   s.StartTime,
+                   s.StartTime AS ShowtimeStartSql,
                    t.UnitPrice,
                    t.Status
             FROM Tickets t
@@ -193,46 +210,20 @@ public static class OrderData
             ORDER BY t.OrderId DESC, t.TicketId ASC;
             """;
 
-        using SqliteDataReader r = cmd.ExecuteReader();
-        while (r.Read())
-        {
-            int orderId = r.GetInt32(1);
-            if (!grouped.TryGetValue(orderId, out List<OrderTicketDetailRow>? list))
-            {
-                list = [];
-                grouped[orderId] = list;
-            }
-
-            list.Add(new OrderTicketDetailRow(
-                r.GetInt32(0),
-                orderId,
-                r.GetString(2),
-                r.GetInt32(3),
-                r.GetString(4),
-                r.GetString(5),
-                r.GetString(6),
-                r.GetString(7),
-                DatabaseHelper.ReadDecimal(r, 8),
-                r.GetString(9)));
-        }
-
-        return grouped.ToDictionary(kv => kv.Key, kv => (IReadOnlyList<OrderTicketDetailRow>)kv.Value);
+        return conn.Query<OrderTicketDetailRow>(sql)
+            .GroupBy(t => t.OrderId)
+            .ToDictionary(g => g.Key, g => (IReadOnlyList<OrderTicketDetailRow>)g.ToList());
     }
 
     private static string FormatStaffLabel(string fullName, string? username)
         => string.IsNullOrWhiteSpace(username) ? fullName : $"{fullName} (@{username})";
 
-    private static string? ReadOrNull(SqliteDataReader reader, int ordinal)
+    private static string? CleanOrNull(string? value)
     {
-        if (reader.IsDBNull(ordinal))
-        {
-            return null;
-        }
-
-        string value = reader.GetString(ordinal).Trim();
-        return string.IsNullOrWhiteSpace(value) ? null : value;
+        string trimmed = (value ?? string.Empty).Trim();
+        return string.IsNullOrWhiteSpace(trimmed) ? null : trimmed;
     }
 
-    private static string ReadOrFallback(SqliteDataReader reader, int ordinal, string fallback)
-        => ReadOrNull(reader, ordinal) ?? fallback;
+    private static string CleanOrFallback(string? value, string fallback)
+        => CleanOrNull(value) ?? fallback;
 }

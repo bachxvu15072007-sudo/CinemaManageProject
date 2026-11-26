@@ -1,6 +1,6 @@
-using System.Globalization;
 using CinemaManageProject.Helpers;
 using CinemaManageProject.Models;
+using Dapper;
 using Microsoft.Data.Sqlite;
 
 namespace CinemaManageProject.Data;
@@ -8,7 +8,7 @@ namespace CinemaManageProject.Data;
 public sealed record AuthResult(bool Succeeded, User? User, string? ErrorMessage);
 
 /// <summary>
-/// Truy vấn và thao tác SQLite cho đăng nhập và đăng ký tài khoản Customer.
+/// Truy vấn và thao tác SQLite bằng Dapper cho đăng nhập và đăng ký tài khoản Customer.
 /// </summary>
 public static class AuthData
 {
@@ -17,44 +17,28 @@ public static class AuthData
         try
         {
             using SqliteConnection conn = DatabaseHelper.OpenConnection();
-            using SqliteCommand cmd = conn.CreateCommand();
-            cmd.CommandText = """
+            const string sql = """
                 SELECT UserId, Username, Password, FullName, Email, Phone, Role, IsActive
                 FROM Users
                 WHERE Username = @username
                 LIMIT 1;
                 """;
-            cmd.Parameters.AddWithValue("@username", username);
 
-            using SqliteDataReader r = cmd.ExecuteReader();
-            if (!r.Read() || !string.Equals(r.GetString(2), password, StringComparison.Ordinal))
+            User? user = conn.QueryFirstOrDefault<User>(sql, new { username });
+            if (user is null || !string.Equals(user.Password, password, StringComparison.Ordinal))
             {
                 return new AuthResult(false, null, "Tên đăng nhập hoặc mật khẩu không đúng.");
             }
 
-            if (r.GetInt32(7) == 0)
+            if (!user.IsActive)
             {
                 return new AuthResult(false, null, "Tài khoản này đang bị khóa.");
             }
 
-            var user = new User
-            {
-                UserId = r.GetInt32(0),
-                Username = r.GetString(1),
-                Password = r.GetString(2),
-                FullName = r.GetString(3),
-                Email = r.IsDBNull(4) ? null : r.GetString(4),
-                Phone = r.IsDBNull(5) ? null : r.GetString(5),
-                Role = Enum.TryParse(r.GetString(6), true, out UserRole role) ? role : UserRole.Customer,
-                IsActive = true,
-                LastLoginAt = DateTime.Now
-            };
-            r.Close();
-
-            using SqliteCommand upd = conn.CreateCommand();
-            upd.CommandText = "UPDATE Users SET LastLoginAt = datetime('now', 'localtime') WHERE UserId = @id;";
-            upd.Parameters.AddWithValue("@id", user.UserId);
-            upd.ExecuteNonQuery();
+            user.LastLoginAt = DateTime.Now;
+            conn.Execute(
+                "UPDATE Users SET LastLoginAt = datetime('now', 'localtime') WHERE UserId = @id;",
+                new { id = user.UserId });
 
             if (user.Role == UserRole.Customer)
             {
@@ -97,48 +81,41 @@ public static class AuthData
             using SqliteConnection conn = DatabaseHelper.OpenConnection();
             using SqliteTransaction tx = conn.BeginTransaction();
 
-            if (ScalarExists(conn, tx, "SELECT 1 FROM Users WHERE LOWER(Username) = LOWER(@v) LIMIT 1;", cleanUser))
+            bool usernameExists = conn.ExecuteScalar<int?>(
+                "SELECT 1 FROM Users WHERE LOWER(Username) = LOWER(@v) LIMIT 1;",
+                new { v = cleanUser },
+                tx).HasValue;
+            if (usernameExists)
             {
                 return new AuthResult(false, null, "Tên đăng nhập đã tồn tại.");
             }
 
-            if (ScalarExists(conn, tx, "SELECT 1 FROM Customers WHERE Phone = @v LIMIT 1;", cleanPhone))
+            bool phoneExists = conn.ExecuteScalar<int?>(
+                "SELECT 1 FROM Customers WHERE Phone = @v LIMIT 1;",
+                new { v = cleanPhone },
+                tx).HasValue;
+            if (phoneExists)
             {
                 return new AuthResult(false, null, "Số điện thoại đã được đăng ký.");
             }
 
-            int userId;
-            using (SqliteCommand cmd = conn.CreateCommand())
-            {
-                cmd.Transaction = tx;
-                cmd.CommandText = """
-                    INSERT INTO Users (Username, Password, FullName, Email, Phone, Role, IsActive)
-                    VALUES (@u, @p, @n, @e, @ph, 'Customer', 1);
-                    SELECT last_insert_rowid();
-                    """;
-                cmd.Parameters.AddWithValue("@u", cleanUser);
-                cmd.Parameters.AddWithValue("@p", password);
-                cmd.Parameters.AddWithValue("@n", cleanName);
-                cmd.Parameters.AddWithValue("@e", (object?)cleanEmail ?? DBNull.Value);
-                cmd.Parameters.AddWithValue("@ph", cleanPhone);
-                userId = Convert.ToInt32(cmd.ExecuteScalar(), CultureInfo.InvariantCulture);
-            }
+            int userId = conn.ExecuteScalar<int>(
+                """
+                INSERT INTO Users (Username, Password, FullName, Email, Phone, Role, IsActive)
+                VALUES (@u, @p, @n, @e, @ph, 'Customer', 1);
+                SELECT last_insert_rowid();
+                """,
+                new { u = cleanUser, p = password, n = cleanName, e = cleanEmail, ph = cleanPhone },
+                tx);
 
-            int customerId;
-            using (SqliteCommand cmd = conn.CreateCommand())
-            {
-                cmd.Transaction = tx;
-                cmd.CommandText = """
-                    INSERT INTO Customers (UserId, FullName, Phone, Email, LoyaltyPoints, TotalSpent, Tier)
-                    VALUES (@uid, @n, @ph, @e, 0, 0, 'Member');
-                    SELECT last_insert_rowid();
-                    """;
-                cmd.Parameters.AddWithValue("@uid", userId);
-                cmd.Parameters.AddWithValue("@n", cleanName);
-                cmd.Parameters.AddWithValue("@ph", cleanPhone);
-                cmd.Parameters.AddWithValue("@e", (object?)cleanEmail ?? DBNull.Value);
-                customerId = Convert.ToInt32(cmd.ExecuteScalar(), CultureInfo.InvariantCulture);
-            }
+            int customerId = conn.ExecuteScalar<int>(
+                """
+                INSERT INTO Customers (UserId, FullName, Phone, Email, LoyaltyPoints, TotalSpent, Tier)
+                VALUES (@uid, @n, @ph, @e, 0, 0, 'Member');
+                SELECT last_insert_rowid();
+                """,
+                new { uid = userId, n = cleanName, ph = cleanPhone, e = cleanEmail },
+                tx);
 
             tx.Commit();
 
@@ -168,14 +145,5 @@ public static class AuthData
         {
             return new AuthResult(false, null, $"Không thể đăng ký: {ex.Message}");
         }
-    }
-
-    private static bool ScalarExists(SqliteConnection conn, SqliteTransaction tx, string sql, string val)
-    {
-        using SqliteCommand cmd = conn.CreateCommand();
-        cmd.Transaction = tx;
-        cmd.CommandText = sql;
-        cmd.Parameters.AddWithValue("@v", val);
-        return cmd.ExecuteScalar() is not null;
     }
 }

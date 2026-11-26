@@ -1,6 +1,6 @@
 # CINEVERSE CINEMA (`CinemaManageProject`)
 
-Ứng dụng desktop quản lý rạp chiếu phim và đặt vé xây dựng bằng **WPF (.NET 10 Windows)**, **SQLite (`Microsoft.Data.Sqlite`)**, kiến trúc **MVVM gọn nhẹ** và giao diện **Dark Theme** tối giản.
+Ứng dụng desktop quản lý rạp chiếu phim và đặt vé xây dựng bằng **WPF (.NET 10 Windows)**, **SQLite (`Microsoft.Data.Sqlite` + `Dapper`)**, kiến trúc **MVVM gọn nhẹ** và giao diện **Dark Theme** tối giản.
 
 ---
 
@@ -35,7 +35,7 @@ Hệ thống hỗ trợ quản lý vận hành rạp phim và đặt vé tập t
 
 ### 2.4. Tầng Dữ liệu (`Data/`) & Phụ trợ (`Helpers/`)
 * **`CinemaManageProject/Helpers/`:** `DatabaseHelper` (mở kết nối SQLite kèm `PRAGMA foreign_keys = ON;`), `FormatHelper` (định dạng tiền VNĐ, ngày giờ, trạng thái), `PosterHelper` (nạp/lưu ảnh poster).
-* **`CinemaManageProject/Data/`:** Tập trung toàn bộ truy vấn SQLite có tham số hóa vào 8 lớp tĩnh (`AuthData`, `CustomerData`, `DashboardData`, `MovieData`, `OrderData`, `RoomData`, `ShowtimeData`, `UserData`) — không còn câu SQL trực tiếp trong `ViewModels/`.
+* **`CinemaManageProject/Data/`:** Tập trung toàn bộ truy vấn SQLite thuần có tham số hóa qua **Dapper** vào 8 lớp tĩnh (`AuthData`, `CustomerData`, `DashboardData`, `MovieData`, `OrderData`, `RoomData`, `ShowtimeData`, `UserData`) — không còn câu SQL trực tiếp trong `ViewModels/`.
 
 ### 2.5. Đăng nhập, Khung Shell, Dashboard & Trọn bộ 6 Màn hình Quản trị Admin (`Views/`, `ViewModels/`)
 * **Vòng đời cửa sổ (`App.xaml` / `App.xaml.cs`):**

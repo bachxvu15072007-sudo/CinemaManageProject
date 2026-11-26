@@ -1,24 +1,25 @@
-using System.Globalization;
 using CinemaManageProject.Helpers;
+using Dapper;
 using Microsoft.Data.Sqlite;
 
 namespace CinemaManageProject.Data;
 
-public sealed record AdminRoomRow(
-    int RoomId,
-    string Name,
-    string RoomType,
-    int TotalRows,
-    int TotalCols,
-    decimal BasePriceSurcharge,
-    bool IsActive,
-    int TotalSeats,
-    int ActiveSeats,
-    int MaintenanceSeats,
-    int StandardSeats,
-    int VipSeats,
-    int CoupleSeats)
+public sealed record AdminRoomRow
 {
+    public int RoomId { get; init; }
+    public string Name { get; init; } = string.Empty;
+    public string RoomType { get; init; } = string.Empty;
+    public int TotalRows { get; init; }
+    public int TotalCols { get; init; }
+    public decimal BasePriceSurcharge { get; init; }
+    public bool IsActive { get; init; }
+    public int TotalSeats { get; init; }
+    public int ActiveSeats { get; init; }
+    public int MaintenanceSeats { get; init; }
+    public int StandardSeats { get; init; }
+    public int VipSeats { get; init; }
+    public int CoupleSeats { get; init; }
+
     public string DimensionsText => $"{TotalRows} hàng × {TotalCols} ghế đơn";
     public string RoomTypeDisplay => FormatHelper.FormatRoomType(RoomType);
     public string SurchargeText => BasePriceSurcharge > 0 ? $"+{FormatHelper.FormatVnd(BasePriceSurcharge)}" : "0đ";
@@ -30,17 +31,19 @@ public sealed record AdminRoomRow(
     public string TotalSeatsText => $"{TotalSeats} ghế";
 }
 
-public sealed record RoomSeatRow(
-    int SeatId,
-    int RoomId,
-    string RowLabel,
-    int SeatNumber,
-    string SeatCode,
-    string SeatType,
-    decimal PriceMultiplier,
-    int RowIndex,
-    int ColIndex,
-    bool IsActive);
+public sealed record RoomSeatRow
+{
+    public int SeatId { get; init; }
+    public int RoomId { get; init; }
+    public string RowLabel { get; init; } = string.Empty;
+    public int SeatNumber { get; init; }
+    public string SeatCode { get; init; } = string.Empty;
+    public string SeatType { get; init; } = string.Empty;
+    public decimal PriceMultiplier { get; init; }
+    public int RowIndex { get; init; }
+    public int ColIndex { get; init; }
+    public bool IsActive { get; init; }
+}
 
 public sealed record SeatOrderRow(
     string OrderCode,
@@ -51,92 +54,58 @@ public sealed record SeatOrderRow(
     string TicketStatus);
 
 /// <summary>
-/// Truy vấn SQLite chỉ đọc thông tin cố định của phòng chiếu, sơ đồ ghế, đơn hàng theo ghế và cập nhật bảo trì ghế.
+/// Truy vấn SQLite bằng Dapper cho phòng chiếu, sơ đồ ghế, đơn hàng theo ghế và cập nhật bảo trì ghế.
 /// </summary>
 public static class RoomData
 {
+    private sealed class SeatOrderSqlRow
+    {
+        public string OrderCode { get; init; } = string.Empty;
+        public string TicketCode { get; init; } = string.Empty;
+        public string MovieTitle { get; init; } = string.Empty;
+        public string StartTimeSql { get; init; } = string.Empty;
+        public string CustomerName { get; init; } = string.Empty;
+        public string Status { get; init; } = string.Empty;
+    }
+
     public static List<AdminRoomRow> LoadAllRooms()
     {
-        var rooms = new List<AdminRoomRow>();
         using SqliteConnection conn = DatabaseHelper.OpenConnection();
-        using SqliteCommand cmd = conn.CreateCommand();
-        cmd.CommandText = """
+        const string sql = """
             SELECT r.RoomId, r.Name, r.RoomType, r.TotalRows, r.TotalCols, r.BasePriceSurcharge, r.IsActive,
-                   (SELECT COUNT(*) FROM Seats s WHERE s.RoomId = r.RoomId),
-                   (SELECT COUNT(*) FROM Seats s WHERE s.RoomId = r.RoomId AND s.IsActive = 1),
-                   (SELECT COUNT(*) FROM Seats s WHERE s.RoomId = r.RoomId AND s.IsActive = 0),
-                   (SELECT COUNT(*) FROM Seats s WHERE s.RoomId = r.RoomId AND s.SeatType = 'Standard'),
-                   (SELECT COUNT(*) FROM Seats s WHERE s.RoomId = r.RoomId AND s.SeatType = 'VIP'),
-                   (SELECT COUNT(*) FROM Seats s WHERE s.RoomId = r.RoomId AND s.SeatType = 'Couple')
+                   (SELECT COUNT(*) FROM Seats s WHERE s.RoomId = r.RoomId) AS TotalSeats,
+                   (SELECT COUNT(*) FROM Seats s WHERE s.RoomId = r.RoomId AND s.IsActive = 1) AS ActiveSeats,
+                   (SELECT COUNT(*) FROM Seats s WHERE s.RoomId = r.RoomId AND s.IsActive = 0) AS MaintenanceSeats,
+                   (SELECT COUNT(*) FROM Seats s WHERE s.RoomId = r.RoomId AND s.SeatType = 'Standard') AS StandardSeats,
+                   (SELECT COUNT(*) FROM Seats s WHERE s.RoomId = r.RoomId AND s.SeatType = 'VIP') AS VipSeats,
+                   (SELECT COUNT(*) FROM Seats s WHERE s.RoomId = r.RoomId AND s.SeatType = 'Couple') AS CoupleSeats
             FROM Rooms r
             ORDER BY r.RoomId ASC;
             """;
-
-        using SqliteDataReader r = cmd.ExecuteReader();
-        while (r.Read())
-        {
-            rooms.Add(new AdminRoomRow(
-                r.GetInt32(0),
-                r.GetString(1),
-                r.GetString(2),
-                r.GetInt32(3),
-                r.GetInt32(4),
-                DatabaseHelper.ReadDecimal(r, 5),
-                r.GetInt32(6) == 1,
-                r.GetInt32(7),
-                r.GetInt32(8),
-                r.GetInt32(9),
-                r.GetInt32(10),
-                r.GetInt32(11),
-                r.GetInt32(12)));
-        }
-
-        return rooms;
+        return conn.Query<AdminRoomRow>(sql).AsList();
     }
 
     public static List<RoomSeatRow> LoadSeatsByRoom(int roomId)
     {
-        var seats = new List<RoomSeatRow>();
         using SqliteConnection conn = DatabaseHelper.OpenConnection();
-        using SqliteCommand cmd = conn.CreateCommand();
-        cmd.CommandText = """
+        const string sql = """
             SELECT SeatId, RoomId, RowLabel, SeatNumber, SeatCode, SeatType, PriceMultiplier, RowIndex, ColIndex, IsActive
             FROM Seats
             WHERE RoomId = @rid
             ORDER BY RowIndex ASC, ColIndex ASC;
             """;
-        cmd.Parameters.AddWithValue("@rid", roomId);
-
-        using SqliteDataReader r = cmd.ExecuteReader();
-        while (r.Read())
-        {
-            seats.Add(new RoomSeatRow(
-                r.GetInt32(0),
-                r.GetInt32(1),
-                r.GetString(2),
-                r.GetInt32(3),
-                r.GetString(4),
-                r.GetString(5),
-                DatabaseHelper.ReadDecimal(r, 6),
-                r.GetInt32(7),
-                r.GetInt32(8),
-                r.GetInt32(9) == 1));
-        }
-
-        return seats;
+        return conn.Query<RoomSeatRow>(sql, new { rid = roomId }).AsList();
     }
 
     public static List<SeatOrderRow> LoadSeatOrders(int seatId)
     {
-        var rows = new List<SeatOrderRow>();
         using SqliteConnection conn = DatabaseHelper.OpenConnection();
-        using SqliteCommand cmd = conn.CreateCommand();
-        cmd.CommandText = """
+        const string sql = """
             SELECT o.OrderCode,
                    t.TicketCode,
-                   m.Title,
-                   s.StartTime,
-                   COALESCE(c.FullName, 'Khách vãng lai'),
+                   m.Title AS MovieTitle,
+                   s.StartTime AS StartTimeSql,
+                   COALESCE(c.FullName, 'Khách vãng lai') AS CustomerName,
                    t.Status
             FROM Tickets t
             INNER JOIN Orders o ON o.OrderId = t.OrderId
@@ -147,28 +116,22 @@ public static class RoomData
             ORDER BY s.StartTime DESC, t.TicketId DESC
             LIMIT 20;
             """;
-        cmd.Parameters.AddWithValue("@sid", seatId);
 
-        using SqliteDataReader r = cmd.ExecuteReader();
-        while (r.Read())
-        {
-            rows.Add(new SeatOrderRow(
-                r.GetString(0),
-                r.GetString(1),
-                r.GetString(2),
-                FormatHelper.FormatSqlDateTime(r.GetString(3), "dd/MM/yyyy HH:mm"),
-                r.GetString(4),
-                FormatHelper.FormatStatusLabel(r.GetString(5))));
-        }
-
-        return rows;
+        return conn.Query<SeatOrderSqlRow>(sql, new { sid = seatId })
+            .Select(r => new SeatOrderRow(
+                r.OrderCode,
+                r.TicketCode,
+                r.MovieTitle,
+                FormatHelper.FormatSqlDateTime(r.StartTimeSql, "dd/MM/yyyy HH:mm"),
+                r.CustomerName,
+                FormatHelper.FormatStatusLabel(r.Status)))
+            .ToList();
     }
 
     public static int CountActiveTicketsForSeat(int seatId)
     {
         using SqliteConnection conn = DatabaseHelper.OpenConnection();
-        using SqliteCommand cmd = conn.CreateCommand();
-        cmd.CommandText = """
+        const string sql = """
             SELECT COUNT(*)
             FROM Tickets t
             INNER JOIN Showtimes s ON s.ShowtimeId = t.ShowtimeId
@@ -176,17 +139,14 @@ public static class RoomData
               AND t.Status IN ('Booked', 'CheckedIn')
               AND s.Status IN ('Scheduled', 'OpenForSale');
             """;
-        cmd.Parameters.AddWithValue("@sid", seatId);
-        return Convert.ToInt32(cmd.ExecuteScalar(), CultureInfo.InvariantCulture);
+        return conn.ExecuteScalar<int>(sql, new { sid = seatId });
     }
 
     public static void SetSeatActive(int seatId, bool isActive)
     {
         using SqliteConnection conn = DatabaseHelper.OpenConnection();
-        using SqliteCommand cmd = conn.CreateCommand();
-        cmd.CommandText = "UPDATE Seats SET IsActive = @active WHERE SeatId = @id;";
-        cmd.Parameters.AddWithValue("@active", isActive ? 1 : 0);
-        cmd.Parameters.AddWithValue("@id", seatId);
-        cmd.ExecuteNonQuery();
+        conn.Execute(
+            "UPDATE Seats SET IsActive = @active WHERE SeatId = @id;",
+            new { active = isActive ? 1 : 0, id = seatId });
     }
 }
