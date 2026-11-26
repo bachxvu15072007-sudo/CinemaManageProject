@@ -44,6 +44,7 @@ public partial class MainWindow : Window
             AdminUsersViewModel => new AdminUsersView(),
             StaffDashboardViewModel => new StaffDashboardView(),
             StaffPosViewModel => new StaffPosView(),
+            StaffCheckInViewModel => new StaffCheckInView(),
             _ => new CustomerDashboardView()
         };
         view.DataContext = _viewModel.CurrentDashboard;
