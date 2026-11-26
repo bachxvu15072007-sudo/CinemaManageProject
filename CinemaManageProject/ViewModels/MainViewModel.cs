@@ -128,7 +128,7 @@ public sealed class MainViewModel : ViewModelBase
                 MenuItems.Add(new SidebarMenuItem("dashboard", "Dashboard Quầy vé", true, "DashboardIconGeometry") { IsSelected = true });
                 MenuItems.Add(new SidebarMenuItem("pos", "Bán vé tại quầy", true, "CinemaTicketIconGeometry"));
                 MenuItems.Add(new SidebarMenuItem("checkin", "Soát vé Check-in", true, "CheckTicketIconGeometry"));
-                MenuItems.Add(new SidebarMenuItem("customers", "Tra cứu Khách hàng", false, "UsersGroupIconGeometry"));
+                MenuItems.Add(new SidebarMenuItem("customers", "Tra cứu Khách hàng", true, "UsersGroupIconGeometry"));
                 break;
 
             default:
@@ -264,6 +264,17 @@ public sealed class MainViewModel : ViewModelBase
                 else
                 {
                     CurrentDashboard = new StaffCheckInViewModel();
+                }
+                break;
+
+            case "customers":
+                if (CurrentDashboard is StaffCustomersViewModel)
+                {
+                    CurrentDashboard.LoadData();
+                }
+                else
+                {
+                    CurrentDashboard = new StaffCustomersViewModel();
                 }
                 break;
 
