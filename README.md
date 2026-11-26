@@ -34,7 +34,7 @@ Hệ thống hỗ trợ quản lý vận hành rạp phim và đặt vé tập t
 * **`Controls.xaml`:** Chứa toàn bộ tài nguyên dùng chung (`BoolToVis` converter, 10 icon vector `<Geometry>`, nền điện ảnh `CinemaWindowBackgroundBrush` và các `Style` chuẩn với bảng màu Dark Theme ghi trực tiếp: `CinemaWindowStyle`, `CardBorderStyle`, `BadgeBorderStyle`, `PrimaryButtonStyle`, `SecondaryButtonStyle`, `DangerButtonStyle`, `GhostButtonStyle`, `NavMenuButtonStyle`, `ModernTextBoxStyle`, `ModernPasswordBoxStyle`, `ModernDataGridStyle`, `CompactDataGridStyle`, `EllipsisCellTextStyle`, `WrappingCellTextStyle`, `BookingSeatButtonStyle`). Các màn hình View giữ gọn chỉ viết bố cục giao diện và xử lý sự kiện `Click` gọi method ViewModel (không dùng `Command`/`RelayCommand`).
 
 ### 2.4. Tầng Dữ liệu (`Data/`) & Phụ trợ (`Helpers/`)
-* **`CinemaManageProject/Helpers/`:** `DatabaseHelper` (mở kết nối SQLite kèm `PRAGMA foreign_keys = ON;` và `SqliteDecimalHandler` cho Dapper), `FormatHelper` (định dạng tiền VNĐ, ngày giờ, trạng thái), `PosterHelper` (nạp/lưu ảnh poster).
+* **`CinemaManageProject/Helpers/`:** `DatabaseHelper` (mở kết nối SQLite kèm `PRAGMA foreign_keys = ON;` và `SqliteDecimalHandler` cho Dapper), `PasswordHelper` (băm/xác thực mật khẩu một chiều `PBKDF2-HMAC-SHA256` kèm salt ngẫu nhiên 16 byte), `FormatHelper` (định dạng tiền VNĐ, ngày giờ, trạng thái), `PosterHelper` (nạp/lưu ảnh poster).
 * **`CinemaManageProject/Data/`:** Tập trung toàn bộ truy vấn SQLite thuần có tham số hóa qua **Dapper** vào 10 lớp tĩnh (`AuthData`, `BookingData`, `CheckInData`, `CustomerData`, `DashboardData`, `MovieData`, `OrderData`, `RoomData`, `ShowtimeData`, `UserData`) — không còn câu SQL trực tiếp trong `ViewModels/`.
 
 ### 2.5. Đăng nhập, Khung Shell & Trọn bộ 13 Màn hình theo 3 Vai trò (`Views/`, `ViewModels/`)
@@ -88,4 +88,4 @@ dotnet run --project CinemaManageProject\CinemaManageProject.csproj
 Toàn bộ 13 màn hình vận hành chính (Admin 6/6, Staff 4/4, Customer 3/3) đã hoàn thiện và kích hoạt đầy đủ trên Sidebar. Các hạng mục mở rộng tiếp theo gồm:
 
 1. **Hệ khuyến nghị phim cá nhân hóa:** Gợi ý phim theo lịch sử xem và độ tương đồng sở thích trên bộ dữ liệu 25 hội viên (`95` cặp khách–phim trong `SeedData.sql`).
-2. **Nâng cấp kỹ thuật (nếu triển khai thực tế):** Băm mật khẩu (`PBKDF2`/`SHA256`), chuyển DB runtime & poster sang `%LocalAppData%` kèm `SqliteConnectionStringBuilder` + `WAL`.
+2. **Nâng cấp kỹ thuật (nếu triển khai thực tế):** Chuyển DB runtime & poster sang `%LocalAppData%` kèm `SqliteConnectionStringBuilder` + `WAL`.

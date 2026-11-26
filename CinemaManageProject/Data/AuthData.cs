@@ -25,7 +25,7 @@ public static class AuthData
                 """;
 
             User? user = conn.QueryFirstOrDefault<User>(sql, new { username });
-            if (user is null || !string.Equals(user.Password, password, StringComparison.Ordinal))
+            if (user is null || !PasswordHelper.VerifyPassword(password, user.Password, out bool needsUpgrade))
             {
                 return new AuthResult(false, null, "Tên đăng nhập hoặc mật khẩu không đúng.");
             }
@@ -35,10 +35,21 @@ public static class AuthData
                 return new AuthResult(false, null, "Tài khoản này đang bị khóa.");
             }
 
+            user.Password = string.Empty;
             user.LastLoginAt = DateTime.Now;
-            conn.Execute(
-                "UPDATE Users SET LastLoginAt = datetime('now', 'localtime') WHERE UserId = @id;",
-                new { id = user.UserId });
+
+            if (needsUpgrade)
+            {
+                conn.Execute(
+                    "UPDATE Users SET Password = @hash, LastLoginAt = datetime('now', 'localtime') WHERE UserId = @id;",
+                    new { hash = PasswordHelper.HashPassword(password), id = user.UserId });
+            }
+            else
+            {
+                conn.Execute(
+                    "UPDATE Users SET LastLoginAt = datetime('now', 'localtime') WHERE UserId = @id;",
+                    new { id = user.UserId });
+            }
 
             if (user.Role == UserRole.Customer)
             {
@@ -99,13 +110,14 @@ public static class AuthData
                 return new AuthResult(false, null, "Số điện thoại đã được đăng ký.");
             }
 
+            string passwordHash = PasswordHelper.HashPassword(password);
             int userId = conn.ExecuteScalar<int>(
                 """
                 INSERT INTO Users (Username, Password, FullName, Email, Phone, Role, IsActive)
                 VALUES (@u, @p, @n, @e, @ph, 'Customer', 1);
                 SELECT last_insert_rowid();
                 """,
-                new { u = cleanUser, p = password, n = cleanName, e = cleanEmail, ph = cleanPhone },
+                new { u = cleanUser, p = passwordHash, n = cleanName, e = cleanEmail, ph = cleanPhone },
                 tx);
 
             int customerId = conn.ExecuteScalar<int>(

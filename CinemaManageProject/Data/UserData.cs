@@ -228,6 +228,9 @@ public static class UserData
 
             int savedUserId;
             int activeFlag = input.IsActive ? 1 : 0;
+            string? hashedPassword = cleanPassword is not null
+                ? PasswordHelper.HashPassword(cleanPassword)
+                : null;
 
             if (!input.UserId.HasValue)
             {
@@ -237,13 +240,13 @@ public static class UserData
                     VALUES (@u, @p, @n, @e, @ph, @r, @act);
                     SELECT last_insert_rowid();
                     """,
-                    new { u = cleanUsername, p = cleanPassword!, n = cleanFullName, e = cleanEmail, ph = cleanPhone, r = cleanRole, act = activeFlag },
+                    new { u = cleanUsername, p = hashedPassword!, n = cleanFullName, e = cleanEmail, ph = cleanPhone, r = cleanRole, act = activeFlag },
                     tx);
             }
             else
             {
                 savedUserId = input.UserId.Value;
-                string updateSql = cleanPassword is not null
+                string updateSql = hashedPassword is not null
                     ? """
                       UPDATE Users
                       SET Username = @u, Password = @p, FullName = @n, Email = @e, Phone = @ph, IsActive = @act
@@ -257,7 +260,7 @@ public static class UserData
 
                 conn.Execute(
                     updateSql,
-                    new { id = savedUserId, u = cleanUsername, p = cleanPassword, n = cleanFullName, e = cleanEmail, ph = cleanPhone, act = activeFlag },
+                    new { id = savedUserId, u = cleanUsername, p = hashedPassword, n = cleanFullName, e = cleanEmail, ph = cleanPhone, act = activeFlag },
                     tx);
             }
 
