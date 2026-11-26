@@ -40,7 +40,10 @@ public partial class MainWindow : Window
             AdminMoviesViewModel => new AdminMoviesView(),
             AdminRoomsViewModel => new AdminRoomsView(),
             AdminShowtimesViewModel => new AdminShowtimesView(),
+            AdminOrdersViewModel => new AdminOrdersView(),
+            AdminUsersViewModel => new AdminUsersView(),
             StaffDashboardViewModel => new StaffDashboardView(),
+            StaffPosViewModel => new StaffPosView(),
             _ => new CustomerDashboardView()
         };
         view.DataContext = _viewModel.CurrentDashboard;

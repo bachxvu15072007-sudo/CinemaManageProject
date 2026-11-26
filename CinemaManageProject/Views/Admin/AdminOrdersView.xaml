@@ -1,0 +1,655 @@
+<UserControl x:Class="CinemaManageProject.Views.Admin.AdminOrdersView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             d:DesignWidth="988"
+             d:DesignHeight="960"
+             d:Background="#09090B">
+
+    <UserControl.Resources>
+        <Style x:Key="OrdersTableStyle"
+               TargetType="DataGrid"
+               BasedOn="{StaticResource CompactDataGridStyle}">
+            <Setter Property="Visibility" Value="Visible" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding HasNoOrders}" Value="True">
+                    <Setter Property="Visibility" Value="Collapsed" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="OrderTicketsTableStyle"
+               TargetType="DataGrid"
+               BasedOn="{StaticResource CompactDataGridStyle}">
+            <Setter Property="RowHeight" Value="NaN" />
+            <Setter Property="MinRowHeight" Value="38" />
+            <Setter Property="Visibility" Value="Visible" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding HasNoSelectedOrderTickets}" Value="True">
+                    <Setter Property="Visibility" Value="Collapsed" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+    </UserControl.Resources>
+
+    <StackPanel>
+        <!-- ==================== HEADER ==================== -->
+        <Grid Margin="0,0,0,18">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="12" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <Grid Grid.Column="0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+
+                <Border Grid.Column="0"
+                        Background="#265E6AD2"
+                        BorderBrush="#5E6AD2"
+                        BorderThickness="1"
+                        CornerRadius="10"
+                        Width="42"
+                        Height="42"
+                        Margin="0,0,12,0"
+                        VerticalAlignment="Center">
+                    <Path Style="{StaticResource CinemaVectorIconStyle}"
+                          Data="{StaticResource ReceiptIconGeometry}"
+                          Width="20"
+                          Height="20"
+                          Stroke="#A5B4FC"
+                          HorizontalAlignment="Center"
+                          VerticalAlignment="Center" />
+                </Border>
+                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                    <TextBlock Text="Hóa đơn &amp; Doanh thu"
+                               Style="{StaticResource PageTitleTextStyle}"
+                               Margin="0,0,0,3" />
+                    <TextBlock Text="Theo dõi doanh thu hiệu lực, cơ cấu kênh bán, phương thức thanh toán và tra cứu chi tiết từng hóa đơn."
+                               Style="{StaticResource MutedCaptionTextStyle}"
+                               TextWrapping="Wrap" />
+                </StackPanel>
+            </Grid>
+
+            <Border Grid.Column="2"
+                    Style="{StaticResource BadgeBorderStyle}"
+                    CornerRadius="8"
+                    Padding="12,5"
+                    VerticalAlignment="Center">
+                <TextBlock Text="TRA CỨU &amp; THỐNG KÊ"
+                           FontSize="11"
+                           FontWeight="Bold"
+                           Foreground="#5E6AD2" />
+            </Border>
+        </Grid>
+
+        <!-- ==================== 4 THẺ KPI ==================== -->
+        <Grid Margin="0,0,0,16">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="12" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="12" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="12" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <Border Grid.Column="0" Style="{StaticResource CardBorderStyle}" Padding="16,14">
+                <StackPanel>
+                    <TextBlock Text="DOANH THU HIỆU LỰC (LỌC)"
+                               FontSize="11"
+                               FontWeight="SemiBold"
+                               Foreground="#A1A1AA"
+                               TextWrapping="Wrap" />
+                    <TextBlock Text="{Binding FilteredRevenueText}"
+                               FontSize="18"
+                               FontWeight="Bold"
+                               Foreground="#5E6AD2"
+                               Margin="0,7,0,4" />
+                    <TextBlock Text="{Binding GlobalRevenueSubText}"
+                               FontSize="11"
+                               Foreground="#A1A1AA"
+                               TextWrapping="Wrap" />
+                </StackPanel>
+            </Border>
+
+            <Border Grid.Column="2" Style="{StaticResource CardBorderStyle}" Padding="16,14">
+                <StackPanel>
+                    <TextBlock Text="KÊNH TẠI QUẦY"
+                               FontSize="11"
+                               FontWeight="SemiBold"
+                               Foreground="#A1A1AA"
+                               TextWrapping="Wrap" />
+                    <TextBlock Text="{Binding CounterRevenueText}"
+                               FontSize="18"
+                               FontWeight="Bold"
+                               Margin="0,7,0,4" />
+                    <TextBlock Text="{Binding CounterOrdersSubText}"
+                               FontSize="11"
+                               Foreground="#A1A1AA"
+                               TextWrapping="Wrap" />
+                </StackPanel>
+            </Border>
+
+            <Border Grid.Column="4" Style="{StaticResource CardBorderStyle}" Padding="16,14">
+                <StackPanel>
+                    <TextBlock Text="KÊNH TỰ ĐẶT"
+                               FontSize="11"
+                               FontWeight="SemiBold"
+                               Foreground="#A1A1AA"
+                               TextWrapping="Wrap" />
+                    <TextBlock Text="{Binding SelfServiceRevenueText}"
+                               FontSize="18"
+                               FontWeight="Bold"
+                               Margin="0,7,0,4" />
+                    <TextBlock Text="{Binding SelfServiceOrdersSubText}"
+                               FontSize="11"
+                               Foreground="#A1A1AA"
+                               TextWrapping="Wrap" />
+                </StackPanel>
+            </Border>
+
+            <Border Grid.Column="6" Style="{StaticResource CardBorderStyle}" Padding="16,14">
+                <StackPanel>
+                    <TextBlock Text="ĐƠN HÀNG &amp; VÉ"
+                               FontSize="11"
+                               FontWeight="SemiBold"
+                               Foreground="#A1A1AA"
+                               TextWrapping="Wrap" />
+                    <TextBlock Text="{Binding FilteredOrdersTicketsText}"
+                               FontSize="16"
+                               FontWeight="Bold"
+                               Margin="0,8,0,5"
+                               TextWrapping="Wrap" />
+                    <TextBlock Text="{Binding CancelledOrdersSubText}"
+                               Foreground="#FEE685"
+                               FontSize="11"
+                               TextWrapping="Wrap" />
+                </StackPanel>
+            </Border>
+        </Grid>
+
+        <!-- ==================== BỘ LỌC TÌM KIẾM (2 HÀNG CÂN ĐỐI) ==================== -->
+        <Border Style="{StaticResource CardBorderStyle}" Margin="0,0,0,16">
+            <StackPanel>
+                <!-- Hàng 1: Tìm kiếm + Khoảng ngày + Đặt lại -->
+                <Grid Margin="0,0,0,10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="12" />
+                        <ColumnDefinition Width="170" />
+                        <ColumnDefinition Width="12" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel Grid.Column="0">
+                        <TextBlock Text="Tìm kiếm (mã đơn, khách hàng, SĐT, thu ngân, ghi chú)"
+                                   Style="{StaticResource FieldLabelTextStyle}" />
+                        <TextBox Style="{StaticResource ModernTextBoxStyle}"
+                                 Height="38"
+                                 Padding="12,0"
+                                 VerticalContentAlignment="Center"
+                                 Text="{Binding SearchKeyword, UpdateSourceTrigger=PropertyChanged}" />
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="2">
+                        <TextBlock Text="Khoảng ngày"
+                                   Style="{StaticResource FieldLabelTextStyle}" />
+                        <ComboBox Style="{StaticResource ModernComboBoxStyle}"
+                                  Height="38"
+                                  ItemsSource="{Binding DateRangeOptions}"
+                                  SelectedItem="{Binding SelectedDateRangeOption, Mode=TwoWay}"
+                                  DisplayMemberPath="Label" />
+                    </StackPanel>
+
+                    <Button x:Name="ResetFiltersButton"
+                            Grid.Column="4"
+                            Content="Đặt lại"
+                            Style="{StaticResource SecondaryButtonStyle}"
+                            Height="38"
+                            Padding="16,0"
+                            VerticalAlignment="Bottom"
+                            Click="OnResetFiltersClick" />
+                </Grid>
+
+                <!-- Hàng 2: Kênh đặt + Phương thức thanh toán + Trạng thái -->
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="12" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="12" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel Grid.Column="0">
+                        <TextBlock Text="Kênh đặt vé"
+                                   Style="{StaticResource FieldLabelTextStyle}" />
+                        <ComboBox Style="{StaticResource ModernComboBoxStyle}"
+                                  Height="38"
+                                  ItemsSource="{Binding ChannelFilterOptions}"
+                                  SelectedItem="{Binding SelectedChannelFilterOption, Mode=TwoWay}"
+                                  DisplayMemberPath="Label" />
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="2">
+                        <TextBlock Text="Phương thức thanh toán"
+                                   Style="{StaticResource FieldLabelTextStyle}" />
+                        <ComboBox Style="{StaticResource ModernComboBoxStyle}"
+                                  Height="38"
+                                  ItemsSource="{Binding PaymentFilterOptions}"
+                                  SelectedItem="{Binding SelectedPaymentFilterOption, Mode=TwoWay}"
+                                  DisplayMemberPath="Label" />
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="4">
+                        <TextBlock Text="Trạng thái hóa đơn"
+                                   Style="{StaticResource FieldLabelTextStyle}" />
+                        <ComboBox Style="{StaticResource ModernComboBoxStyle}"
+                                  Height="38"
+                                  ItemsSource="{Binding StatusFilterOptions}"
+                                  SelectedItem="{Binding SelectedStatusFilterOption, Mode=TwoWay}"
+                                  DisplayMemberPath="Label" />
+                    </StackPanel>
+                </Grid>
+            </StackPanel>
+        </Border>
+
+        <!-- ==================== DANH SÁCH HÓA ĐƠN (FULL CHIỀU NGANG) ==================== -->
+        <Border Style="{StaticResource CardBorderStyle}" Margin="0,0,0,16">
+            <StackPanel>
+                <DockPanel Margin="0,0,0,12" LastChildFill="False">
+                    <TextBlock DockPanel.Dock="Left"
+                               Text="Danh sách Hóa đơn"
+                               Style="{StaticResource SectionTitleTextStyle}"
+                               VerticalAlignment="Center" />
+                    <TextBlock DockPanel.Dock="Right"
+                               Text="{Binding ResultCountText}"
+                               Style="{StaticResource MutedCaptionTextStyle}"
+                               VerticalAlignment="Center" />
+                </DockPanel>
+
+                <Border Visibility="{Binding HasNoOrders, Converter={StaticResource BoolToVis}, FallbackValue=Collapsed}"
+                        Background="#18181B"
+                        BorderBrush="#23252A"
+                        BorderThickness="1"
+                        CornerRadius="8"
+                        Padding="16,24">
+                    <TextBlock Text="Không tìm thấy hóa đơn nào phù hợp với bộ lọc."
+                               Style="{StaticResource MutedCaptionTextStyle}"
+                               HorizontalAlignment="Center" />
+                </Border>
+
+                <DataGrid x:Name="OrdersDataGrid"
+                          Style="{StaticResource OrdersTableStyle}"
+                          ItemsSource="{Binding Orders}"
+                          SelectedItem="{Binding SelectedOrder, Mode=TwoWay}"
+                          MaxHeight="280">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="Mã hóa đơn" Binding="{Binding OrderCode}" Width="128" MinWidth="124" />
+                        <DataGridTextColumn Header="Thời gian" Binding="{Binding CreatedAtDisplay}" SortMemberPath="CreatedAtSql" Width="116" MinWidth="112" />
+                        <DataGridTextColumn Header="Khách hàng" Binding="{Binding CustomerName}" Width="0.95*" MinWidth="110" ElementStyle="{StaticResource EllipsisCellTextStyle}" />
+                        <DataGridTextColumn Header="Kênh" Binding="{Binding BookingChannelDisplay}" Width="66" MinWidth="64" />
+                        <DataGridTextColumn Header="Thu ngân" Binding="{Binding StaffDisplay}" Width="1.25*" MinWidth="110" ElementStyle="{StaticResource EllipsisCellTextStyle}" />
+                        <DataGridTextColumn Header="Số vé" Binding="{Binding TotalTicketsText}" SortMemberPath="ActiveTicketsCount" Width="56" MinWidth="54" />
+                        <DataGridTextColumn Header="Thanh toán" Binding="{Binding PaymentDisplay}" Width="98" MinWidth="94" />
+                        <DataGridTextColumn Header="Tổng tiền" Binding="{Binding TotalAmountText}" SortMemberPath="TotalAmount" Width="82" MinWidth="78" />
+                        <DataGridTextColumn Header="Trạng thái" Binding="{Binding StatusDisplay}" Width="108" MinWidth="104" />
+                    </DataGrid.Columns>
+                </DataGrid>
+            </StackPanel>
+        </Border>
+
+        <!-- ==================== CHI TIẾT HÓA ĐƠN & CƠ CẤU DOANH THU (2 CỘT) ==================== -->
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="16" />
+                <ColumnDefinition Width="348" />
+            </Grid.ColumnDefinitions>
+
+            <!-- CỘT TRÁI: CHI TIẾT HÓA ĐƠN & DANH SÁCH VÉ -->
+            <Border Grid.Column="0" Style="{StaticResource CardBorderStyle}" VerticalAlignment="Top">
+                <Grid>
+                    <!-- Placeholder khi chưa chọn đơn -->
+                    <Border Background="#18181B"
+                            BorderBrush="#23252A"
+                            BorderThickness="1"
+                            CornerRadius="8"
+                            Padding="18,28">
+                        <Border.Style>
+                            <Style TargetType="Border">
+                                <Setter Property="Visibility" Value="Visible" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding HasSelectedOrder}" Value="True">
+                                        <Setter Property="Visibility" Value="Collapsed" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Border.Style>
+                        <TextBlock Text="Không có hóa đơn được chọn. Chọn một hóa đơn ở bảng phía trên hoặc đặt lại bộ lọc để xem chi tiết thanh toán và danh sách vé."
+                                   Style="{StaticResource MutedCaptionTextStyle}"
+                                   TextWrapping="Wrap"
+                                   HorizontalAlignment="Center"
+                                   TextAlignment="Center" />
+                    </Border>
+
+                    <!-- Chi tiết hóa đơn đang chọn -->
+                    <StackPanel Visibility="{Binding HasSelectedOrder, Converter={StaticResource BoolToVis}, FallbackValue=Collapsed}">
+                        <Grid Margin="0,0,0,14">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="12" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+
+                            <TextBlock Grid.Column="0"
+                                       Text="Chi tiết Hóa đơn"
+                                       Style="{StaticResource SectionTitleTextStyle}"
+                                       VerticalAlignment="Center" />
+
+                            <WrapPanel Grid.Column="2" HorizontalAlignment="Right" VerticalAlignment="Center">
+                                <Border Style="{StaticResource BadgeBorderStyle}" CornerRadius="8" Padding="10,4" Margin="0,2,6,2">
+                                    <TextBlock Text="{Binding SelectedOrder.OrderCode}"
+                                               FontSize="11"
+                                               FontWeight="Bold"
+                                               Foreground="#A5B4FC" />
+                                </Border>
+                                <Border Style="{StaticResource BadgeBorderStyle}" CornerRadius="8" Padding="10,4" Margin="0,2,6,2">
+                                    <TextBlock Text="{Binding SelectedOrder.BookingChannelDisplay}"
+                                               FontSize="11"
+                                               FontWeight="SemiBold"
+                                               Foreground="#FAFAFA" />
+                                </Border>
+                                <Border Style="{StaticResource BadgeBorderStyle}" CornerRadius="8" Padding="10,4" Margin="0,2,0,2">
+                                    <TextBlock Text="{Binding SelectedOrder.StatusDisplay}"
+                                               FontSize="11"
+                                               FontWeight="Bold">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="Foreground" Value="#A4F4CF" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding SelectedOrder.Status}" Value="PartiallyRefunded">
+                                                        <Setter Property="Foreground" Value="#FEE685" />
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding SelectedOrder.Status}" Value="Cancelled">
+                                                        <Setter Property="Foreground" Value="#FFC9C9" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                </Border>
+                            </WrapPanel>
+                        </Grid>
+
+                        <!-- Thông tin khách hàng, thu ngân, thời gian -->
+                        <Border Background="#18181B"
+                                BorderBrush="#23252A"
+                                BorderThickness="1"
+                                CornerRadius="8"
+                                Padding="14,12"
+                                Margin="0,0,0,12">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="16" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+
+                                <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,0,8">
+                                    <TextBlock Text="Khách hàng" FontSize="11" Foreground="#71717A" />
+                                    <TextBlock FontSize="13" FontWeight="SemiBold" Foreground="#FAFAFA" TextWrapping="Wrap">
+                                        <Run Text="{Binding SelectedOrder.CustomerName, Mode=OneWay}" />
+                                    </TextBlock>
+                                    <TextBlock Text="{Binding SelectedOrder.CustomerPhone}"
+                                               FontSize="11"
+                                               Foreground="#A1A1AA" />
+                                </StackPanel>
+
+                                <StackPanel Grid.Row="0" Grid.Column="2" Margin="0,0,0,8">
+                                    <TextBlock Text="Người xử lý / Kênh" FontSize="11" Foreground="#71717A" />
+                                    <TextBlock Text="{Binding SelectedOrder.StaffDisplay}"
+                                               FontSize="13"
+                                               FontWeight="SemiBold"
+                                               Foreground="#FAFAFA"
+                                               TextWrapping="Wrap" />
+                                    <TextBlock Text="{Binding SelectedOrder.PaymentDisplay}"
+                                               FontSize="11"
+                                               Foreground="#A1A1AA" />
+                                </StackPanel>
+
+                                <StackPanel Grid.Row="1" Grid.Column="0">
+                                    <TextBlock Text="Thời gian tạo" FontSize="11" Foreground="#71717A" />
+                                    <TextBlock Text="{Binding SelectedOrder.CreatedAtDisplay}"
+                                               FontSize="12"
+                                               Foreground="#FAFAFA" />
+                                </StackPanel>
+
+                                <StackPanel Grid.Row="1" Grid.Column="2">
+                                    <TextBlock Text="Thanh toán lúc" FontSize="11" Foreground="#71717A" />
+                                    <TextBlock Text="{Binding SelectedOrder.PaidAtDisplay}"
+                                               FontSize="12"
+                                               Foreground="#FAFAFA" />
+                                </StackPanel>
+
+                                <TextBlock Grid.Row="2"
+                                           Grid.Column="0"
+                                           Grid.ColumnSpan="3"
+                                           Margin="0,8,0,0"
+                                           FontSize="11"
+                                           Foreground="#A1A1AA"
+                                           TextWrapping="Wrap">
+                                    <Run Text="Ghi chú: " Foreground="#71717A" />
+                                    <Run Text="{Binding SelectedOrder.NoteText, Mode=OneWay}" />
+                                </TextBlock>
+                            </Grid>
+                        </Border>
+
+                        <!-- Phiếu tính tiền -->
+                        <Border Background="#18181B"
+                                BorderBrush="#23252A"
+                                BorderThickness="1"
+                                CornerRadius="8"
+                                Padding="14,12"
+                                Margin="0,0,0,14">
+                            <StackPanel>
+                                <DockPanel Margin="0,0,0,6">
+                                    <TextBlock DockPanel.Dock="Left" Text="Tạm tính giá vé" FontSize="12" Foreground="#A1A1AA" />
+                                    <TextBlock DockPanel.Dock="Right" Text="{Binding SelectedOrder.SubTotalAmountText}" FontSize="12" FontWeight="SemiBold" HorizontalAlignment="Right" />
+                                </DockPanel>
+
+                                <DockPanel Margin="0,0,0,6"
+                                           Visibility="{Binding SelectedOrder.HasDiscountOrPoints, Converter={StaticResource BoolToVis}, FallbackValue=Collapsed}">
+                                    <TextBlock DockPanel.Dock="Left" Text="Giảm giá / Đổi điểm" FontSize="12" Foreground="#A1A1AA" />
+                                    <TextBlock DockPanel.Dock="Right" Text="{Binding SelectedOrder.DiscountSummaryText}" FontSize="12" Foreground="#A4F4CF" HorizontalAlignment="Right" />
+                                </DockPanel>
+
+                                <DockPanel Margin="0,0,0,6"
+                                           Visibility="{Binding SelectedOrder.HasRefundAdjustment, Converter={StaticResource BoolToVis}, FallbackValue=Collapsed}">
+                                    <TextBlock DockPanel.Dock="Left" Text="Đã hoàn / điều chỉnh" FontSize="12" Foreground="#FEE685" />
+                                    <TextBlock DockPanel.Dock="Right" Text="{Binding SelectedOrder.RefundAdjustmentText}" FontSize="12" FontWeight="SemiBold" Foreground="#FEE685" HorizontalAlignment="Right" />
+                                </DockPanel>
+
+                                <Line X1="0"
+                                      Y1="0"
+                                      X2="1"
+                                      Y2="0"
+                                      Stretch="Fill"
+                                      Height="2"
+                                      Stroke="#3F3F46"
+                                      StrokeThickness="1"
+                                      StrokeDashArray="4 3"
+                                      Margin="0,4,0,8" />
+
+                                <DockPanel>
+                                    <TextBlock DockPanel.Dock="Left" Text="Tổng tiền hóa đơn" FontSize="13" FontWeight="Bold" Foreground="#FAFAFA" VerticalAlignment="Center" />
+                                    <TextBlock DockPanel.Dock="Right" Text="{Binding SelectedOrder.TotalAmountText}" FontSize="16" FontWeight="Bold" Foreground="#5E6AD2" HorizontalAlignment="Right" />
+                                </DockPanel>
+
+                                <StackPanel Margin="0,8,0,0"
+                                            Visibility="{Binding SelectedOrder.HasCashDetails, Converter={StaticResource BoolToVis}, FallbackValue=Collapsed}">
+                                    <DockPanel Margin="0,0,0,4">
+                                        <TextBlock DockPanel.Dock="Left" Text="Khách đưa (tiền mặt)" FontSize="12" Foreground="#71717A" />
+                                        <TextBlock DockPanel.Dock="Right" Text="{Binding SelectedOrder.CashReceivedText}" FontSize="12" Foreground="#A1A1AA" HorizontalAlignment="Right" />
+                                    </DockPanel>
+                                    <DockPanel>
+                                        <TextBlock DockPanel.Dock="Left" Text="Tiền thối lại" FontSize="12" Foreground="#71717A" />
+                                        <TextBlock DockPanel.Dock="Right" Text="{Binding SelectedOrder.ChangeAmountText}" FontSize="12" Foreground="#A1A1AA" HorizontalAlignment="Right" />
+                                    </DockPanel>
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Vé trong hóa đơn -->
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                            <Path Style="{StaticResource CinemaVectorIconStyle}"
+                                  Data="{StaticResource CinemaTicketIconGeometry}"
+                                  Width="15"
+                                  Height="15"
+                                  Stroke="#A5B4FC"
+                                  Margin="0,0,8,0"
+                                  VerticalAlignment="Center" />
+                            <TextBlock Text="Vé trong hóa đơn"
+                                       FontSize="13"
+                                       FontWeight="SemiBold"
+                                       Foreground="#FAFAFA"
+                                       VerticalAlignment="Center" />
+                        </StackPanel>
+
+                        <TextBlock Text="Hóa đơn này không có dữ liệu vé đính kèm."
+                                   Visibility="{Binding HasNoSelectedOrderTickets, Converter={StaticResource BoolToVis}, FallbackValue=Collapsed}"
+                                   Style="{StaticResource MutedCaptionTextStyle}"
+                                   Margin="0,4,0,0" />
+
+                        <DataGrid x:Name="OrderDetailTicketsGrid"
+                                  Style="{StaticResource OrderTicketsTableStyle}"
+                                  ItemsSource="{Binding SelectedOrderTickets}"
+                                  MaxHeight="230">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="Mã vé" Binding="{Binding TicketCode}" Width="96" MinWidth="92" />
+                                <DataGridTextColumn Header="Phim" Binding="{Binding MovieTitle}" Width="1.15*" MinWidth="74" ElementStyle="{StaticResource WrappingCellTextStyle}" />
+                                <DataGridTextColumn Header="Phòng / Ghế" Binding="{Binding RoomAndSeat}" Width="1.15*" MinWidth="74" ElementStyle="{StaticResource WrappingCellTextStyle}" />
+                                <DataGridTextColumn Header="Suất chiếu" Binding="{Binding ShowtimeDisplay}" SortMemberPath="ShowtimeStartSql" Width="112" MinWidth="108" />
+                                <DataGridTextColumn Header="Đơn giá" Binding="{Binding UnitPriceText}" SortMemberPath="UnitPrice" Width="76" MinWidth="74" />
+                                <DataGridTextColumn Header="Trạng thái" Binding="{Binding StatusDisplay}" Width="88" MinWidth="84" />
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <!-- CỘT PHẢI: CƠ CẤU THANH TOÁN & DOANH THU THEO PHIM -->
+            <StackPanel Grid.Column="2">
+                <!-- Cơ cấu phương thức thanh toán -->
+                <Border Style="{StaticResource CardBorderStyle}" Margin="0,0,0,16">
+                    <StackPanel>
+                        <TextBlock Text="Cơ cấu Thanh toán"
+                                   Style="{StaticResource SectionTitleTextStyle}"
+                                   Margin="0,0,0,4" />
+                        <TextBlock Text="Tính trên các hóa đơn hiệu lực theo bộ lọc hiện tại."
+                                   Style="{StaticResource MutedCaptionTextStyle}"
+                                   Margin="0,0,0,12" />
+
+                        <ItemsControl ItemsSource="{Binding PaymentBreakdowns}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <StackPanel Margin="0,0,0,10">
+                                        <DockPanel Margin="0,0,0,4">
+                                            <TextBlock DockPanel.Dock="Left"
+                                                       Text="{Binding MethodLabel}"
+                                                       FontSize="12"
+                                                       FontWeight="SemiBold"
+                                                       Foreground="#FAFAFA" />
+                                            <TextBlock DockPanel.Dock="Right"
+                                                       HorizontalAlignment="Right"
+                                                       FontSize="12"><Run Text="{Binding OrderCount, Mode=OneWay}" Foreground="#A1A1AA" /><Run Text=" đơn (" Foreground="#71717A" /><Run Text="{Binding ShareText, Mode=OneWay}" Foreground="#A1A1AA" /><Run Text=") • " Foreground="#71717A" /><Run Text="{Binding RevenueText, Mode=OneWay}" FontWeight="SemiBold" Foreground="#5E6AD2" /></TextBlock>
+                                        </DockPanel>
+                                        <Border Height="6"
+                                                Background="#18181B"
+                                                BorderBrush="#23252A"
+                                                BorderThickness="1"
+                                                CornerRadius="3"
+                                                ClipToBounds="True">
+                                            <Border Background="#5E6AD2"
+                                                    CornerRadius="3"
+                                                    RenderTransformOrigin="0,0.5">
+                                                <Border.RenderTransform>
+                                                    <ScaleTransform ScaleX="{Binding ShareRatio}" />
+                                                </Border.RenderTransform>
+                                            </Border>
+                                        </Border>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </Border>
+
+                <!-- Doanh thu theo phim -->
+                <Border Style="{StaticResource CardBorderStyle}">
+                    <StackPanel>
+                        <TextBlock Text="Doanh thu theo Phim"
+                                   Style="{StaticResource SectionTitleTextStyle}"
+                                   Margin="0,0,0,4" />
+                        <TextBlock Text="Phân bổ thực thu theo vé chưa hủy trong bộ lọc."
+                                   Style="{StaticResource MutedCaptionTextStyle}"
+                                   Margin="0,0,0,12" />
+
+                        <TextBlock Text="Chưa có dữ liệu doanh thu theo phim."
+                                   Visibility="{Binding HasNoMovieRevenues, Converter={StaticResource BoolToVis}, FallbackValue=Collapsed}"
+                                   Style="{StaticResource MutedCaptionTextStyle}" />
+
+                        <ItemsControl ItemsSource="{Binding MovieRevenues}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Background="#18181B"
+                                            BorderBrush="#23252A"
+                                            BorderThickness="1"
+                                            CornerRadius="8"
+                                            Padding="10,8"
+                                            Margin="0,0,0,8">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+
+                                            <StackPanel Grid.Column="0">
+                                                <TextBlock Text="{Binding MovieTitle}"
+                                                           FontSize="12"
+                                                           FontWeight="SemiBold"
+                                                           Foreground="#FAFAFA"
+                                                           TextTrimming="CharacterEllipsis" />
+                                                <TextBlock FontSize="11" Foreground="#A1A1AA" Margin="0,2,0,0"><Run Text="{Binding TicketCountText, Mode=OneWay}" /><Run Text=" • " Foreground="#71717A" /><Run Text="{Binding ShareText, Mode=OneWay}" /></TextBlock>
+                                            </StackPanel>
+
+                                            <TextBlock Grid.Column="1"
+                                                       Text="{Binding RevenueText}"
+                                                       FontSize="12"
+                                                       FontWeight="Bold"
+                                                       Foreground="#5E6AD2"
+                                                       VerticalAlignment="Center"
+                                                       Margin="10,0,0,0" />
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </Grid>
+    </StackPanel>
+</UserControl>

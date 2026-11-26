@@ -1,6 +1,6 @@
 using System.Collections.ObjectModel;
+using CinemaManageProject.Data;
 using CinemaManageProject.Helpers;
-using Microsoft.Data.Sqlite;
 
 namespace CinemaManageProject.ViewModels.Staff;
 
@@ -75,85 +75,36 @@ public sealed class StaffDashboardViewModel : ViewModelBase
         int staffId = App.CurrentUser?.UserId ?? 0;
         StaffGreeting = $"Ca làm việc của {App.CurrentUser?.FullName ?? "Nhân viên"}";
 
-        using SqliteConnection conn = DatabaseHelper.OpenConnection();
+        StaffDashboardSnapshot data = DashboardData.LoadStaffDashboard(staffId);
 
-        using (SqliteCommand kpi = conn.CreateCommand())
-        {
-            kpi.CommandText = """
-                SELECT
-                    (SELECT COALESCE(SUM(TotalTickets), 0) FROM Orders WHERE StaffUserId = @sid AND Status != 'Cancelled'),
-                    (SELECT COALESCE(SUM(TotalAmount), 0) FROM Orders WHERE StaffUserId = @sid AND Status != 'Cancelled'),
-                    (SELECT COUNT(*) FROM Showtimes WHERE Status = 'OpenForSale'),
-                    (SELECT COUNT(*) FROM Tickets WHERE Status = 'Booked');
-                """;
-            kpi.Parameters.AddWithValue("@sid", staffId);
-
-            using SqliteDataReader r = kpi.ExecuteReader();
-            if (r.Read())
-            {
-                MyTicketsText = $"{r.GetInt32(0)} vé";
-                MyRevenueText = FormatHelper.FormatVnd(DatabaseHelper.ReadDecimal(r, 1));
-                OpenShowtimesText = $"{r.GetInt32(2)} suất";
-                PendingCheckInText = $"{r.GetInt32(3)} vé chờ soát";
-            }
-        }
+        MyTicketsText = $"{data.MyTickets} vé";
+        MyRevenueText = FormatHelper.FormatVnd(data.MyRevenue);
+        OpenShowtimesText = $"{data.OpenShowtimesCount} suất";
+        PendingCheckInText = $"{data.PendingCheckInCount} vé chờ soát";
 
         OpenShowtimes.Clear();
-        using (SqliteCommand st = conn.CreateCommand())
+        foreach (StaffDashboardShowtimeDto st in data.OpenShowtimes)
         {
-            st.CommandText = """
-                SELECT m.Title, r.Name, m.AgeRating, s.StartTime, s.Format,
-                       (SELECT COUNT(*) FROM Seats se WHERE se.RoomId = s.RoomId AND se.IsActive = 1) -
-                       (SELECT COUNT(*) FROM Tickets t WHERE t.ShowtimeId = s.ShowtimeId AND t.Status IN ('Booked', 'CheckedIn')),
-                       (SELECT COUNT(*) FROM Seats se WHERE se.RoomId = s.RoomId AND se.IsActive = 1),
-                       s.BaseTicketPrice + r.BasePriceSurcharge
-                FROM Showtimes s
-                INNER JOIN Movies m ON m.MovieId = s.MovieId
-                INNER JOIN Rooms r ON r.RoomId = s.RoomId
-                WHERE s.Status = 'OpenForSale'
-                ORDER BY s.StartTime ASC
-                LIMIT 12;
-                """;
-            using SqliteDataReader r = st.ExecuteReader();
-            while (r.Read())
-            {
-                int avail = Math.Max(0, r.GetInt32(5));
-                OpenShowtimes.Add(new StaffShowtimeRow(
-                    r.GetString(0),
-                    r.GetString(1),
-                    r.GetString(2),
-                    FormatHelper.FormatSqlDateTime(r.GetString(3)),
-                    r.GetString(4),
-                    $"{avail} / {r.GetInt32(6)} trống",
-                    FormatHelper.FormatVnd(DatabaseHelper.ReadDecimal(r, 7))));
-            }
+            OpenShowtimes.Add(new StaffShowtimeRow(
+                st.MovieTitle,
+                st.RoomName,
+                st.AgeRating,
+                FormatHelper.FormatSqlDateTime(st.StartTimeSql),
+                st.Format,
+                $"{st.SeatsLeft} / {st.TotalSeats} trống",
+                FormatHelper.FormatVnd(st.Price)));
         }
 
         MyRecentOrders.Clear();
-        using (SqliteCommand ord = conn.CreateCommand())
+        foreach (StaffDashboardOrderDto ord in data.MyRecentOrders)
         {
-            ord.CommandText = """
-                SELECT o.OrderCode, COALESCE(c.FullName, 'Khách vãng lai'),
-                       o.TotalTickets, o.PaymentMethod, o.TotalAmount, o.CreatedAt
-                FROM Orders o
-                LEFT JOIN Customers c ON c.CustomerId = o.CustomerId
-                WHERE o.StaffUserId = @sid
-                ORDER BY o.CreatedAt DESC
-                LIMIT 8;
-                """;
-            ord.Parameters.AddWithValue("@sid", staffId);
-
-            using SqliteDataReader r = ord.ExecuteReader();
-            while (r.Read())
-            {
-                MyRecentOrders.Add(new StaffOrderRow(
-                    r.GetString(0),
-                    r.GetString(1),
-                    r.GetInt32(2),
-                    FormatHelper.FormatPaymentMethod(r.GetString(3)),
-                    FormatHelper.FormatVnd(DatabaseHelper.ReadDecimal(r, 4)),
-                    FormatHelper.FormatSqlDateTime(r.GetString(5))));
-            }
+            MyRecentOrders.Add(new StaffOrderRow(
+                ord.OrderCode,
+                ord.CustomerName,
+                ord.TotalTickets,
+                FormatHelper.FormatPaymentMethod(ord.PaymentMethod),
+                FormatHelper.FormatVnd(ord.TotalAmount),
+                FormatHelper.FormatSqlDateTime(ord.CreatedAtSql)));
         }
     }
 }

@@ -1,6 +1,6 @@
 # CINEVERSE CINEMA (`CinemaManageProject`)
 
-Ứng dụng desktop quản lý rạp chiếu phim và đặt vé xây dựng bằng **WPF (.NET 10 Windows)**, **SQLite (`Microsoft.Data.Sqlite`)**, kiến trúc **MVVM gọn nhẹ** và giao diện **Dark Theme** tối giản.
+Ứng dụng desktop quản lý rạp chiếu phim và đặt vé xây dựng bằng **WPF (.NET 10 Windows)**, **SQLite (`Microsoft.Data.Sqlite` + `Dapper`)**, kiến trúc **MVVM gọn nhẹ** và giao diện **Dark Theme** tối giản.
 
 ---
 
@@ -31,20 +31,29 @@ Hệ thống hỗ trợ quản lý vận hành rạp phim và đặt vé tập t
 * **10 lớp Entity:** Ánh xạ đầy đủ các bảng SQLite (`User`, `Customer`, `Movie`, `Genre`, `MovieGenre`, `Room`, `Seat`, `Showtime`, `Order`, `Ticket`).
 
 ### 2.3. Giao diện Dark Theme & Resource Tập trung (`CinemaManageProject/Themes/Controls.xaml`)
-* **`Controls.xaml`:** Chứa toàn bộ tài nguyên dùng chung (`BoolToVis` converter và các `Style` chuẩn với bảng màu Dark Theme ghi trực tiếp: `CinemaWindowStyle`, `CardBorderStyle`, `BadgeBorderStyle`, `PrimaryButtonStyle`, `SecondaryButtonStyle`, `DangerButtonStyle`, `GhostButtonStyle`, `NavMenuButtonStyle`, `ModernTextBoxStyle`, `ModernPasswordBoxStyle`, `ModernDataGridStyle`). Các màn hình View giữ gọn chỉ viết bố cục giao diện và xử lý sự kiện `Click` gọi method ViewModel (không dùng `Command`/`RelayCommand`).
+* **`Controls.xaml`:** Chứa toàn bộ tài nguyên dùng chung (`BoolToVis` converter, 10 icon vector `<Geometry>`, nền điện ảnh `CinemaWindowBackgroundBrush` và các `Style` chuẩn với bảng màu Dark Theme ghi trực tiếp: `CinemaWindowStyle`, `CardBorderStyle`, `BadgeBorderStyle`, `PrimaryButtonStyle`, `SecondaryButtonStyle`, `DangerButtonStyle`, `GhostButtonStyle`, `NavMenuButtonStyle`, `ModernTextBoxStyle`, `ModernPasswordBoxStyle`, `ModernDataGridStyle`, `CompactDataGridStyle`, `EllipsisCellTextStyle`, `WrappingCellTextStyle`). Các màn hình View giữ gọn chỉ viết bố cục giao diện và xử lý sự kiện `Click` gọi method ViewModel (không dùng `Command`/`RelayCommand`).
 
-### 2.4. Đăng nhập, Khung Shell & 3 Dashboard Theo Vai trò (`Views/`, `ViewModels/`)
+### 2.4. Tầng Dữ liệu (`Data/`) & Phụ trợ (`Helpers/`)
+* **`CinemaManageProject/Helpers/`:** `DatabaseHelper` (mở kết nối SQLite kèm `PRAGMA foreign_keys = ON;`), `FormatHelper` (định dạng tiền VNĐ, ngày giờ, trạng thái), `PosterHelper` (nạp/lưu ảnh poster).
+* **`CinemaManageProject/Data/`:** Tập trung toàn bộ truy vấn SQLite thuần có tham số hóa qua **Dapper** vào 8 lớp tĩnh (`AuthData`, `CustomerData`, `DashboardData`, `MovieData`, `OrderData`, `RoomData`, `ShowtimeData`, `UserData`) — không còn câu SQL trực tiếp trong `ViewModels/`.
+
+### 2.5. Đăng nhập, Khung Shell, Dashboard & Trọn bộ 6 Màn hình Quản trị Admin (`Views/`, `ViewModels/`)
 * **Vòng đời cửa sổ (`App.xaml` / `App.xaml.cs`):**
   * Dùng `ShutdownMode="OnExplicitShutdown"`, khởi chạy với `LoginWindow`, chuyển sang `Views.MainWindow` sau khi xác thực (`CompleteLogin()`) và quay lại `LoginWindow` khi đăng xuất (`Logout()`).
-  * Mở kết nối tới `Database/cinema.db` qua `DatabaseHelper.OpenConnection()`.
 * **Màn hình Đăng nhập (`Views/LoginWindow.xaml`, `ViewModels/LoginViewModel.cs`):**
-  * Xác thực trực tiếp với bảng `Users` (nạp thêm `CustomerProfile` nếu vai trò là `Customer`), hỗ trợ chuyển sang form **Đăng ký hội viên mới** và 3 nút điền nhanh tài khoản mẫu `Admin` / `Staff` / `Customer`.
+  * Xác thực qua `AuthData` (nạp thêm `CustomerProfile` nếu vai trò là `Customer`), hỗ trợ chuyển sang form **Đăng ký hội viên mới** và 3 nút điền nhanh tài khoản mẫu `Admin` / `Staff` / `Customer`.
 * **Khung chính (`Views/MainWindow.xaml`, `ViewModels/MainViewModel.cs`):**
-  * Sidebar điều hướng phân quyền tự động theo `UserRole`, Topbar làm mới dữ liệu, nút Đăng xuất và vùng `ContentControl` nạp động Dashboard theo vai trò.
-* **3 Dashboard riêng biệt đặt theo từng thư mục vai trò (`Admin/`, `Staff/`, `Customer/` trong `Views/` và `ViewModels/`):**
-  * **`AdminDashboardView`:** 4 thẻ KPI toàn rạp (tổng doanh thu & hôm nay, vé phát hành & đã check-in, số phim đang/sắp chiếu, phòng hoạt động & ghế bảo trì), bảng *Lịch chiếu & Tỷ lệ lấp đầy* và *Hóa đơn gần đây*.
-  * **`StaffDashboardView`:** 4 thẻ KPI ca quầy cá nhân (vé đã bán, doanh thu quầy của nhân viên, suất đang mở bán, vé chờ soát check-in), bảng *Suất chiếu mở bán & Ghế trống* và *Giao dịch quầy gần đây*.
-  * **`CustomerDashboardView`:** Thẻ hội viên (`Tier`, điểm tích lũy, tổng chi tiêu, vé chờ chiếu), danh sách phim với bộ lọc `Tất cả` / `Đang chiếu` / `Sắp chiếu`, và bảng *Vé của tôi*.
+  * Sidebar điều hướng phân quyền tự động theo `UserRole` có hỗ trợ đóng/mở gọn (`ToggleSidebar`), Topbar làm mới dữ liệu, nút Đăng xuất và vùng `ContentControl` nạp động màn hình theo vai trò.
+* **Phân hệ Admin (6/6 màn hình hoàn chỉnh):**
+  * **`AdminDashboardView`:** 4 thẻ KPI toàn rạp, bảng *Lịch chiếu & Tỷ lệ lấp đầy* và *Hóa đơn gần đây*.
+  * **`AdminMoviesView`:** Thêm/sửa/xóa phim, gán nhiều thể loại (`MovieGenres`), nạp/lưu ảnh poster và lọc theo thể loại/độ tuổi/trạng thái.
+  * **`AdminRoomsView`:** Xem thông số cố định của 4 phòng chiếu, trực quan hóa sơ đồ ghế (Thường / VIP / Ghế đôi rộng gấp đôi), kiểm tra đơn đặt theo ghế và bật/tắt bảo trì có chặn ghế đang có vé hiệu lực.
+  * **`AdminShowtimesView`:** Lên lịch chiếu tự cộng `+15` phút dọn phòng, chặn trùng giờ cùng phòng, xem trước giá vé theo hạng ghế và khóa sửa thông số cốt lõi khi suất đã phát sinh vé.
+  * **`AdminOrdersView`:** Tra cứu hóa đơn & phân tích doanh thu (4 KPI, bộ lọc ngày/kênh/PTTT/trạng thái/từ khóa, cơ cấu 4 phương thức thanh toán, phân bổ doanh thu theo phim theo tỷ lệ `activeSub`, chi tiết phiếu tính tiền & danh sách vé).
+  * **`AdminUsersView`:** Quản trị tài khoản `Staff` & `Customer` (thêm, sửa, đổi mật khẩu, khóa/mở khóa, xóa có kiểm tra ràng buộc lịch sử), đồng bộ 1-1 `Users` ↔ `Customers`, và bảo vệ nghiêm ngặt tài khoản `Admin` gốc.
+* **Dashboard Staff & Customer:**
+  * **`StaffDashboardView`:** 4 thẻ KPI ca quầy cá nhân, bảng *Suất chiếu mở bán & Ghế trống* và *Giao dịch quầy gần đây*.
+  * **`CustomerDashboardView`:** Thẻ hội viên (`Tier`, điểm tích lũy, tổng chi tiêu, vé chờ chiếu), dải trượt ngang poster phim với khung spotlight chi tiết & bộ lọc, và bảng *Vé của tôi*.
 
 ---
 
@@ -70,11 +79,10 @@ dotnet run --project CinemaManageProject\CinemaManageProject.csproj
 
 ## 4. Những thứ Cần làm Tiếp tục
 
-Các mục điều hướng còn lại trên Sidebar đang ở trạng thái chờ để triển khai lần lượt ở các bước tiếp theo:
+Các mục điều hướng còn lại trên Sidebar cho `Staff` và `Customer` đang ở trạng thái chờ triển khai:
 
-1. **Quản lý Phim & Thể loại (`Admin`):** Thêm/sửa/xóa phim (`Movies`), gán nhiều thể loại (`MovieGenres`), chọn ảnh poster và chuyển trạng thái `ComingSoon` / `NowShowing` / `Ended`.
-2. **Quản lý Phòng chiếu & Sơ đồ Ghế (`Admin`):** Thêm/sửa phòng (`Rooms`), chỉnh loại ghế (`Standard`, `VIP`, `Couple`), `PriceMultiplier` và bật/tắt bảo trì từng ghế (`Seats.IsActive`).
-3. **Quản lý & Xem Lịch chiếu (`Admin` / `Staff` / `Customer`):** Lên lịch `Showtimes`, tự tính `EndTime = StartTime + DurationMinutes + 15 phút` dọn phòng, chặn trùng giờ theo phòng.
-4. **Quy trình Chọn ghế & Đặt vé (`Booking`):** Giao diện chọn ghế trực quan theo `RowIndex`/`ColIndex`, khóa ghế đã bán (`Booked`/`CheckedIn`) và ghế bảo trì, tính giá vé, áp dụng điểm thưởng `LoyaltyPoints`, tính tiền thối khi thanh toán `Cash` (`Counter`) và lưu `Order` + `Ticket` (`TicketCode`) trong SQLite transaction.
-5. **Soát vé Check-in & Hóa đơn (`Staff` / `Admin` / `Customer`):** Nhập mã `TicketCode` xác nhận `CheckedIn`, xem chi tiết hóa đơn, lịch sử vé của khách và xử lý hủy/hoàn vé hợp lệ.
-6. **Khách hàng & Nhân sự (`Staff` / `Admin`):** Tra cứu hội viên theo SĐT, quản lý tài khoản nhân viên (`IsActive`).
+1. **Bán vé tại quầy (`Staff` — `pos`):** Chọn suất chiếu, sơ đồ chọn ghế trực quan (khóa ghế bảo trì & ghế đã đặt), áp điểm thưởng `LoyaltyPoints`, tính tiền thối (`Cash`) và ghi `Orders` + `Tickets` trong SQLite transaction.
+2. **Soát vé Check-in (`Staff` — `checkin`):** Quét/nhập `TicketCode`, kiểm tra trạng thái `Booked` và cập nhật `CheckedIn` (`CheckedInAt`, `CheckedInByUserId`).
+3. **Tra cứu Khách hàng (`Staff` — `customers`):** Tìm nhanh hội viên theo SĐT/tên, xem hạng thẻ/lịch sử và đăng ký hội viên tại quầy.
+4. **Phim & Lịch chiếu + Tự đặt vé (`Customer` — `browse`) & Vé của tôi (`Customer` — `mytickets`):** Đặt vé trực tuyến (`BookingChannel = 'SelfService'`) và theo dõi chi tiết vé/lịch sử hóa đơn.
+5. **Nâng cấp kỹ thuật (nếu triển khai thực tế):** Băm mật khẩu (`PBKDF2`/`SHA256`), chuyển DB runtime & poster sang `%LocalAppData%` kèm `SqliteConnectionStringBuilder` + `WAL`, bổ sung xử lý hủy/hoàn vé (`Cancelled` / `PartiallyRefunded`).

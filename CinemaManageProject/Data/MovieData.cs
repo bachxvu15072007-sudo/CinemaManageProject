@@ -1,5 +1,5 @@
-using System.Globalization;
 using CinemaManageProject.Helpers;
+using Dapper;
 using Microsoft.Data.Sqlite;
 
 namespace CinemaManageProject.Data;
@@ -41,82 +41,98 @@ public sealed record MovieSaveInput(
     IReadOnlyList<int> GenreIds);
 
 /// <summary>
-/// Truy vấn SQLite cho các bảng Movies, Genres và MovieGenres.
+/// Truy vấn SQLite bằng Dapper cho các bảng Movies, Genres và MovieGenres.
 /// </summary>
 public static class MovieData
 {
+    private sealed class GenreRow
+    {
+        public int GenreId { get; init; }
+        public string Name { get; init; } = string.Empty;
+    }
+
+    private sealed class MovieGenrePair
+    {
+        public int MovieId { get; init; }
+        public int GenreId { get; init; }
+    }
+
+    private sealed class MovieSqlRow
+    {
+        public int MovieId { get; init; }
+        public string Title { get; init; } = string.Empty;
+        public string? OriginalTitle { get; init; }
+        public string? Director { get; init; }
+        public string? Cast { get; init; }
+        public int DurationMinutes { get; init; }
+        public string ReleaseDateSql { get; init; } = string.Empty;
+        public string? EndDateSql { get; init; }
+        public string AgeRatingText { get; init; } = string.Empty;
+        public string Language { get; init; } = string.Empty;
+        public string? Description { get; init; }
+        public string? PosterPath { get; init; }
+        public string Status { get; init; } = string.Empty;
+        public string GenresText { get; init; } = string.Empty;
+    }
+
     public static List<(int GenreId, string Name)> LoadAllGenres()
     {
-        var result = new List<(int, string)>();
         using SqliteConnection conn = DatabaseHelper.OpenConnection();
-        using SqliteCommand cmd = conn.CreateCommand();
-        cmd.CommandText = "SELECT GenreId, Name FROM Genres ORDER BY Name COLLATE NOCASE ASC;";
-
-        using SqliteDataReader r = cmd.ExecuteReader();
-        while (r.Read())
-        {
-            result.Add((r.GetInt32(0), r.GetString(1)));
-        }
-
-        return result;
+        return conn.Query<GenreRow>("SELECT GenreId, Name FROM Genres ORDER BY Name COLLATE NOCASE ASC;")
+            .Select(g => (g.GenreId, g.Name))
+            .ToList();
     }
 
     public static int InsertGenre(string name)
     {
         using SqliteConnection conn = DatabaseHelper.OpenConnection();
-        using SqliteCommand cmd = conn.CreateCommand();
-        cmd.CommandText = """
+        return conn.ExecuteScalar<int>(
+            """
             INSERT INTO Genres (Name) VALUES (@name);
             SELECT last_insert_rowid();
-            """;
-        cmd.Parameters.AddWithValue("@name", name);
-        return Convert.ToInt32(cmd.ExecuteScalar(), CultureInfo.InvariantCulture);
+            """,
+            new { name });
     }
 
     public static List<AdminMovieRow> LoadAllMovies()
     {
         using SqliteConnection conn = DatabaseHelper.OpenConnection();
-        Dictionary<int, List<int>> movieGenres = LoadMovieGenreMap(conn);
 
-        var movies = new List<AdminMovieRow>();
-        using SqliteCommand cmd = conn.CreateCommand();
-        cmd.CommandText = """
+        Dictionary<int, List<int>> movieGenres = conn
+            .Query<MovieGenrePair>("SELECT MovieId, GenreId FROM MovieGenres;")
+            .GroupBy(p => p.MovieId)
+            .ToDictionary(g => g.Key, g => g.Select(x => x.GenreId).ToList());
+
+        const string sql = """
             SELECT m.MovieId, m.Title, m.OriginalTitle, m.Director, m.Cast,
-                   m.DurationMinutes, m.ReleaseDate, m.EndDate, m.AgeRating,
-                   m.Language, m.Description, m.PosterPath, m.Status,
+                   m.DurationMinutes, m.ReleaseDate AS ReleaseDateSql, m.EndDate AS EndDateSql,
+                   m.AgeRating AS AgeRatingText, m.Language, m.Description, m.PosterPath, m.Status,
                    COALESCE((SELECT GROUP_CONCAT(g.Name, ', ')
                              FROM MovieGenres mg INNER JOIN Genres g ON g.GenreId = mg.GenreId
-                             WHERE mg.MovieId = m.MovieId), 'Chưa gán')
+                             WHERE mg.MovieId = m.MovieId), 'Chưa gán') AS GenresText
             FROM Movies m
             ORDER BY CASE m.Status WHEN 'NowShowing' THEN 0 WHEN 'ComingSoon' THEN 1 ELSE 2 END,
                      m.ReleaseDate DESC, m.MovieId DESC;
             """;
 
-        using SqliteDataReader r = cmd.ExecuteReader();
-        while (r.Read())
-        {
-            int movieId = r.GetInt32(0);
-            IReadOnlyList<int> ids = movieGenres.TryGetValue(movieId, out List<int>? list) ? list : [];
-
-            movies.Add(new AdminMovieRow(
-                movieId,
-                r.GetString(1),
-                r.IsDBNull(2) ? null : r.GetString(2),
-                r.IsDBNull(3) ? null : r.GetString(3),
-                r.IsDBNull(4) ? null : r.GetString(4),
-                r.GetInt32(5),
-                r.GetString(6),
-                r.IsDBNull(7) ? null : r.GetString(7),
-                r.GetString(8),
-                r.GetString(9),
-                r.IsDBNull(10) ? null : r.GetString(10),
-                r.IsDBNull(11) ? null : r.GetString(11),
-                r.GetString(12),
-                r.GetString(13),
-                ids));
-        }
-
-        return movies;
+        return conn.Query<MovieSqlRow>(sql)
+            .Select(m => new AdminMovieRow(
+                m.MovieId,
+                m.Title,
+                m.OriginalTitle,
+                m.Director,
+                m.Cast,
+                m.DurationMinutes,
+                m.ReleaseDateSql,
+                m.EndDateSql,
+                m.AgeRatingText,
+                m.Language,
+                m.Description,
+                m.PosterPath,
+                m.Status,
+                m.GenresText,
+                movieGenres.TryGetValue(m.MovieId, out List<int>? ids) ? ids : []))
+            .ToList();
     }
 
     public static int SaveMovie(int? movieId, MovieSaveInput input)
@@ -124,41 +140,78 @@ public static class MovieData
         using SqliteConnection conn = DatabaseHelper.OpenConnection();
         using SqliteTransaction tx = conn.BeginTransaction();
 
+        string? cleanPoster = string.IsNullOrWhiteSpace(input.PosterPath) ? null : input.PosterPath;
         int savedId;
+
         if (movieId.HasValue)
         {
             savedId = movieId.Value;
-            using SqliteCommand update = conn.CreateCommand();
-            update.Transaction = tx;
-            update.CommandText = """
+            conn.Execute(
+                """
                 UPDATE Movies
-                SET Title = @title, OriginalTitle = @orig, Director = @dir, Cast = @cast,
-                    DurationMinutes = @dur, ReleaseDate = @rel, EndDate = @end, AgeRating = @age,
-                    Language = @lang, Description = @desc, PosterPath = @poster, Status = @status
-                WHERE MovieId = @id;
-                """;
-            BindMovieParameters(update, input);
-            update.Parameters.AddWithValue("@id", savedId);
-            update.ExecuteNonQuery();
+                SET Title = @Title, OriginalTitle = @OriginalTitle, Director = @Director, Cast = @Cast,
+                    DurationMinutes = @DurationMinutes, ReleaseDate = @ReleaseDateSql, EndDate = @EndDateSql,
+                    AgeRating = @AgeRating, Language = @Language, Description = @Description,
+                    PosterPath = @PosterPath, Status = @Status
+                WHERE MovieId = @MovieId;
+                """,
+                new
+                {
+                    MovieId = savedId,
+                    input.Title,
+                    input.OriginalTitle,
+                    input.Director,
+                    input.Cast,
+                    input.DurationMinutes,
+                    input.ReleaseDateSql,
+                    input.EndDateSql,
+                    input.AgeRating,
+                    input.Language,
+                    input.Description,
+                    PosterPath = cleanPoster,
+                    input.Status
+                },
+                tx);
         }
         else
         {
-            using SqliteCommand insert = conn.CreateCommand();
-            insert.Transaction = tx;
-            insert.CommandText = """
+            savedId = conn.ExecuteScalar<int>(
+                """
                 INSERT INTO Movies (
                     Title, OriginalTitle, Director, Cast, DurationMinutes,
                     ReleaseDate, EndDate, AgeRating, Language, Description, PosterPath, Status)
                 VALUES (
-                    @title, @orig, @dir, @cast, @dur,
-                    @rel, @end, @age, @lang, @desc, @poster, @status);
+                    @Title, @OriginalTitle, @Director, @Cast, @DurationMinutes,
+                    @ReleaseDateSql, @EndDateSql, @AgeRating, @Language, @Description, @PosterPath, @Status);
                 SELECT last_insert_rowid();
-                """;
-            BindMovieParameters(insert, input);
-            savedId = Convert.ToInt32(insert.ExecuteScalar(), CultureInfo.InvariantCulture);
+                """,
+                new
+                {
+                    input.Title,
+                    input.OriginalTitle,
+                    input.Director,
+                    input.Cast,
+                    input.DurationMinutes,
+                    input.ReleaseDateSql,
+                    input.EndDateSql,
+                    input.AgeRating,
+                    input.Language,
+                    input.Description,
+                    PosterPath = cleanPoster,
+                    input.Status
+                },
+                tx);
         }
 
-        SyncMovieGenres(conn, tx, savedId, input.GenreIds);
+        conn.Execute("DELETE FROM MovieGenres WHERE MovieId = @mid;", new { mid = savedId }, tx);
+        if (input.GenreIds.Count > 0)
+        {
+            conn.Execute(
+                "INSERT INTO MovieGenres (MovieId, GenreId) VALUES (@mid, @gid);",
+                input.GenreIds.Select(gid => new { mid = savedId, gid }),
+                tx);
+        }
+
         tx.Commit();
         return savedId;
     }
@@ -166,76 +219,12 @@ public static class MovieData
     public static int CountMovieShowtimes(int movieId)
     {
         using SqliteConnection conn = DatabaseHelper.OpenConnection();
-        using SqliteCommand cmd = conn.CreateCommand();
-        cmd.CommandText = "SELECT COUNT(*) FROM Showtimes WHERE MovieId = @id;";
-        cmd.Parameters.AddWithValue("@id", movieId);
-        return Convert.ToInt32(cmd.ExecuteScalar(), CultureInfo.InvariantCulture);
+        return conn.ExecuteScalar<int>("SELECT COUNT(*) FROM Showtimes WHERE MovieId = @id;", new { id = movieId });
     }
 
     public static void DeleteMovie(int movieId)
     {
         using SqliteConnection conn = DatabaseHelper.OpenConnection();
-        using SqliteCommand cmd = conn.CreateCommand();
-        cmd.CommandText = "DELETE FROM Movies WHERE MovieId = @id;";
-        cmd.Parameters.AddWithValue("@id", movieId);
-        cmd.ExecuteNonQuery();
-    }
-
-    private static Dictionary<int, List<int>> LoadMovieGenreMap(SqliteConnection conn)
-    {
-        var map = new Dictionary<int, List<int>>();
-        using SqliteCommand cmd = conn.CreateCommand();
-        cmd.CommandText = "SELECT MovieId, GenreId FROM MovieGenres;";
-
-        using SqliteDataReader r = cmd.ExecuteReader();
-        while (r.Read())
-        {
-            int mid = r.GetInt32(0);
-            if (!map.TryGetValue(mid, out List<int>? list))
-            {
-                list = [];
-                map[mid] = list;
-            }
-            list.Add(r.GetInt32(1));
-        }
-
-        return map;
-    }
-
-    private static void BindMovieParameters(SqliteCommand cmd, MovieSaveInput input)
-    {
-        cmd.Parameters.AddWithValue("@title", input.Title);
-        cmd.Parameters.AddWithValue("@orig", (object?)input.OriginalTitle ?? DBNull.Value);
-        cmd.Parameters.AddWithValue("@dir", (object?)input.Director ?? DBNull.Value);
-        cmd.Parameters.AddWithValue("@cast", (object?)input.Cast ?? DBNull.Value);
-        cmd.Parameters.AddWithValue("@dur", input.DurationMinutes);
-        cmd.Parameters.AddWithValue("@rel", input.ReleaseDateSql);
-        cmd.Parameters.AddWithValue("@end", (object?)input.EndDateSql ?? DBNull.Value);
-        cmd.Parameters.AddWithValue("@age", input.AgeRating);
-        cmd.Parameters.AddWithValue("@lang", input.Language);
-        cmd.Parameters.AddWithValue("@desc", (object?)input.Description ?? DBNull.Value);
-        cmd.Parameters.AddWithValue("@poster", string.IsNullOrWhiteSpace(input.PosterPath) ? DBNull.Value : input.PosterPath);
-        cmd.Parameters.AddWithValue("@status", input.Status);
-    }
-
-    private static void SyncMovieGenres(SqliteConnection conn, SqliteTransaction tx, int movieId, IReadOnlyList<int> genreIds)
-    {
-        using (SqliteCommand del = conn.CreateCommand())
-        {
-            del.Transaction = tx;
-            del.CommandText = "DELETE FROM MovieGenres WHERE MovieId = @mid;";
-            del.Parameters.AddWithValue("@mid", movieId);
-            del.ExecuteNonQuery();
-        }
-
-        foreach (int genreId in genreIds)
-        {
-            using SqliteCommand ins = conn.CreateCommand();
-            ins.Transaction = tx;
-            ins.CommandText = "INSERT INTO MovieGenres (MovieId, GenreId) VALUES (@mid, @gid);";
-            ins.Parameters.AddWithValue("@mid", movieId);
-            ins.Parameters.AddWithValue("@gid", genreId);
-            ins.ExecuteNonQuery();
-        }
+        conn.Execute("DELETE FROM Movies WHERE MovieId = @id;", new { id = movieId });
     }
 }

@@ -6,9 +6,9 @@ Tài liệu này quy định các nguyên tắc bắt buộc khi làm việc tr�
 
 ## 1. Công nghệ & Truy cập Dữ liệu
 * **Nền tảng:** `.NET 10 Windows` (`net10.0-windows`), **WPF** (`UseWPF=true`), `Nullable=enable`, `ImplicitUsings=enable`.
-* **CSDL:** Dùng trực tiếp **SQLite (`Microsoft.Data.Sqlite`)** thông qua `DatabaseHelper.OpenConnection()` làm việc với `Database/cinema.db`.
+* **CSDL:** Dùng **SQLite (`Microsoft.Data.Sqlite` + micro-ORM `Dapper`)** thông qua `DatabaseHelper.OpenConnection()` làm việc với `Database/cinema.db`.
 * **Không tự ý thêm package / hạ tầng ngoài phạm vi:** Không thêm Entity Framework Core, `appsettings.json`, hoặc thư viện MVVM bên thứ ba trừ khi người dùng yêu cầu rõ ràng.
-* **An toàn SQL:** Luôn dùng parameterized query (`@param`), bật `PRAGMA foreign_keys = ON;` (đã có trong `DatabaseHelper.OpenConnection()`), tuân thủ đúng tên bảng, cột và ràng buộc `CHECK (...)` trong `CinemaManageProject/Database/CinemaManageDB.sql`.
+* **An toàn SQL:** Luôn dùng SQL thuần có tham số hóa (`@param` qua Dapper anonymous/typed parameters), bật `PRAGMA foreign_keys = ON;` (đã có trong `DatabaseHelper.OpenConnection()`), tuân thủ đúng tên bảng, cột và ràng buộc `CHECK (...)` trong `CinemaManageProject/Database/CinemaManageDB.sql`.
 
 ## 2. Kiến trúc MVVM Gọn nhẹ & Tổ chức Thư mục
 * **Vị trí file:**

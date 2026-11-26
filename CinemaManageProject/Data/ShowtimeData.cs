@@ -1,16 +1,17 @@
-using System.Globalization;
 using CinemaManageProject.Helpers;
+using Dapper;
 using Microsoft.Data.Sqlite;
 
 namespace CinemaManageProject.Data;
 
-public sealed record ShowtimeMovieOption(
-    int MovieId,
-    string Title,
-    int DurationMinutes,
-    string Language,
-    string Status)
+public sealed record ShowtimeMovieOption
 {
+    public int MovieId { get; init; }
+    public string Title { get; init; } = string.Empty;
+    public int DurationMinutes { get; init; }
+    public string Language { get; init; } = string.Empty;
+    public string Status { get; init; } = string.Empty;
+
     public string DisplayLabel => Status switch
     {
         "Ended" => $"{Title} ({DurationMinutes}p - Ngừng chiếu)",
@@ -21,14 +22,15 @@ public sealed record ShowtimeMovieOption(
     public override string ToString() => DisplayLabel;
 }
 
-public sealed record ShowtimeRoomOption(
-    int RoomId,
-    string Name,
-    string RoomType,
-    decimal BasePriceSurcharge,
-    bool IsActive,
-    int ActiveSeatCount)
+public sealed record ShowtimeRoomOption
 {
+    public int RoomId { get; init; }
+    public string Name { get; init; } = string.Empty;
+    public string RoomType { get; init; } = string.Empty;
+    public decimal BasePriceSurcharge { get; init; }
+    public bool IsActive { get; init; }
+    public int ActiveSeatCount { get; init; }
+
     public string RoomTypeDisplay => FormatHelper.FormatRoomType(RoomType);
     public string DisplayLabel => IsActive
         ? $"{Name} ({ActiveSeatCount} ghế)"
@@ -37,23 +39,24 @@ public sealed record ShowtimeRoomOption(
     public override string ToString() => DisplayLabel;
 }
 
-public sealed record AdminShowtimeItem(
-    int ShowtimeId,
-    int MovieId,
-    string MovieTitle,
-    int MovieDurationMinutes,
-    int RoomId,
-    string RoomName,
-    decimal RoomSurcharge,
-    string StartTimeSql,
-    string EndTimeSql,
-    decimal BaseTicketPrice,
-    string Format,
-    string Status,
-    int ActiveTicketsCount,
-    int TotalTicketsCount,
-    int AvailableSeatsCount)
+public sealed record AdminShowtimeItem
 {
+    public int ShowtimeId { get; init; }
+    public int MovieId { get; init; }
+    public string MovieTitle { get; init; } = string.Empty;
+    public int MovieDurationMinutes { get; init; }
+    public int RoomId { get; init; }
+    public string RoomName { get; init; } = string.Empty;
+    public decimal RoomSurcharge { get; init; }
+    public string StartTimeSql { get; init; } = string.Empty;
+    public string EndTimeSql { get; init; } = string.Empty;
+    public decimal BaseTicketPrice { get; init; }
+    public string Format { get; init; } = string.Empty;
+    public string Status { get; init; } = string.Empty;
+    public int ActiveTicketsCount { get; init; }
+    public int TotalTicketsCount { get; init; }
+    public int AvailableSeatsCount { get; init; }
+
     public string ShowDateSql => StartTimeSql.Length >= 10 ? StartTimeSql[..10] : StartTimeSql;
     public string ShowDateDisplay => FormatHelper.FormatSqlDateTime(StartTimeSql, "dd/MM/yyyy");
     public string TimeRangeDisplay =>
@@ -78,86 +81,72 @@ public sealed record ShowtimeSaveInput(
 public sealed record ShowtimeSaveResult(bool Succeeded, int ShowtimeId, string? ErrorMessage);
 
 /// <summary>
-/// Truy vấn SQLite và kiểm tra ràng buộc nghiệp vụ cho bảng Showtimes.
+/// Truy vấn SQLite bằng Dapper và kiểm tra ràng buộc nghiệp vụ cho bảng Showtimes.
 /// </summary>
 public static class ShowtimeData
 {
     public const decimal StandardBaseTicketPrice = 80000m;
 
+    private sealed class ShowtimeLockRow
+    {
+        public int MovieId { get; init; }
+        public int RoomId { get; init; }
+        public string StartTime { get; init; } = string.Empty;
+        public decimal BaseTicketPrice { get; init; }
+        public int ActiveTickets { get; init; }
+    }
+
+    private sealed class RoomConflictRow
+    {
+        public string MovieTitle { get; init; } = string.Empty;
+        public string RoomName { get; init; } = string.Empty;
+        public string StartTime { get; init; } = string.Empty;
+        public string EndTime { get; init; } = string.Empty;
+    }
+
     public static List<ShowtimeMovieOption> LoadMovieOptions()
     {
-        var result = new List<ShowtimeMovieOption>();
         using SqliteConnection conn = DatabaseHelper.OpenConnection();
-        using SqliteCommand cmd = conn.CreateCommand();
-        cmd.CommandText = """
+        const string sql = """
             SELECT MovieId, Title, DurationMinutes, Language, Status
             FROM Movies
             ORDER BY CASE Status WHEN 'NowShowing' THEN 0 WHEN 'ComingSoon' THEN 1 ELSE 2 END,
                      Title COLLATE NOCASE ASC;
             """;
-
-        using SqliteDataReader r = cmd.ExecuteReader();
-        while (r.Read())
-        {
-            result.Add(new ShowtimeMovieOption(
-                r.GetInt32(0),
-                r.GetString(1),
-                r.GetInt32(2),
-                r.GetString(3),
-                r.GetString(4)));
-        }
-
-        return result;
+        return conn.Query<ShowtimeMovieOption>(sql).AsList();
     }
 
     public static List<ShowtimeRoomOption> LoadRoomOptions()
     {
-        var result = new List<ShowtimeRoomOption>();
         using SqliteConnection conn = DatabaseHelper.OpenConnection();
-        using SqliteCommand cmd = conn.CreateCommand();
-        cmd.CommandText = """
+        const string sql = """
             SELECT r.RoomId, r.Name, r.RoomType, r.BasePriceSurcharge, r.IsActive,
-                   (SELECT COUNT(*) FROM Seats s WHERE s.RoomId = r.RoomId AND s.IsActive = 1)
+                   (SELECT COUNT(*) FROM Seats s WHERE s.RoomId = r.RoomId AND s.IsActive = 1) AS ActiveSeatCount
             FROM Rooms r
             ORDER BY r.IsActive DESC, r.RoomId ASC;
             """;
-
-        using SqliteDataReader r = cmd.ExecuteReader();
-        while (r.Read())
-        {
-            result.Add(new ShowtimeRoomOption(
-                r.GetInt32(0),
-                r.GetString(1),
-                r.GetString(2),
-                DatabaseHelper.ReadDecimal(r, 3),
-                r.GetInt32(4) == 1,
-                r.GetInt32(5)));
-        }
-
-        return result;
+        return conn.Query<ShowtimeRoomOption>(sql).AsList();
     }
 
     public static List<AdminShowtimeItem> LoadAllShowtimes()
     {
-        var items = new List<AdminShowtimeItem>();
         using SqliteConnection conn = DatabaseHelper.OpenConnection();
-        using SqliteCommand cmd = conn.CreateCommand();
-        cmd.CommandText = """
+        const string sql = """
             SELECT s.ShowtimeId,
                    s.MovieId,
-                   m.Title,
-                   m.DurationMinutes,
+                   m.Title AS MovieTitle,
+                   m.DurationMinutes AS MovieDurationMinutes,
                    s.RoomId,
-                   r.Name,
-                   r.BasePriceSurcharge,
-                   s.StartTime,
-                   s.EndTime,
+                   r.Name AS RoomName,
+                   r.BasePriceSurcharge AS RoomSurcharge,
+                   s.StartTime AS StartTimeSql,
+                   s.EndTime AS EndTimeSql,
                    s.BaseTicketPrice,
                    s.Format,
                    s.Status,
-                   (SELECT COUNT(*) FROM Tickets t WHERE t.ShowtimeId = s.ShowtimeId AND t.Status IN ('Booked', 'CheckedIn')),
-                   (SELECT COUNT(*) FROM Tickets t WHERE t.ShowtimeId = s.ShowtimeId),
-                   (SELECT COUNT(*) FROM Seats se WHERE se.RoomId = s.RoomId AND se.IsActive = 1)
+                   (SELECT COUNT(*) FROM Tickets t WHERE t.ShowtimeId = s.ShowtimeId AND t.Status IN ('Booked', 'CheckedIn')) AS ActiveTicketsCount,
+                   (SELECT COUNT(*) FROM Tickets t WHERE t.ShowtimeId = s.ShowtimeId) AS TotalTicketsCount,
+                   (SELECT COUNT(*) FROM Seats se WHERE se.RoomId = s.RoomId AND se.IsActive = 1) AS AvailableSeatsCount
             FROM Showtimes s
             INNER JOIN Movies m ON m.MovieId = s.MovieId
             INNER JOIN Rooms r ON r.RoomId = s.RoomId
@@ -166,29 +155,7 @@ public static class ShowtimeData
                      s.StartTime DESC,
                      s.RoomId ASC;
             """;
-
-        using SqliteDataReader r = cmd.ExecuteReader();
-        while (r.Read())
-        {
-            items.Add(new AdminShowtimeItem(
-                r.GetInt32(0),
-                r.GetInt32(1),
-                r.GetString(2),
-                r.GetInt32(3),
-                r.GetInt32(4),
-                r.GetString(5),
-                DatabaseHelper.ReadDecimal(r, 6),
-                r.GetString(7),
-                r.GetString(8),
-                DatabaseHelper.ReadDecimal(r, 9),
-                r.GetString(10),
-                r.GetString(11),
-                r.GetInt32(12),
-                r.GetInt32(13),
-                r.GetInt32(14)));
-        }
-
-        return items;
+        return conn.Query<AdminShowtimeItem>(sql).AsList();
     }
 
     public static ShowtimeSaveResult SaveShowtime(int? showtimeId, ShowtimeSaveInput input)
@@ -218,35 +185,41 @@ public static class ShowtimeData
         if (showtimeId.HasValue)
         {
             savedId = showtimeId.Value;
-            using SqliteCommand update = conn.CreateCommand();
-            update.Transaction = tx;
-            update.CommandText = """
+            conn.Execute(
+                """
                 UPDATE Showtimes
-                SET MovieId = @mid,
-                    RoomId = @rid,
-                    StartTime = @start,
-                    EndTime = @end,
-                    BaseTicketPrice = @price,
-                    Format = @fmt,
-                    Status = @status
-                WHERE ShowtimeId = @id;
-                """;
-            BindParameters(update, input);
-            update.Parameters.AddWithValue("@id", savedId);
-            update.ExecuteNonQuery();
+                SET MovieId = @MovieId,
+                    RoomId = @RoomId,
+                    StartTime = @StartTimeSql,
+                    EndTime = @EndTimeSql,
+                    BaseTicketPrice = @BaseTicketPrice,
+                    Format = @Format,
+                    Status = @Status
+                WHERE ShowtimeId = @ShowtimeId;
+                """,
+                new
+                {
+                    ShowtimeId = savedId,
+                    input.MovieId,
+                    input.RoomId,
+                    input.StartTimeSql,
+                    input.EndTimeSql,
+                    input.BaseTicketPrice,
+                    input.Format,
+                    input.Status
+                },
+                tx);
         }
         else
         {
-            using SqliteCommand insert = conn.CreateCommand();
-            insert.Transaction = tx;
-            insert.CommandText = """
+            savedId = conn.ExecuteScalar<int>(
+                """
                 INSERT INTO Showtimes (MovieId, RoomId, StartTime, EndTime, BaseTicketPrice, Format, Status, CreatedByUserId)
-                VALUES (@mid, @rid, @start, @end, @price, @fmt, @status, @uid);
+                VALUES (@MovieId, @RoomId, @StartTimeSql, @EndTimeSql, @BaseTicketPrice, @Format, @Status, @CreatedByUserId);
                 SELECT last_insert_rowid();
-                """;
-            BindParameters(insert, input);
-            insert.Parameters.AddWithValue("@uid", input.CreatedByUserId);
-            savedId = Convert.ToInt32(insert.ExecuteScalar(), CultureInfo.InvariantCulture);
+                """,
+                input,
+                tx);
         }
 
         tx.Commit();
@@ -256,19 +229,13 @@ public static class ShowtimeData
     public static int CountShowtimeTickets(int showtimeId)
     {
         using SqliteConnection conn = DatabaseHelper.OpenConnection();
-        using SqliteCommand cmd = conn.CreateCommand();
-        cmd.CommandText = "SELECT COUNT(*) FROM Tickets WHERE ShowtimeId = @id;";
-        cmd.Parameters.AddWithValue("@id", showtimeId);
-        return Convert.ToInt32(cmd.ExecuteScalar(), CultureInfo.InvariantCulture);
+        return conn.ExecuteScalar<int>("SELECT COUNT(*) FROM Tickets WHERE ShowtimeId = @id;", new { id = showtimeId });
     }
 
     public static void DeleteShowtime(int showtimeId)
     {
         using SqliteConnection conn = DatabaseHelper.OpenConnection();
-        using SqliteCommand cmd = conn.CreateCommand();
-        cmd.CommandText = "DELETE FROM Showtimes WHERE ShowtimeId = @id;";
-        cmd.Parameters.AddWithValue("@id", showtimeId);
-        cmd.ExecuteNonQuery();
+        conn.Execute("DELETE FROM Showtimes WHERE ShowtimeId = @id;", new { id = showtimeId });
     }
 
     public static string SuggestFormat(string roomType, string movieLanguage)
@@ -296,39 +263,30 @@ public static class ShowtimeData
         int showtimeId,
         ShowtimeSaveInput input)
     {
-        using SqliteCommand cmd = conn.CreateCommand();
-        cmd.Transaction = tx;
-        cmd.CommandText = """
+        const string sql = """
             SELECT MovieId, RoomId, StartTime, BaseTicketPrice,
-                   (SELECT COUNT(*) FROM Tickets t WHERE t.ShowtimeId = s.ShowtimeId AND t.Status IN ('Booked', 'CheckedIn'))
+                   (SELECT COUNT(*) FROM Tickets t WHERE t.ShowtimeId = s.ShowtimeId AND t.Status IN ('Booked', 'CheckedIn')) AS ActiveTickets
             FROM Showtimes s
             WHERE s.ShowtimeId = @id;
             """;
-        cmd.Parameters.AddWithValue("@id", showtimeId);
 
-        using SqliteDataReader r = cmd.ExecuteReader();
-        if (!r.Read())
+        ShowtimeLockRow? existing = conn.QueryFirstOrDefault<ShowtimeLockRow>(sql, new { id = showtimeId }, tx);
+        if (existing is null)
         {
             return "Không tìm thấy suất chiếu cần cập nhật.";
         }
 
-        int activeTickets = r.GetInt32(4);
-        if (activeTickets <= 0)
+        if (existing.ActiveTickets <= 0)
         {
             return null;
         }
 
-        int oldMovieId = r.GetInt32(0);
-        int oldRoomId = r.GetInt32(1);
-        string oldStart = r.GetString(2);
-        decimal oldPrice = DatabaseHelper.ReadDecimal(r, 3);
-
-        if (oldMovieId != input.MovieId
-            || oldRoomId != input.RoomId
-            || !string.Equals(oldStart, input.StartTimeSql, StringComparison.Ordinal)
-            || oldPrice != input.BaseTicketPrice)
+        if (existing.MovieId != input.MovieId
+            || existing.RoomId != input.RoomId
+            || !string.Equals(existing.StartTime, input.StartTimeSql, StringComparison.Ordinal)
+            || existing.BaseTicketPrice != input.BaseTicketPrice)
         {
-            return $"Suất chiếu đang có {activeTickets} vé hiệu lực, không thể đổi phim, phòng, giờ chiếu hoặc giá vé (chỉ được cập nhật trạng thái).";
+            return $"Suất chiếu đang có {existing.ActiveTickets} vé hiệu lực, không thể đổi phim, phòng, giờ chiếu hoặc giá vé (chỉ được cập nhật trạng thái).";
         }
 
         return null;
@@ -342,10 +300,8 @@ public static class ShowtimeData
         string startSql,
         string endSql)
     {
-        using SqliteCommand cmd = conn.CreateCommand();
-        cmd.Transaction = tx;
-        cmd.CommandText = """
-            SELECT m.Title, r.Name, s.StartTime, s.EndTime
+        const string sql = """
+            SELECT m.Title AS MovieTitle, r.Name AS RoomName, s.StartTime, s.EndTime
             FROM Showtimes s
             INNER JOIN Movies m ON m.MovieId = s.MovieId
             INNER JOIN Rooms r ON r.RoomId = s.RoomId
@@ -357,32 +313,19 @@ public static class ShowtimeData
             ORDER BY s.StartTime ASC
             LIMIT 1;
             """;
-        cmd.Parameters.AddWithValue("@rid", roomId);
-        cmd.Parameters.AddWithValue("@sid", excludeShowtimeId.HasValue ? excludeShowtimeId.Value : DBNull.Value);
-        cmd.Parameters.AddWithValue("@start", startSql);
-        cmd.Parameters.AddWithValue("@end", endSql);
 
-        using SqliteDataReader r = cmd.ExecuteReader();
-        if (!r.Read())
+        RoomConflictRow? conflict = conn.QueryFirstOrDefault<RoomConflictRow>(
+            sql,
+            new { rid = roomId, sid = excludeShowtimeId, start = startSql, end = endSql },
+            tx);
+
+        if (conflict is null)
         {
             return null;
         }
 
-        string movieTitle = r.GetString(0);
-        string roomName = r.GetString(1);
-        string startDisplay = FormatHelper.FormatSqlDateTime(r.GetString(2), "HH:mm");
-        string endDisplay = FormatHelper.FormatSqlDateTime(r.GetString(3), "HH:mm dd/MM/yyyy");
-        return $"{roomName} bị trùng lịch với suất \"{movieTitle}\" ({startDisplay} – {endDisplay}, đã tính +15 phút dọn phòng).";
-    }
-
-    private static void BindParameters(SqliteCommand cmd, ShowtimeSaveInput input)
-    {
-        cmd.Parameters.AddWithValue("@mid", input.MovieId);
-        cmd.Parameters.AddWithValue("@rid", input.RoomId);
-        cmd.Parameters.AddWithValue("@start", input.StartTimeSql);
-        cmd.Parameters.AddWithValue("@end", input.EndTimeSql);
-        cmd.Parameters.AddWithValue("@price", input.BaseTicketPrice);
-        cmd.Parameters.AddWithValue("@fmt", input.Format);
-        cmd.Parameters.AddWithValue("@status", input.Status);
+        string startDisplay = FormatHelper.FormatSqlDateTime(conflict.StartTime, "HH:mm");
+        string endDisplay = FormatHelper.FormatSqlDateTime(conflict.EndTime, "HH:mm dd/MM/yyyy");
+        return $"{conflict.RoomName} bị trùng lịch với suất \"{conflict.MovieTitle}\" ({startDisplay} – {endDisplay}, đã tính +15 phút dọn phòng).";
     }
 }
