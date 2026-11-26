@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using CinemaManageProject.Data;
 using CinemaManageProject.Helpers;
+using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace CinemaManageProject.ViewModels;
 
@@ -22,8 +23,10 @@ public sealed class BookingSeatRowGroup
 /// <summary>
 /// Ô ghế tương tác trên sơ đồ chọn ghế với trạng thái Thường / VIP / Đôi / Đang chọn / Đã đặt / Bảo trì.
 /// </summary>
-public sealed class BookingSeatCellItem : ViewModelBase
+public sealed partial class BookingSeatCellItem : ViewModelBase
 {
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(VisualState))]
     private bool _isSelected;
 
     public BookingSeatCellItem(ShowtimeSeatRow row, decimal unitPrice)
@@ -53,22 +56,6 @@ public sealed class BookingSeatCellItem : ViewModelBase
 
     public bool IsCouple => SeatType == "Couple";
     public bool IsSelectable => IsActive && !IsBooked;
-
-    public bool IsSelected
-    {
-        get => _isSelected;
-        set
-        {
-            if (_isSelected == value)
-            {
-                return;
-            }
-
-            _isSelected = value;
-            OnPropertyChanged(nameof(IsSelected));
-            OnPropertyChanged(nameof(VisualState));
-        }
-    }
 
     public string VisualState => !IsActive
         ? "Maintenance"

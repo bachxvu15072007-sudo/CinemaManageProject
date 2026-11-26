@@ -1,83 +1,41 @@
 using CinemaManageProject.Data;
+using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace CinemaManageProject.ViewModels;
 
 /// <summary>
 /// ViewModel cho LoginWindow: đăng nhập theo Users và đăng ký tài khoản Customer mới.
 /// </summary>
-public sealed class LoginViewModel : ViewModelBase
+public sealed partial class LoginViewModel : ViewModelBase
 {
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsLoginMode))]
     private bool _isRegisterMode;
-    private string _username = string.Empty;
-    private string _regFullName = string.Empty;
-    private string _regPhone = string.Empty;
-    private string _regUsername = string.Empty;
-    private string _regEmail = string.Empty;
-    private string? _errorMessage;
 
-    public LoginViewModel()
-    {
-    }
+    [ObservableProperty]
+    private string _username = string.Empty;
+
+    [ObservableProperty]
+    private string _regFullName = string.Empty;
+
+    [ObservableProperty]
+    private string _regPhone = string.Empty;
+
+    [ObservableProperty]
+    private string _regUsername = string.Empty;
+
+    [ObservableProperty]
+    private string _regEmail = string.Empty;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasError))]
+    private string? _errorMessage;
 
     public event Action? LoginSucceeded;
     public event Action<string>? DemoPasswordRequested;
     public event Action? ModeSwitched;
 
-    public bool IsRegisterMode
-    {
-        get => _isRegisterMode;
-        private set
-        {
-            if (value == _isRegisterMode) return;
-            _isRegisterMode = value;
-            OnPropertyChanged(nameof(IsRegisterMode));
-            OnPropertyChanged(nameof(IsLoginMode));
-        }
-    }
-
     public bool IsLoginMode => !IsRegisterMode;
-
-    public string Username
-    {
-        get => _username;
-        set { _username = value; OnPropertyChanged(nameof(Username)); }
-    }
-
-    public string RegFullName
-    {
-        get => _regFullName;
-        set { _regFullName = value; OnPropertyChanged(nameof(RegFullName)); }
-    }
-
-    public string RegPhone
-    {
-        get => _regPhone;
-        set { _regPhone = value; OnPropertyChanged(nameof(RegPhone)); }
-    }
-
-    public string RegUsername
-    {
-        get => _regUsername;
-        set { _regUsername = value; OnPropertyChanged(nameof(RegUsername)); }
-    }
-
-    public string RegEmail
-    {
-        get => _regEmail;
-        set { _regEmail = value; OnPropertyChanged(nameof(RegEmail)); }
-    }
-
-    public string? ErrorMessage
-    {
-        get => _errorMessage;
-        private set
-        {
-            _errorMessage = value;
-            OnPropertyChanged(nameof(ErrorMessage));
-            OnPropertyChanged(nameof(HasError));
-        }
-    }
-
     public bool HasError => !string.IsNullOrWhiteSpace(ErrorMessage);
 
     public void ToggleMode()
@@ -90,7 +48,7 @@ public sealed class LoginViewModel : ViewModelBase
     public void Login(string password)
     {
         ErrorMessage = null;
-        string cleanUser = Username.Trim();
+        string cleanUser = (Username ?? string.Empty).Trim();
         if (string.IsNullOrWhiteSpace(cleanUser) || string.IsNullOrEmpty(password))
         {
             ErrorMessage = "Vui lòng nhập đầy đủ tên đăng nhập và mật khẩu.";
@@ -111,9 +69,9 @@ public sealed class LoginViewModel : ViewModelBase
     public void Register(string password, string confirmPassword)
     {
         ErrorMessage = null;
-        string cleanName = RegFullName.Trim();
-        string cleanPhone = RegPhone.Trim();
-        string cleanUser = RegUsername.Trim();
+        string cleanName = (RegFullName ?? string.Empty).Trim();
+        string cleanPhone = (RegPhone ?? string.Empty).Trim();
+        string cleanUser = (RegUsername ?? string.Empty).Trim();
         string? cleanEmail = string.IsNullOrWhiteSpace(RegEmail) ? null : RegEmail.Trim();
 
         if (string.IsNullOrWhiteSpace(cleanName) || string.IsNullOrWhiteSpace(cleanPhone) ||

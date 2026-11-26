@@ -2,24 +2,51 @@ using System.Collections.ObjectModel;
 using CinemaManageProject.Data;
 using CinemaManageProject.Helpers;
 using CinemaManageProject.Models;
+using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace CinemaManageProject.ViewModels.Customer;
 
 /// <summary>
 /// ViewModel màn hình Vé của tôi &amp; Lịch sử hóa đơn cho vai trò Customer.
 /// </summary>
-public sealed class CustomerMyTicketsViewModel : ViewModelBase
+public sealed partial class CustomerMyTicketsViewModel : ViewModelBase
 {
     private readonly List<CustomerMyTicketRow> _allTickets = [];
     private BookingCustomerSummary? _memberProfile;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasSelectedTicket))]
+    [NotifyPropertyChangedFor(nameof(CanCancelSelectedTicket))]
     private CustomerMyTicketRow? _selectedTicket;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(AllFilterTag))]
+    [NotifyPropertyChangedFor(nameof(BookedFilterTag))]
+    [NotifyPropertyChangedFor(nameof(CheckedInFilterTag))]
+    [NotifyPropertyChangedFor(nameof(CancelledFilterTag))]
     private string _statusFilter = "All";
+
+    [ObservableProperty]
     private string _searchKeyword = string.Empty;
+
+    [ObservableProperty]
     private string _pendingCountText = "0 vé";
+
+    [ObservableProperty]
     private string _checkedInCountText = "0 vé";
+
+    [ObservableProperty]
     private string _ordersCountText = "0 hóa đơn";
+
+    [ObservableProperty]
     private string _tierAndPointsText = "Member • 0 điểm";
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasError))]
     private string? _errorMessage;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasSuccess))]
     private string? _successMessage;
 
     public CustomerMyTicketsViewModel()
@@ -30,75 +57,20 @@ public sealed class CustomerMyTicketsViewModel : ViewModelBase
     public ObservableCollection<CustomerMyTicketRow> FilteredTickets { get; } = [];
     public ObservableCollection<CustomerMyOrderRow> MyOrders { get; } = [];
 
-    public string PendingCountText { get => _pendingCountText; private set { _pendingCountText = value; OnPropertyChanged(nameof(PendingCountText)); } }
-    public string CheckedInCountText { get => _checkedInCountText; private set { _checkedInCountText = value; OnPropertyChanged(nameof(CheckedInCountText)); } }
-    public string OrdersCountText { get => _ordersCountText; private set { _ordersCountText = value; OnPropertyChanged(nameof(OrdersCountText)); } }
-    public string TierAndPointsText { get => _tierAndPointsText; private set { _tierAndPointsText = value; OnPropertyChanged(nameof(TierAndPointsText)); } }
-
-    public string StatusFilter
-    {
-        get => _statusFilter;
-        private set
-        {
-            if (_statusFilter == value) return;
-            _statusFilter = value;
-            OnPropertyChanged(nameof(StatusFilter));
-            OnPropertyChanged(nameof(AllFilterTag));
-            OnPropertyChanged(nameof(BookedFilterTag));
-            OnPropertyChanged(nameof(CheckedInFilterTag));
-            OnPropertyChanged(nameof(CancelledFilterTag));
-            ApplyTicketFilter();
-        }
-    }
-
     public string? AllFilterTag => StatusFilter == "All" ? "Active" : null;
     public string? BookedFilterTag => StatusFilter == "Booked" ? "Active" : null;
     public string? CheckedInFilterTag => StatusFilter == "CheckedIn" ? "Active" : null;
     public string? CancelledFilterTag => StatusFilter == "Cancelled" ? "Active" : null;
 
-    public string SearchKeyword
-    {
-        get => _searchKeyword;
-        set
-        {
-            if (_searchKeyword == value) return;
-            _searchKeyword = value ?? string.Empty;
-            OnPropertyChanged(nameof(SearchKeyword));
-            ApplyTicketFilter();
-        }
-    }
-
-    public CustomerMyTicketRow? SelectedTicket
-    {
-        get => _selectedTicket;
-        set
-        {
-            if (ReferenceEquals(_selectedTicket, value)) return;
-            _selectedTicket = value;
-            OnPropertyChanged(nameof(SelectedTicket));
-            OnPropertyChanged(nameof(HasSelectedTicket));
-            OnPropertyChanged(nameof(CanCancelSelectedTicket));
-        }
-    }
-
     public bool HasSelectedTicket => SelectedTicket is not null;
     public bool CanCancelSelectedTicket => SelectedTicket?.CanCancel == true;
     public bool HasNoFilteredTickets => FilteredTickets.Count == 0;
     public bool HasNoOrders => MyOrders.Count == 0;
-
-    public string? ErrorMessage
-    {
-        get => _errorMessage;
-        private set { _errorMessage = value; OnPropertyChanged(nameof(ErrorMessage)); OnPropertyChanged(nameof(HasError)); }
-    }
     public bool HasError => !string.IsNullOrWhiteSpace(ErrorMessage);
-
-    public string? SuccessMessage
-    {
-        get => _successMessage;
-        private set { _successMessage = value; OnPropertyChanged(nameof(SuccessMessage)); OnPropertyChanged(nameof(HasSuccess)); }
-    }
     public bool HasSuccess => !string.IsNullOrWhiteSpace(SuccessMessage);
+
+    partial void OnStatusFilterChanged(string value) => ApplyTicketFilter();
+    partial void OnSearchKeywordChanged(string value) => ApplyTicketFilter();
 
     public override void LoadData()
     {
@@ -190,7 +162,7 @@ public sealed class CustomerMyTicketsViewModel : ViewModelBase
     private void ApplyTicketFilter(int? preferredTicketId = null)
     {
         int? keepId = preferredTicketId ?? SelectedTicket?.TicketId;
-        string kw = SearchKeyword.Trim();
+        string kw = (SearchKeyword ?? string.Empty).Trim();
 
         FilteredTickets.Clear();
         IEnumerable<CustomerMyTicketRow> query = _allTickets;

@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using System.Globalization;
 using CinemaManageProject.Data;
 using CinemaManageProject.Helpers;
+using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace CinemaManageProject.ViewModels.Admin;
 
@@ -23,7 +24,7 @@ public sealed record ShowtimeRoomFilterOption(int? RoomId, string Name)
 /// <summary>
 /// ViewModel Quản lý Lịch chiếu cho vai trò Admin.
 /// </summary>
-public sealed class AdminShowtimesViewModel : ViewModelBase
+public sealed partial class AdminShowtimesViewModel : ViewModelBase
 {
     private const int CleanupBufferMinutes = 15;
     private static readonly string[] DateFormats = ["dd/MM/yyyy", "d/M/yyyy", "yyyy-MM-dd"];
@@ -32,26 +33,59 @@ public sealed class AdminShowtimesViewModel : ViewModelBase
     private readonly List<AdminShowtimeItem> _allShowtimes = [];
     private int? _editingShowtimeId;
     private int _selectedActiveTicketsCount;
-    private bool _suppressAutoFormat;
+    private bool _suppressFilters;
+    private bool _suppressFormSideEffects;
 
+    [ObservableProperty]
     private string _searchKeyword = string.Empty;
+
+    [ObservableProperty]
     private ShowtimeDateFilterOption? _selectedDateFilter;
+
+    [ObservableProperty]
     private ShowtimeRoomFilterOption? _selectedRoomFilter;
+
+    [ObservableProperty]
     private ShowtimeStatusOption? _selectedStatusFilterOption;
+
+    [ObservableProperty]
     private string _resultCountText = "0 suất chiếu";
+
+    [ObservableProperty]
     private string _summaryStatsText = string.Empty;
+
     private AdminShowtimeItem? _selectedShowtime;
 
+    [ObservableProperty]
     private ShowtimeMovieOption? _selectedMovieOption;
+
+    [ObservableProperty]
     private ShowtimeRoomOption? _selectedRoomOption;
+
+    [ObservableProperty]
     private string _showDateText = DateTime.Today.ToString("dd/MM/yyyy", CultureInfo.InvariantCulture);
+
+    [ObservableProperty]
     private string _startTimeText = "14:00";
+
+    [ObservableProperty]
     private string _formatText = "2D Phụ đề";
+
+    [ObservableProperty]
     private ShowtimeStatusOption? _selectedStatusOption;
 
+    [ObservableProperty]
     private string _previewEndTimeText = "Chọn phim, ngày và giờ để xem giờ kết thúc (+15p dọn phòng).";
+
+    [ObservableProperty]
     private string _previewPriceSummaryText = string.Empty;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasError))]
     private string? _errorMessage;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasSuccess))]
     private string? _successMessage;
 
     public AdminShowtimesViewModel()
@@ -86,46 +120,20 @@ public sealed class AdminShowtimesViewModel : ViewModelBase
     public ObservableCollection<ShowtimeDateFilterOption> DateFilterOptions { get; } = [];
     public ObservableCollection<ShowtimeRoomFilterOption> RoomFilterOptions { get; } = [];
 
-    public string SearchKeyword
-    {
-        get => _searchKeyword;
-        set { if (_searchKeyword == value) return; _searchKeyword = value; OnPropertyChanged(nameof(SearchKeyword)); ApplyFilter(); }
-    }
-
-    public ShowtimeDateFilterOption? SelectedDateFilter
-    {
-        get => _selectedDateFilter;
-        set { if (Equals(_selectedDateFilter, value)) return; _selectedDateFilter = value; OnPropertyChanged(nameof(SelectedDateFilter)); ApplyFilter(); }
-    }
-
-    public ShowtimeRoomFilterOption? SelectedRoomFilter
-    {
-        get => _selectedRoomFilter;
-        set { if (Equals(_selectedRoomFilter, value)) return; _selectedRoomFilter = value; OnPropertyChanged(nameof(SelectedRoomFilter)); ApplyFilter(); }
-    }
-
-    public ShowtimeStatusOption? SelectedStatusFilterOption
-    {
-        get => _selectedStatusFilterOption;
-        set { if (Equals(_selectedStatusFilterOption, value)) return; _selectedStatusFilterOption = value; OnPropertyChanged(nameof(SelectedStatusFilterOption)); ApplyFilter(); }
-    }
-
     public AdminShowtimeItem? SelectedShowtime
     {
         get => _selectedShowtime;
         set
         {
             _selectedShowtime = value;
-            OnPropertyChanged(nameof(SelectedShowtime));
-            if (value is not null)
+            OnPropertyChanged();
+            if (!_suppressFormSideEffects && value is not null)
             {
                 PopulateForm(value);
             }
         }
     }
 
-    public string ResultCountText { get => _resultCountText; private set { _resultCountText = value; OnPropertyChanged(nameof(ResultCountText)); } }
-    public string SummaryStatsText { get => _summaryStatsText; private set { _summaryStatsText = value; OnPropertyChanged(nameof(SummaryStatsText)); } }
     public bool IsEditMode => _editingShowtimeId.HasValue;
     public bool SelectedHasActiveTickets => _editingShowtimeId.HasValue && _selectedActiveTicketsCount > 0;
     public bool CanEditScheduleCore => !SelectedHasActiveTickets;
@@ -135,80 +143,30 @@ public sealed class AdminShowtimesViewModel : ViewModelBase
         ? $"Suất chiếu đã có {_selectedActiveTicketsCount} vé hiệu lực — chỉ được cập nhật trạng thái (khóa đổi phim, phòng và giờ chiếu)."
         : string.Empty;
     public string StandardBasePriceDisplay => FormatHelper.FormatVnd(CurrentBasePrice());
-
-    public ShowtimeMovieOption? SelectedMovieOption
-    {
-        get => _selectedMovieOption;
-        set
-        {
-            _selectedMovieOption = value;
-            OnPropertyChanged(nameof(SelectedMovieOption));
-            UpdateSuggestedFormatIfNew();
-            UpdatePreviews();
-        }
-    }
-
-    public ShowtimeRoomOption? SelectedRoomOption
-    {
-        get => _selectedRoomOption;
-        set
-        {
-            _selectedRoomOption = value;
-            OnPropertyChanged(nameof(SelectedRoomOption));
-            UpdateSuggestedFormatIfNew();
-            UpdatePreviews();
-        }
-    }
-
-    public string ShowDateText
-    {
-        get => _showDateText;
-        set { _showDateText = value; OnPropertyChanged(nameof(ShowDateText)); UpdatePreviews(); }
-    }
-
-    public string StartTimeText
-    {
-        get => _startTimeText;
-        set { _startTimeText = value; OnPropertyChanged(nameof(StartTimeText)); UpdatePreviews(); }
-    }
-
-    public string FormatText
-    {
-        get => _formatText;
-        set { _formatText = value; OnPropertyChanged(nameof(FormatText)); }
-    }
-
-    public ShowtimeStatusOption? SelectedStatusOption
-    {
-        get => _selectedStatusOption;
-        set { _selectedStatusOption = value; OnPropertyChanged(nameof(SelectedStatusOption)); }
-    }
-
-    public string PreviewEndTimeText
-    {
-        get => _previewEndTimeText;
-        private set { _previewEndTimeText = value; OnPropertyChanged(nameof(PreviewEndTimeText)); }
-    }
-
-    public string PreviewPriceSummaryText
-    {
-        get => _previewPriceSummaryText;
-        private set { _previewPriceSummaryText = value; OnPropertyChanged(nameof(PreviewPriceSummaryText)); }
-    }
-
-    public string? ErrorMessage
-    {
-        get => _errorMessage;
-        private set { _errorMessage = value; OnPropertyChanged(nameof(ErrorMessage)); OnPropertyChanged(nameof(HasError)); }
-    }
     public bool HasError => !string.IsNullOrWhiteSpace(ErrorMessage);
-
-    public string? SuccessMessage
-    {
-        get => _successMessage;
-        private set { _successMessage = value; OnPropertyChanged(nameof(SuccessMessage)); OnPropertyChanged(nameof(HasSuccess)); }
-    }
     public bool HasSuccess => !string.IsNullOrWhiteSpace(SuccessMessage);
+
+    partial void OnSearchKeywordChanged(string value) { if (!_suppressFilters) ApplyFilter(); }
+    partial void OnSelectedDateFilterChanged(ShowtimeDateFilterOption? value) { if (!_suppressFilters) ApplyFilter(); }
+    partial void OnSelectedRoomFilterChanged(ShowtimeRoomFilterOption? value) { if (!_suppressFilters) ApplyFilter(); }
+    partial void OnSelectedStatusFilterOptionChanged(ShowtimeStatusOption? value) { if (!_suppressFilters) ApplyFilter(); }
+
+    partial void OnSelectedMovieOptionChanged(ShowtimeMovieOption? value)
+    {
+        if (_suppressFormSideEffects) return;
+        UpdateSuggestedFormatIfNew();
+        UpdatePreviews();
+    }
+
+    partial void OnSelectedRoomOptionChanged(ShowtimeRoomOption? value)
+    {
+        if (_suppressFormSideEffects) return;
+        UpdateSuggestedFormatIfNew();
+        UpdatePreviews();
+    }
+
+    partial void OnShowDateTextChanged(string value) { if (!_suppressFormSideEffects) UpdatePreviews(); }
+    partial void OnStartTimeTextChanged(string value) { if (!_suppressFormSideEffects) UpdatePreviews(); }
 
     public override void LoadData()
     {
@@ -222,7 +180,10 @@ public sealed class AdminShowtimesViewModel : ViewModelBase
 
         if (editingId.HasValue && _allShowtimes.FirstOrDefault(s => s.ShowtimeId == editingId.Value) is { } matched)
         {
+            _suppressFormSideEffects = true;
             SelectedShowtime = matched;
+            _suppressFormSideEffects = false;
+            PopulateForm(matched);
             return;
         }
 
@@ -234,15 +195,19 @@ public sealed class AdminShowtimesViewModel : ViewModelBase
 
     public void ResetFilters()
     {
-        _searchKeyword = string.Empty;
-        _selectedDateFilter = DateFilterOptions.FirstOrDefault();
-        _selectedRoomFilter = RoomFilterOptions.FirstOrDefault();
-        _selectedStatusFilterOption = StatusFilterOptions[0];
+        _suppressFilters = true;
+        try
+        {
+            SearchKeyword = string.Empty;
+            SelectedDateFilter = DateFilterOptions.FirstOrDefault();
+            SelectedRoomFilter = RoomFilterOptions.FirstOrDefault();
+            SelectedStatusFilterOption = StatusFilterOptions[0];
+        }
+        finally
+        {
+            _suppressFilters = false;
+        }
 
-        OnPropertyChanged(nameof(SearchKeyword));
-        OnPropertyChanged(nameof(SelectedDateFilter));
-        OnPropertyChanged(nameof(SelectedRoomFilter));
-        OnPropertyChanged(nameof(SelectedStatusFilterOption));
         ApplyFilter();
     }
 
@@ -317,9 +282,9 @@ public sealed class AdminShowtimesViewModel : ViewModelBase
 
     private void RefreshMovieAndRoomOptions()
     {
-        int? selectedMovieId = _selectedMovieOption?.MovieId;
-        int? selectedRoomId = _selectedRoomOption?.RoomId;
-        int? roomFilterId = _selectedRoomFilter?.RoomId;
+        int? selectedMovieId = SelectedMovieOption?.MovieId;
+        int? selectedRoomId = SelectedRoomOption?.RoomId;
+        int? roomFilterId = SelectedRoomFilter?.RoomId;
 
         MovieOptions.Clear();
         foreach (ShowtimeMovieOption m in ShowtimeData.LoadMovieOptions())
@@ -336,27 +301,25 @@ public sealed class AdminShowtimesViewModel : ViewModelBase
             RoomFilterOptions.Add(new ShowtimeRoomFilterOption(r.RoomId, r.Name));
         }
 
-        _suppressAutoFormat = true;
-        _selectedMovieOption = selectedMovieId.HasValue
+        _suppressFormSideEffects = true;
+        SelectedMovieOption = selectedMovieId.HasValue
             ? MovieOptions.FirstOrDefault(m => m.MovieId == selectedMovieId.Value) ?? FirstSchedulableMovie()
             : FirstSchedulableMovie();
-        _selectedRoomOption = selectedRoomId.HasValue
+        SelectedRoomOption = selectedRoomId.HasValue
             ? RoomOptions.FirstOrDefault(r => r.RoomId == selectedRoomId.Value) ?? FirstActiveRoom()
             : FirstActiveRoom();
-        _suppressAutoFormat = false;
+        _suppressFormSideEffects = false;
 
-        _selectedRoomFilter = roomFilterId.HasValue
+        _suppressFilters = true;
+        SelectedRoomFilter = roomFilterId.HasValue
             ? RoomFilterOptions.FirstOrDefault(r => r.RoomId == roomFilterId.Value) ?? RoomFilterOptions[0]
             : RoomFilterOptions[0];
-
-        OnPropertyChanged(nameof(SelectedMovieOption));
-        OnPropertyChanged(nameof(SelectedRoomOption));
-        OnPropertyChanged(nameof(SelectedRoomFilter));
+        _suppressFilters = false;
     }
 
     private void RefreshDateFilters()
     {
-        string? activeDateSql = _selectedDateFilter?.DateSql;
+        string? activeDateSql = SelectedDateFilter?.DateSql;
         DateFilterOptions.Clear();
         DateFilterOptions.Add(new ShowtimeDateFilterOption(null, "Tất cả ngày"));
 
@@ -378,16 +341,17 @@ public sealed class AdminShowtimesViewModel : ViewModelBase
             DateFilterOptions.Add(new ShowtimeDateFilterOption(dateSql, label));
         }
 
-        _selectedDateFilter = !string.IsNullOrEmpty(activeDateSql)
+        _suppressFilters = true;
+        SelectedDateFilter = !string.IsNullOrEmpty(activeDateSql)
             ? DateFilterOptions.FirstOrDefault(d => d.DateSql == activeDateSql) ?? DateFilterOptions[0]
             : DateFilterOptions[0];
-        OnPropertyChanged(nameof(SelectedDateFilter));
+        _suppressFilters = false;
     }
 
     private void ApplyFilter()
     {
         Showtimes.Clear();
-        string keyword = SearchKeyword.Trim();
+        string keyword = (SearchKeyword ?? string.Empty).Trim();
         string? dateSql = SelectedDateFilter?.DateSql;
         int? roomId = SelectedRoomFilter?.RoomId;
         string status = SelectedStatusFilterOption?.Value ?? "All";
@@ -425,21 +389,25 @@ public sealed class AdminShowtimesViewModel : ViewModelBase
         _editingShowtimeId = item.ShowtimeId;
         _selectedActiveTicketsCount = item.ActiveTicketsCount;
 
-        _suppressAutoFormat = true;
-        _selectedMovieOption = MovieOptions.FirstOrDefault(m => m.MovieId == item.MovieId);
-        _selectedRoomOption = RoomOptions.FirstOrDefault(r => r.RoomId == item.RoomId);
-        OnPropertyChanged(nameof(SelectedMovieOption));
-        OnPropertyChanged(nameof(SelectedRoomOption));
-
-        if (DateTime.TryParseExact(item.StartTimeSql, "yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out DateTime startDt))
+        _suppressFormSideEffects = true;
+        try
         {
-            ShowDateText = startDt.ToString("dd/MM/yyyy", CultureInfo.InvariantCulture);
-            StartTimeText = startDt.ToString("HH:mm", CultureInfo.InvariantCulture);
-        }
+            SelectedMovieOption = MovieOptions.FirstOrDefault(m => m.MovieId == item.MovieId);
+            SelectedRoomOption = RoomOptions.FirstOrDefault(r => r.RoomId == item.RoomId);
 
-        FormatText = item.Format;
-        SelectedStatusOption = StatusOptions.FirstOrDefault(s => s.Value == item.Status) ?? StatusOptions[0];
-        _suppressAutoFormat = false;
+            if (DateTime.TryParseExact(item.StartTimeSql, "yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out DateTime startDt))
+            {
+                ShowDateText = startDt.ToString("dd/MM/yyyy", CultureInfo.InvariantCulture);
+                StartTimeText = startDt.ToString("HH:mm", CultureInfo.InvariantCulture);
+            }
+
+            FormatText = item.Format;
+            SelectedStatusOption = StatusOptions.FirstOrDefault(s => s.Value == item.Status) ?? StatusOptions[0];
+        }
+        finally
+        {
+            _suppressFormSideEffects = false;
+        }
 
         NotifyModeChanged();
         UpdatePreviews();
@@ -450,16 +418,19 @@ public sealed class AdminShowtimesViewModel : ViewModelBase
         _editingShowtimeId = null;
         _selectedActiveTicketsCount = 0;
 
-        _suppressAutoFormat = true;
-        _selectedMovieOption = FirstSchedulableMovie();
-        _selectedRoomOption = FirstActiveRoom();
-        OnPropertyChanged(nameof(SelectedMovieOption));
-        OnPropertyChanged(nameof(SelectedRoomOption));
-
-        ShowDateText = DateTime.Today.ToString("dd/MM/yyyy", CultureInfo.InvariantCulture);
-        StartTimeText = "14:00";
-        SelectedStatusOption = StatusOptions[0];
-        _suppressAutoFormat = false;
+        _suppressFormSideEffects = true;
+        try
+        {
+            SelectedMovieOption = FirstSchedulableMovie();
+            SelectedRoomOption = FirstActiveRoom();
+            ShowDateText = DateTime.Today.ToString("dd/MM/yyyy", CultureInfo.InvariantCulture);
+            StartTimeText = "14:00";
+            SelectedStatusOption = StatusOptions[0];
+        }
+        finally
+        {
+            _suppressFormSideEffects = false;
+        }
 
         UpdateSuggestedFormatIfNew();
         NotifyModeChanged();
@@ -486,19 +457,19 @@ public sealed class AdminShowtimesViewModel : ViewModelBase
             return false;
         }
 
-        if (!DateOnly.TryParseExact(ShowDateText.Trim(), DateFormats, CultureInfo.InvariantCulture, DateTimeStyles.None, out DateOnly showDate))
+        if (!DateOnly.TryParseExact((ShowDateText ?? string.Empty).Trim(), DateFormats, CultureInfo.InvariantCulture, DateTimeStyles.None, out DateOnly showDate))
         {
             ErrorMessage = "Ngày chiếu không hợp lệ (hãy nhập dạng dd/MM/yyyy hoặc yyyy-MM-dd).";
             return false;
         }
 
-        if (!TimeOnly.TryParseExact(StartTimeText.Trim(), TimeFormats, CultureInfo.InvariantCulture, DateTimeStyles.None, out TimeOnly startTime))
+        if (!TimeOnly.TryParseExact((StartTimeText ?? string.Empty).Trim(), TimeFormats, CultureInfo.InvariantCulture, DateTimeStyles.None, out TimeOnly startTime))
         {
             ErrorMessage = "Giờ bắt đầu không hợp lệ (hãy nhập dạng HH:mm, ví dụ 14:30).";
             return false;
         }
 
-        string format = FormatText.Trim();
+        string format = (FormatText ?? string.Empty).Trim();
         if (string.IsNullOrWhiteSpace(format) || format.Length > 50)
         {
             ErrorMessage = "Định dạng chiếu không được để trống và tối đa 50 ký tự.";
@@ -522,7 +493,7 @@ public sealed class AdminShowtimesViewModel : ViewModelBase
 
     private void UpdateSuggestedFormatIfNew()
     {
-        if (_suppressAutoFormat || IsEditMode || SelectedMovieOption is null || SelectedRoomOption is null)
+        if (_suppressFormSideEffects || IsEditMode || SelectedMovieOption is null || SelectedRoomOption is null)
         {
             return;
         }
@@ -533,8 +504,8 @@ public sealed class AdminShowtimesViewModel : ViewModelBase
     private void UpdatePreviews()
     {
         if (SelectedMovieOption is not null
-            && DateOnly.TryParseExact(ShowDateText.Trim(), DateFormats, CultureInfo.InvariantCulture, DateTimeStyles.None, out DateOnly d)
-            && TimeOnly.TryParseExact(StartTimeText.Trim(), TimeFormats, CultureInfo.InvariantCulture, DateTimeStyles.None, out TimeOnly t))
+            && DateOnly.TryParseExact((ShowDateText ?? string.Empty).Trim(), DateFormats, CultureInfo.InvariantCulture, DateTimeStyles.None, out DateOnly d)
+            && TimeOnly.TryParseExact((StartTimeText ?? string.Empty).Trim(), TimeFormats, CultureInfo.InvariantCulture, DateTimeStyles.None, out TimeOnly t))
         {
             DateTime startDt = d.ToDateTime(t);
             DateTime endDt = startDt.AddMinutes(SelectedMovieOption.DurationMinutes + CleanupBufferMinutes);

@@ -1,52 +1,49 @@
 using System.Collections.ObjectModel;
 using System.Windows;
-using System.Windows.Media;
 using CinemaManageProject.Models;
 using CinemaManageProject.ViewModels.Admin;
 using CinemaManageProject.ViewModels.Customer;
 using CinemaManageProject.ViewModels.Staff;
+using CommunityToolkit.Mvvm.ComponentModel;
+using Wpf.Ui.Controls;
 
 namespace CinemaManageProject.ViewModels;
 
-public sealed class SidebarMenuItem : ViewModelBase
+public sealed partial class SidebarMenuItem : ViewModelBase
 {
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ActiveTag))]
     private bool _isSelected;
 
-    public SidebarMenuItem(string key, string label, bool isAvailable, string iconResourceKey = "DashboardIconGeometry")
+    public SidebarMenuItem(string key, string label, bool isAvailable, SymbolRegular iconSymbol = SymbolRegular.Board24)
     {
         Key = key;
         Label = label;
         IsAvailable = isAvailable;
-        IconResourceKey = iconResourceKey;
+        IconSymbol = iconSymbol;
     }
 
     public string Key { get; }
     public string Label { get; }
     public bool IsAvailable { get; }
-    public string IconResourceKey { get; }
-    public Geometry? IconGeometry => Application.Current?.TryFindResource(IconResourceKey) as Geometry;
-
+    public SymbolRegular IconSymbol { get; }
     public string? ActiveTag => IsSelected ? "Active" : null;
-
-    public bool IsSelected
-    {
-        get => _isSelected;
-        set
-        {
-            _isSelected = value;
-            OnPropertyChanged(nameof(IsSelected));
-            OnPropertyChanged(nameof(ActiveTag));
-        }
-    }
 }
 
 /// <summary>
-/// ViewModel Shell của MainWindow: quản lý Sidebar theo vai trò và nạp Dashboard tương ứng.
+/// ViewModel Shell của MainWindow: quản lý Sidebar theo vai trò và nạp màn hình tương ứng.
 /// </summary>
-public sealed class MainViewModel : ViewModelBase
+public sealed partial class MainViewModel : ViewModelBase
 {
+    [ObservableProperty]
     private ViewModelBase? _currentDashboard;
+
+    [ObservableProperty]
     private string _pageTitle = string.Empty;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(SidebarToggleLabel))]
+    [NotifyPropertyChangedFor(nameof(SidebarToggleToolTip))]
     private bool _isSidebarOpen = true;
 
     public MainViewModel()
@@ -71,87 +68,13 @@ public sealed class MainViewModel : ViewModelBase
     public string UsernameDisplay { get; }
     public string RoleDisplay { get; }
 
-    public string PageTitle
-    {
-        get => _pageTitle;
-        private set { _pageTitle = value; OnPropertyChanged(nameof(PageTitle)); }
-    }
-
-    public ViewModelBase? CurrentDashboard
-    {
-        get => _currentDashboard;
-        private set { _currentDashboard = value; OnPropertyChanged(nameof(CurrentDashboard)); }
-    }
-
-    public bool IsSidebarOpen
-    {
-        get => _isSidebarOpen;
-        private set
-        {
-            if (_isSidebarOpen == value)
-            {
-                return;
-            }
-
-            _isSidebarOpen = value;
-            OnPropertyChanged(nameof(IsSidebarOpen));
-            OnPropertyChanged(nameof(SidebarToggleLabel));
-            OnPropertyChanged(nameof(SidebarToggleToolTip));
-        }
-    }
-
     public string SidebarToggleLabel => IsSidebarOpen ? "‹" : "☰";
     public string SidebarToggleToolTip => IsSidebarOpen ? "Thu gọn thanh bên" : "Mở thanh bên";
 
-    public void ToggleSidebar() => IsSidebarOpen = !IsSidebarOpen;
-
     public ObservableCollection<SidebarMenuItem> MenuItems { get; } = [];
 
-    private void BuildSidebar(UserRole role)
-    {
-        MenuItems.Clear();
-
-        switch (role)
-        {
-            case UserRole.Admin:
-                PageTitle = "Dashboard Quản trị";
-                MenuItems.Add(new SidebarMenuItem("dashboard", "Dashboard Quản trị", true, "DashboardIconGeometry") { IsSelected = true });
-                MenuItems.Add(new SidebarMenuItem("movies", "Quản lý Phim", true, "FilmClapperIconGeometry"));
-                MenuItems.Add(new SidebarMenuItem("rooms", "Phòng & Sơ đồ ghế", true, "TheaterScreenIconGeometry"));
-                MenuItems.Add(new SidebarMenuItem("showtimes", "Quản lý Lịch chiếu", true, "ShowtimeClockIconGeometry"));
-                MenuItems.Add(new SidebarMenuItem("orders", "Hóa đơn & Doanh thu", true, "ReceiptIconGeometry"));
-                MenuItems.Add(new SidebarMenuItem("users", "Nhân sự & Tài khoản", true, "UsersGroupIconGeometry"));
-                break;
-
-            case UserRole.Staff:
-                PageTitle = "Dashboard Quầy vé";
-                MenuItems.Add(new SidebarMenuItem("dashboard", "Dashboard Quầy vé", true, "DashboardIconGeometry") { IsSelected = true });
-                MenuItems.Add(new SidebarMenuItem("pos", "Bán vé tại quầy", true, "CinemaTicketIconGeometry"));
-                MenuItems.Add(new SidebarMenuItem("checkin", "Soát vé Check-in", true, "CheckTicketIconGeometry"));
-                MenuItems.Add(new SidebarMenuItem("customers", "Tra cứu Khách hàng", true, "UsersGroupIconGeometry"));
-                break;
-
-            default:
-                PageTitle = "Trang chủ Hội viên";
-                MenuItems.Add(new SidebarMenuItem("dashboard", "Trang chủ Hội viên", true, "DashboardIconGeometry") { IsSelected = true });
-                MenuItems.Add(new SidebarMenuItem("browse", "Phim & Lịch chiếu", true, "FilmStripIconGeometry"));
-                MenuItems.Add(new SidebarMenuItem("mytickets", "Vé của tôi", true, "CinemaTicketIconGeometry"));
-                break;
-        }
-    }
-
-    private void LoadRoleDashboard(UserRole role)
-    {
-        CurrentDashboard = role switch
-        {
-            UserRole.Admin => new AdminDashboardViewModel(),
-            UserRole.Staff => new StaffDashboardViewModel(),
-            _ => new CustomerDashboardViewModel()
-        };
-    }
-
+    public void ToggleSidebar() => IsSidebarOpen = !IsSidebarOpen;
     public void RefreshCurrentDashboard() => CurrentDashboard?.LoadData();
-
     public void Logout() => ((App)Application.Current).Logout();
 
     public void SelectMenu(SidebarMenuItem? item)
@@ -163,11 +86,11 @@ public sealed class MainViewModel : ViewModelBase
 
         if (!item.IsAvailable)
         {
-            MessageBox.Show(
+            System.Windows.MessageBox.Show(
                 $"Màn hình \"{item.Label}\" sẽ được viết ở bước tiếp theo.",
                 "CINEVERSE CINEMA",
-                MessageBoxButton.OK,
-                MessageBoxImage.Information);
+                System.Windows.MessageBoxButton.OK,
+                System.Windows.MessageBoxImage.Information);
             return;
         }
 
@@ -190,119 +113,72 @@ public sealed class MainViewModel : ViewModelBase
                 }
                 break;
 
-            case "movies":
-                if (CurrentDashboard is AdminMoviesViewModel)
-                {
-                    CurrentDashboard.LoadData();
-                }
-                else
-                {
-                    CurrentDashboard = new AdminMoviesViewModel();
-                }
+            case "movies": SwitchOrReload(() => new AdminMoviesViewModel()); break;
+            case "rooms": SwitchOrReload(() => new AdminRoomsViewModel()); break;
+            case "showtimes": SwitchOrReload(() => new AdminShowtimesViewModel()); break;
+            case "orders": SwitchOrReload(() => new AdminOrdersViewModel()); break;
+            case "users": SwitchOrReload(() => new AdminUsersViewModel()); break;
+            case "pos": SwitchOrReload(() => new StaffPosViewModel()); break;
+            case "checkin": SwitchOrReload(() => new StaffCheckInViewModel()); break;
+            case "customers": SwitchOrReload(() => new StaffCustomersViewModel()); break;
+            case "browse": SwitchOrReload(() => new CustomerBrowseViewModel()); break;
+            case "mytickets": SwitchOrReload(() => new CustomerMyTicketsViewModel()); break;
+            default: CurrentDashboard?.LoadData(); break;
+        }
+    }
+
+    private void SwitchOrReload<T>(Func<T> factory) where T : ViewModelBase
+    {
+        if (CurrentDashboard is T)
+        {
+            CurrentDashboard.LoadData();
+        }
+        else
+        {
+            CurrentDashboard = factory();
+        }
+    }
+
+    private void BuildSidebar(UserRole role)
+    {
+        MenuItems.Clear();
+
+        switch (role)
+        {
+            case UserRole.Admin:
+                PageTitle = "Dashboard Quản trị";
+                MenuItems.Add(new SidebarMenuItem("dashboard", "Dashboard Quản trị", true, SymbolRegular.Board24) { IsSelected = true });
+                MenuItems.Add(new SidebarMenuItem("movies", "Quản lý Phim", true, SymbolRegular.MoviesAndTv24));
+                MenuItems.Add(new SidebarMenuItem("rooms", "Phòng & Sơ đồ ghế", true, SymbolRegular.Desktop24));
+                MenuItems.Add(new SidebarMenuItem("showtimes", "Quản lý Lịch chiếu", true, SymbolRegular.Clock24));
+                MenuItems.Add(new SidebarMenuItem("orders", "Hóa đơn & Doanh thu", true, SymbolRegular.Receipt24));
+                MenuItems.Add(new SidebarMenuItem("users", "Nhân sự & Tài khoản", true, SymbolRegular.People24));
                 break;
 
-            case "rooms":
-                if (CurrentDashboard is AdminRoomsViewModel)
-                {
-                    CurrentDashboard.LoadData();
-                }
-                else
-                {
-                    CurrentDashboard = new AdminRoomsViewModel();
-                }
-                break;
-
-            case "showtimes":
-                if (CurrentDashboard is AdminShowtimesViewModel)
-                {
-                    CurrentDashboard.LoadData();
-                }
-                else
-                {
-                    CurrentDashboard = new AdminShowtimesViewModel();
-                }
-                break;
-
-            case "orders":
-                if (CurrentDashboard is AdminOrdersViewModel)
-                {
-                    CurrentDashboard.LoadData();
-                }
-                else
-                {
-                    CurrentDashboard = new AdminOrdersViewModel();
-                }
-                break;
-
-            case "users":
-                if (CurrentDashboard is AdminUsersViewModel)
-                {
-                    CurrentDashboard.LoadData();
-                }
-                else
-                {
-                    CurrentDashboard = new AdminUsersViewModel();
-                }
-                break;
-
-            case "pos":
-                if (CurrentDashboard is StaffPosViewModel)
-                {
-                    CurrentDashboard.LoadData();
-                }
-                else
-                {
-                    CurrentDashboard = new StaffPosViewModel();
-                }
-                break;
-
-            case "checkin":
-                if (CurrentDashboard is StaffCheckInViewModel)
-                {
-                    CurrentDashboard.LoadData();
-                }
-                else
-                {
-                    CurrentDashboard = new StaffCheckInViewModel();
-                }
-                break;
-
-            case "customers":
-                if (CurrentDashboard is StaffCustomersViewModel)
-                {
-                    CurrentDashboard.LoadData();
-                }
-                else
-                {
-                    CurrentDashboard = new StaffCustomersViewModel();
-                }
-                break;
-
-            case "browse":
-                if (CurrentDashboard is CustomerBrowseViewModel)
-                {
-                    CurrentDashboard.LoadData();
-                }
-                else
-                {
-                    CurrentDashboard = new CustomerBrowseViewModel();
-                }
-                break;
-
-            case "mytickets":
-                if (CurrentDashboard is CustomerMyTicketsViewModel)
-                {
-                    CurrentDashboard.LoadData();
-                }
-                else
-                {
-                    CurrentDashboard = new CustomerMyTicketsViewModel();
-                }
+            case UserRole.Staff:
+                PageTitle = "Dashboard Quầy vé";
+                MenuItems.Add(new SidebarMenuItem("dashboard", "Dashboard Quầy vé", true, SymbolRegular.Board24) { IsSelected = true });
+                MenuItems.Add(new SidebarMenuItem("pos", "Bán vé tại quầy", true, SymbolRegular.TicketDiagonal24));
+                MenuItems.Add(new SidebarMenuItem("checkin", "Soát vé Check-in", true, SymbolRegular.CheckmarkCircle24));
+                MenuItems.Add(new SidebarMenuItem("customers", "Tra cứu Khách hàng", true, SymbolRegular.People24));
                 break;
 
             default:
-                CurrentDashboard?.LoadData();
+                PageTitle = "Trang chủ Hội viên";
+                MenuItems.Add(new SidebarMenuItem("dashboard", "Trang chủ Hội viên", true, SymbolRegular.Board24) { IsSelected = true });
+                MenuItems.Add(new SidebarMenuItem("browse", "Phim & Lịch chiếu", true, SymbolRegular.Filmstrip24));
+                MenuItems.Add(new SidebarMenuItem("mytickets", "Vé của tôi", true, SymbolRegular.TicketDiagonal24));
                 break;
         }
+    }
+
+    private void LoadRoleDashboard(UserRole role)
+    {
+        CurrentDashboard = role switch
+        {
+            UserRole.Admin => new AdminDashboardViewModel(),
+            UserRole.Staff => new StaffDashboardViewModel(),
+            _ => new CustomerDashboardViewModel()
+        };
     }
 }

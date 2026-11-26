@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using System.Globalization;
 using CinemaManageProject.Data;
 using CinemaManageProject.Helpers;
+using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace CinemaManageProject.ViewModels.Staff;
 
@@ -13,21 +14,56 @@ public sealed record PosPaymentOption(string Code, string Label)
 /// <summary>
 /// ViewModel màn hình Bán vé tại quầy (POS) cho vai trò Staff.
 /// </summary>
-public sealed class StaffPosViewModel : ViewModelBase
+public sealed partial class StaffPosViewModel : ViewModelBase
 {
     private readonly List<OpenShowtimeOption> _allShowtimes = [];
+    private bool _suppressShowtimeLoad;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasSelectedShowtime))]
     private OpenShowtimeOption? _selectedShowtime;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasCustomer))]
+    [NotifyPropertyChangedFor(nameof(CustomerDisplayText))]
+    [NotifyPropertyChangedFor(nameof(CustomerPointsInfoText))]
     private BookingCustomerSummary? _selectedCustomer;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsCashPayment))]
     private PosPaymentOption _selectedPaymentMethod;
+
+    [ObservableProperty]
     private string _searchKeyword = string.Empty;
+
+    [ObservableProperty]
     private string _customerPhoneInput = string.Empty;
+
+    [ObservableProperty]
     private string _pointsToUseText = "0";
+
+    [ObservableProperty]
     private string _cashReceivedText = string.Empty;
+
+    [ObservableProperty]
     private string _orderNote = string.Empty;
+
+    [ObservableProperty]
     private string _seatMapHeader = "Sơ đồ Ghế suất chiếu";
+
+    [ObservableProperty]
     private string _seatMapSubtitle = "Chọn một suất chiếu đang mở bán phía trên để chọn ghế.";
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasError))]
     private string? _errorMessage;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasSuccess))]
     private string? _successMessage;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasLastReceipt))]
     private string? _lastReceiptSummary;
 
     public StaffPosViewModel()
@@ -48,71 +84,8 @@ public sealed class StaffPosViewModel : ViewModelBase
     public ObservableCollection<BookingSeatRowGroup> SeatRows { get; } = [];
     public ObservableCollection<BookingSeatCellItem> SelectedSeats { get; } = [];
 
-    public string SearchKeyword
-    {
-        get => _searchKeyword;
-        set
-        {
-            if (_searchKeyword == value) return;
-            _searchKeyword = value ?? string.Empty;
-            OnPropertyChanged(nameof(SearchKeyword));
-            ApplyShowtimeFilter();
-        }
-    }
-
-    public OpenShowtimeOption? SelectedShowtime
-    {
-        get => _selectedShowtime;
-        set
-        {
-            if (ReferenceEquals(_selectedShowtime, value)) return;
-            _selectedShowtime = value;
-            OnPropertyChanged(nameof(SelectedShowtime));
-            OnPropertyChanged(nameof(HasSelectedShowtime));
-            LoadSeatMapForSelectedShowtime();
-        }
-    }
-
     public bool HasSelectedShowtime => SelectedShowtime is not null;
     public bool HasNoShowtimes => Showtimes.Count == 0;
-
-    public string SeatMapHeader
-    {
-        get => _seatMapHeader;
-        private set { _seatMapHeader = value; OnPropertyChanged(nameof(SeatMapHeader)); }
-    }
-
-    public string SeatMapSubtitle
-    {
-        get => _seatMapSubtitle;
-        private set { _seatMapSubtitle = value; OnPropertyChanged(nameof(SeatMapSubtitle)); }
-    }
-
-    public string CustomerPhoneInput
-    {
-        get => _customerPhoneInput;
-        set { _customerPhoneInput = value ?? string.Empty; OnPropertyChanged(nameof(CustomerPhoneInput)); }
-    }
-
-    public BookingCustomerSummary? SelectedCustomer
-    {
-        get => _selectedCustomer;
-        private set
-        {
-            _selectedCustomer = value;
-            if (value is null)
-            {
-                _pointsToUseText = "0";
-                OnPropertyChanged(nameof(PointsToUseText));
-            }
-            OnPropertyChanged(nameof(SelectedCustomer));
-            OnPropertyChanged(nameof(HasCustomer));
-            OnPropertyChanged(nameof(CustomerDisplayText));
-            OnPropertyChanged(nameof(CustomerPointsInfoText));
-            RecalculateTotals();
-        }
-    }
-
     public bool HasCustomer => SelectedCustomer is not null;
 
     public string CustomerDisplayText => SelectedCustomer is null
@@ -123,48 +96,7 @@ public sealed class StaffPosViewModel : ViewModelBase
         ? "Nhập SĐT hội viên để tích/đổi điểm thưởng."
         : $"{SelectedCustomer.TierDisplay} • Hiện có {SelectedCustomer.LoyaltyPointsText} (tối đa dùng {MaxRedeemablePoints} điểm)";
 
-    public string PointsToUseText
-    {
-        get => _pointsToUseText;
-        set
-        {
-            _pointsToUseText = value ?? "0";
-            OnPropertyChanged(nameof(PointsToUseText));
-            RecalculateTotals();
-        }
-    }
-
-    public PosPaymentOption SelectedPaymentMethod
-    {
-        get => _selectedPaymentMethod;
-        set
-        {
-            if (value is null || ReferenceEquals(_selectedPaymentMethod, value)) return;
-            _selectedPaymentMethod = value;
-            OnPropertyChanged(nameof(SelectedPaymentMethod));
-            OnPropertyChanged(nameof(IsCashPayment));
-            RecalculateTotals();
-        }
-    }
-
-    public bool IsCashPayment => SelectedPaymentMethod.Code == "Cash";
-
-    public string CashReceivedText
-    {
-        get => _cashReceivedText;
-        set
-        {
-            _cashReceivedText = value ?? string.Empty;
-            OnPropertyChanged(nameof(CashReceivedText));
-            RecalculateTotals();
-        }
-    }
-
-    public string OrderNote
-    {
-        get => _orderNote;
-        set { _orderNote = value ?? string.Empty; OnPropertyChanged(nameof(OrderNote)); }
-    }
+    public bool IsCashPayment => SelectedPaymentMethod?.Code == "Cash";
 
     public decimal SubTotalAmount => SelectedSeats.Sum(s => s.UnitPrice);
     public int MaxRedeemablePoints => SelectedCustomer is null
@@ -176,7 +108,7 @@ public sealed class StaffPosViewModel : ViewModelBase
         get
         {
             if (SelectedCustomer is null) return 0;
-            if (!int.TryParse(PointsToUseText.Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out int pts) || pts < 0)
+            if (!int.TryParse((PointsToUseText ?? string.Empty).Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out int pts) || pts < 0)
             {
                 return 0;
             }
@@ -210,26 +142,33 @@ public sealed class StaffPosViewModel : ViewModelBase
         ? $"Thiếu {FormatHelper.FormatVnd(TotalAmount - ParsedCashReceived)}"
         : FormatHelper.FormatVnd(ChangeAmount);
 
-    public string? ErrorMessage
-    {
-        get => _errorMessage;
-        private set { _errorMessage = value; OnPropertyChanged(nameof(ErrorMessage)); OnPropertyChanged(nameof(HasError)); }
-    }
     public bool HasError => !string.IsNullOrWhiteSpace(ErrorMessage);
-
-    public string? SuccessMessage
-    {
-        get => _successMessage;
-        private set { _successMessage = value; OnPropertyChanged(nameof(SuccessMessage)); OnPropertyChanged(nameof(HasSuccess)); }
-    }
     public bool HasSuccess => !string.IsNullOrWhiteSpace(SuccessMessage);
-
-    public string? LastReceiptSummary
-    {
-        get => _lastReceiptSummary;
-        private set { _lastReceiptSummary = value; OnPropertyChanged(nameof(LastReceiptSummary)); OnPropertyChanged(nameof(HasLastReceipt)); }
-    }
     public bool HasLastReceipt => !string.IsNullOrWhiteSpace(LastReceiptSummary);
+
+    partial void OnSearchKeywordChanged(string value) => ApplyShowtimeFilter();
+
+    partial void OnSelectedShowtimeChanged(OpenShowtimeOption? value)
+    {
+        if (!_suppressShowtimeLoad)
+        {
+            LoadSeatMapForSelectedShowtime();
+        }
+    }
+
+    partial void OnSelectedCustomerChanged(BookingCustomerSummary? value)
+    {
+        if (value is null)
+        {
+            PointsToUseText = "0";
+        }
+
+        RecalculateTotals();
+    }
+
+    partial void OnSelectedPaymentMethodChanged(PosPaymentOption value) => RecalculateTotals();
+    partial void OnPointsToUseTextChanged(string value) => RecalculateTotals();
+    partial void OnCashReceivedTextChanged(string value) => RecalculateTotals();
 
     public override void LoadData()
     {
@@ -296,7 +235,7 @@ public sealed class StaffPosViewModel : ViewModelBase
     public void LookupCustomer()
     {
         ClearMessages();
-        string phone = CustomerPhoneInput.Trim();
+        string phone = (CustomerPhoneInput ?? string.Empty).Trim();
         if (string.IsNullOrWhiteSpace(phone))
         {
             ErrorMessage = "Vui lòng nhập số điện thoại hội viên cần tra cứu.";
@@ -365,7 +304,7 @@ public sealed class StaffPosViewModel : ViewModelBase
         int pointsToUse = 0;
         if (SelectedCustomer is not null)
         {
-            if (!int.TryParse(PointsToUseText.Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out pointsToUse) || pointsToUse < 0)
+            if (!int.TryParse((PointsToUseText ?? string.Empty).Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out pointsToUse) || pointsToUse < 0)
             {
                 ErrorMessage = "Số điểm thưởng áp dụng phải là số nguyên không âm.";
                 return;
@@ -395,6 +334,7 @@ public sealed class StaffPosViewModel : ViewModelBase
             return;
         }
 
+        PosPaymentOption paymentMethod = SelectedPaymentMethod ?? PaymentOptions[0];
         var input = new BookingCreateInput(
             ShowtimeId: SelectedShowtime.ShowtimeId,
             SeatIds: SelectedSeats.Select(s => s.SeatId).ToList(),
@@ -402,7 +342,7 @@ public sealed class StaffPosViewModel : ViewModelBase
             CustomerId: SelectedCustomer?.CustomerId,
             BookingChannel: "Counter",
             PointsUsed: pointsToUse,
-            PaymentMethod: SelectedPaymentMethod.Code,
+            PaymentMethod: paymentMethod.Code,
             CashReceived: cashReceived,
             Note: string.IsNullOrWhiteSpace(OrderNote)
                 ? $"Bán tại quầy bởi {App.CurrentUser?.Username ?? "staff"}"
@@ -418,7 +358,7 @@ public sealed class StaffPosViewModel : ViewModelBase
 
         string cashSummary = IsCashPayment
             ? $" • Khách đưa {FormatHelper.FormatVnd(result.CashReceived)} • Tiền thối {FormatHelper.FormatVnd(result.ChangeAmount)}"
-            : $" • {SelectedPaymentMethod.Label}";
+            : $" • {paymentMethod.Label}";
         string pointsSummary = result.UpdatedCustomerPoints.HasValue
             ? $" • +{result.EarnedPoints} điểm (Còn {result.UpdatedCustomerPoints.Value} điểm, hạng {result.UpdatedCustomerTier})"
             : string.Empty;
@@ -437,7 +377,7 @@ public sealed class StaffPosViewModel : ViewModelBase
     private void ApplyShowtimeFilter(int? preferredShowtimeId = null)
     {
         int? keepId = preferredShowtimeId ?? SelectedShowtime?.ShowtimeId;
-        string kw = SearchKeyword.Trim();
+        string kw = (SearchKeyword ?? string.Empty).Trim();
 
         Showtimes.Clear();
         IEnumerable<OpenShowtimeOption> query = _allShowtimes;
@@ -460,9 +400,9 @@ public sealed class StaffPosViewModel : ViewModelBase
             ? Showtimes.FirstOrDefault(s => s.ShowtimeId == keepId.Value) ?? Showtimes.FirstOrDefault()
             : Showtimes.FirstOrDefault();
 
-        _selectedShowtime = next;
-        OnPropertyChanged(nameof(SelectedShowtime));
-        OnPropertyChanged(nameof(HasSelectedShowtime));
+        _suppressShowtimeLoad = true;
+        SelectedShowtime = next;
+        _suppressShowtimeLoad = false;
         LoadSeatMapForSelectedShowtime();
     }
 
@@ -520,7 +460,7 @@ public sealed class StaffPosViewModel : ViewModelBase
         SuccessMessage = null;
     }
 
-    private static bool TryParseAmount(string raw, out decimal value)
+    private static bool TryParseAmount(string? raw, out decimal value)
     {
         string normalized = (raw ?? string.Empty).Replace(".", string.Empty).Replace(",", string.Empty).Trim();
         return decimal.TryParse(normalized, NumberStyles.Number, CultureInfo.InvariantCulture, out value) && value >= 0m;

@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using System.Globalization;
 using CinemaManageProject.Data;
 using CinemaManageProject.Helpers;
+using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace CinemaManageProject.ViewModels.Admin;
 
@@ -17,9 +18,14 @@ public sealed class SeatRowGroup
     public ObservableCollection<SeatCellItem> Seats { get; }
 }
 
-public sealed class SeatCellItem : ViewModelBase
+public sealed partial class SeatCellItem : ViewModelBase
 {
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(StatusDisplay))]
+    [NotifyPropertyChangedFor(nameof(VisualState))]
     private bool _isAvailable;
+
+    [ObservableProperty]
     private bool _isSelected;
 
     public SeatCellItem(RoomSeatRow row)
@@ -43,26 +49,6 @@ public sealed class SeatCellItem : ViewModelBase
     public decimal PriceMultiplier { get; }
 
     public bool IsCouple => SeatType == "Couple";
-
-    public bool IsAvailable
-    {
-        get => _isAvailable;
-        set
-        {
-            if (_isAvailable == value) return;
-            _isAvailable = value;
-            OnPropertyChanged(nameof(IsAvailable));
-            OnPropertyChanged(nameof(StatusDisplay));
-            OnPropertyChanged(nameof(VisualState));
-        }
-    }
-
-    public bool IsSelected
-    {
-        get => _isSelected;
-        set { if (_isSelected == value) return; _isSelected = value; OnPropertyChanged(nameof(IsSelected)); }
-    }
-
     public string SeatTypeDisplay => FormatHelper.FormatSeatType(SeatType);
     public string MultiplierText => $"×{PriceMultiplier.ToString("0.00", CultureInfo.InvariantCulture)}";
     public string PositionText => $"Hàng {RowLabel} • Ghế số {SeatNumber}";
@@ -73,16 +59,35 @@ public sealed class SeatCellItem : ViewModelBase
 /// <summary>
 /// ViewModel Quản lý Phòng chiếu &amp; Sơ đồ Ghế cho Admin: xem phòng, kiểm tra đơn đặt theo ghế và bật/tắt bảo trì ghế.
 /// </summary>
-public sealed class AdminRoomsViewModel : ViewModelBase
+public sealed partial class AdminRoomsViewModel : ViewModelBase
 {
     private int? _selectedRoomId;
     private int? _selectedSeatId;
+    private bool _suppressRoomLoad;
+
+    [ObservableProperty]
     private AdminRoomRow? _selectedRoom;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasSelectedSeat))]
+    [NotifyPropertyChangedFor(nameof(SeatActionLabel))]
     private SeatCellItem? _selectedSeat;
+
+    [ObservableProperty]
     private string _seatMapHeader = "Sơ đồ Ghế";
+
+    [ObservableProperty]
     private string _seatMapSubtitle = "Chọn một phòng bên trái để xem sơ đồ ghế.";
+
+    [ObservableProperty]
     private string _seatOrdersSummaryText = string.Empty;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasError))]
     private string? _errorMessage;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasSuccess))]
     private string? _successMessage;
 
     public AdminRoomsViewModel()
@@ -94,63 +99,35 @@ public sealed class AdminRoomsViewModel : ViewModelBase
     public ObservableCollection<SeatRowGroup> SeatRows { get; } = [];
     public ObservableCollection<SeatOrderRow> SeatOrders { get; } = [];
 
-    public AdminRoomRow? SelectedRoom
-    {
-        get => _selectedRoom;
-        set
-        {
-            if (value is not null && _selectedRoomId != value.RoomId)
-            {
-                _selectedSeatId = null;
-                ClearMessages();
-            }
-
-            _selectedRoom = value;
-            OnPropertyChanged(nameof(SelectedRoom));
-            if (value is not null)
-            {
-                _selectedRoomId = value.RoomId;
-                ShowSelectedRoom(value);
-            }
-        }
-    }
-
-    public SeatCellItem? SelectedSeat
-    {
-        get => _selectedSeat;
-        private set
-        {
-            _selectedSeat = value;
-            _selectedSeatId = value?.SeatId;
-            OnPropertyChanged(nameof(SelectedSeat));
-            OnPropertyChanged(nameof(HasSelectedSeat));
-            OnPropertyChanged(nameof(SeatActionLabel));
-        }
-    }
-
     public bool HasSelectedSeat => SelectedSeat is not null;
     public bool HasNoSeatOrders => HasSelectedSeat && SeatOrders.Count == 0;
     public string SeatActionLabel => SelectedSeat?.IsAvailable == true
         ? "Đặt bảo trì (Không cho đặt)"
         : "Mở lại khả dụng (Available)";
-
-    public string SeatMapHeader { get => _seatMapHeader; private set { _seatMapHeader = value; OnPropertyChanged(nameof(SeatMapHeader)); } }
-    public string SeatMapSubtitle { get => _seatMapSubtitle; private set { _seatMapSubtitle = value; OnPropertyChanged(nameof(SeatMapSubtitle)); } }
-    public string SeatOrdersSummaryText { get => _seatOrdersSummaryText; private set { _seatOrdersSummaryText = value; OnPropertyChanged(nameof(SeatOrdersSummaryText)); } }
-
-    public string? ErrorMessage
-    {
-        get => _errorMessage;
-        private set { _errorMessage = value; OnPropertyChanged(nameof(ErrorMessage)); OnPropertyChanged(nameof(HasError)); }
-    }
     public bool HasError => !string.IsNullOrWhiteSpace(ErrorMessage);
-
-    public string? SuccessMessage
-    {
-        get => _successMessage;
-        private set { _successMessage = value; OnPropertyChanged(nameof(SuccessMessage)); OnPropertyChanged(nameof(HasSuccess)); }
-    }
     public bool HasSuccess => !string.IsNullOrWhiteSpace(SuccessMessage);
+
+    partial void OnSelectedRoomChanged(AdminRoomRow? value)
+    {
+        if (_suppressRoomLoad || value is null)
+        {
+            return;
+        }
+
+        if (_selectedRoomId != value.RoomId)
+        {
+            _selectedSeatId = null;
+            ClearMessages();
+        }
+
+        _selectedRoomId = value.RoomId;
+        ShowSelectedRoom(value);
+    }
+
+    partial void OnSelectedSeatChanged(SeatCellItem? value)
+    {
+        _selectedSeatId = value?.SeatId;
+    }
 
     public override void LoadData()
     {
@@ -170,7 +147,11 @@ public sealed class AdminRoomsViewModel : ViewModelBase
         if (target is not null)
         {
             _selectedSeatId = preferredSeatId;
+            _selectedRoomId = target.RoomId;
+            _suppressRoomLoad = true;
             SelectedRoom = target;
+            _suppressRoomLoad = false;
+            ShowSelectedRoom(target);
         }
     }
 
