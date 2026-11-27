@@ -11,6 +11,7 @@ Tài liệu này quy định các nguyên tắc bắt buộc khi làm việc tr�
   * `Microsoft.Data.Sqlite` + `Dapper`: truy vấn SQLite thuần có tham số hóa và ánh xạ DTO gọn nhẹ.
   * `CommunityToolkit.Mvvm`: dùng `ObservableObject`, `[ObservableProperty]`, `[NotifyPropertyChangedFor]` (Source Generator) để loại bỏ code lặp `INotifyPropertyChanged`.
   * `WPF-UI`: cung cấp Dark Theme, style control hiện đại (`ThemesDictionary`, `ControlsDictionary`) và bộ icon `ui:SymbolIcon` (`SymbolRegular`).
+  * `xUnit` (`xunit`, `Microsoft.NET.Test.Sdk`, `xunit.runner.visualstudio`): dùng riêng trong project kiểm thử `CinemaManageProject.Tests`.
 * **Quy tắc chủ động đề xuất thư viện khi lên ý tưởng (Bắt buộc):**
   * **Mỗi lần lên ý tưởng, thiết kế hoặc chuẩn bị viết tính năng/module mới**, AI agent phải **chủ động đề xuất các thư viện phù hợp** (nêu rõ công dụng, ưu/nhược điểm, và mức độ rút gọn code so với tự viết tay) để **người dùng xem xét và lựa chọn trước** khi triển khai.
   * Không tự ý cài thêm package mới (như EF Core, thư viện chart, PDF, barcode...) khi chưa được người dùng chọn/đồng ý.

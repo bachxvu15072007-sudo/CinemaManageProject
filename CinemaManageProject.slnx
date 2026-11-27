@@ -1,3 +1,4 @@
 <Solution>
   <Project Path="CinemaManageProject/CinemaManageProject.csproj" />
+  <Project Path="CinemaManageProject.Tests/CinemaManageProject.Tests.csproj" />
 </Solution>
