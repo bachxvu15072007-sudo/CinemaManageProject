@@ -17,10 +17,11 @@ Tài liệu này mô tả toàn bộ mã nguồn của dự án **CINEVERSE CINE
 
 | Thành phần | Công nghệ / Thư viện | Phiên bản | Vai trò chính |
 | :--- | :--- | :---: | :--- |
-| Nền tảng & UI | `.NET 10 Windows` (`net10.0-windows`), `WPF` | `10.0` | Ứng dụng desktop Windows, giao diện XAML, `Nullable=enable`, `ImplicitUsings=enable` |
+| Nền tảng & UI | `.NET 10 SDK` (`net10.0-windows`, **chỉ hỗ trợ Windows 10/11**), `WPF` | `10.0` | Ứng dụng desktop Windows, giao diện XAML, `Nullable=enable`, `ImplicitUsings=enable` |
 | Giao diện & Icon | `WPF-UI` (`Wpf.Ui`) | `4.3.0` | Dark Theme, style control hiện đại (`ThemesDictionary`, `ControlsDictionary`), icon `ui:SymbolIcon` |
 | Kiến trúc MVVM | `CommunityToolkit.Mvvm` | `8.4.2` | `ObservableObject`, Source Generator `[ObservableProperty]` & `[NotifyPropertyChangedFor]` |
 | CSDL & Micro-ORM | `Microsoft.Data.Sqlite` + `Dapper` | `10.0.15` / `2.1.100` | Lưu trữ cục bộ SQLite, bật `PRAGMA foreign_keys = ON`, SQL tham số hóa & ánh xạ DTO gọn nhẹ |
+| Kiểm thử tự động | `xUnit` + `Microsoft.NET.Test.Sdk` | `2.9.3` / `17.14.1` | Kiểm thử tích hợp đăng nhập, đặt vé, chống đặt trùng ghế và hủy vé (`dotnet test`) |
 | Bảo mật & Hệ thống | `PBKDF2-HMAC-SHA256` + `dwmapi.dll` (DWM) | .NET BCL / Win32 | Băm mật khẩu kèm salt ngẫu nhiên 16 byte; bật thanh tiêu đề tối thuần Windows 10/11 |
 
 ---
@@ -35,7 +36,9 @@ Tài liệu này mô tả toàn bộ mã nguồn của dự án **CINEVERSE CINE
 7. [Thư mục `CinemaManageProject/Posters/` — Tài nguyên Ảnh Poster Phim](#7-thư-mục-cinemamanageprojectposters--tài-nguyên-ảnh-poster-phim)
 8. [Thư mục `CinemaManageProject/ViewModels/` — Tầng Logic Giao diện (MVVM)](#8-thư-mục-cinemamanageprojectviewmodels--tầng-logic-giao-diện-mvvm)
 9. [Thư mục `CinemaManageProject/Views/` — Tầng Màn hình XAML & Code-behind](#9-thư-mục-cinemamanageprojectviews--tầng-màn-hình-xaml--code-behind)
-10. [Thư mục `docs/superpowers/` — Đặc tả Thiết kế & Kế hoạch Triển khai](#10-thư-mục-docssuperpowers--đặc-tả-thiết-kế--kế-hoạch-triển-khai)
+10. [Thư mục `CinemaManageProject.Tests/` — Kiểm thử Tự động (`xUnit`)](#10-thư-mục-cinemamanageprojecttests--kiểm-thử-tự-động-xunit)
+11. [Thư mục `docs/` — Sơ đồ Use Case, ERD, Ảnh Demo & Đặc tả Thiết kế](#11-thư-mục-docs--sơ-đồ-use-case-erd-ảnh-demo--đặc-tả-thiết-kế)
+12. [Phân tích Chuyên sâu: Giao dịch Đặt ghế, Ràng buộc Khóa ngoại & Phân quyền](#12-phân-tích-chuyên-sâu-giao-dịch-đặt-ghế-ràng-buộc-khóa-ngoại--phân-quyền)
 
 ---
 
@@ -342,15 +345,37 @@ Chứa trọn bộ **15 màn hình hoàn chỉnh** (30 tệp `.xaml` và `.xaml.
 
 ---
 
-## 10. Thư mục `docs/superpowers/` — Đặc tả Thiết kế & Kế hoạch Triển khai
+## 10. Thư mục `CinemaManageProject.Tests/` — Kiểm thử Tự động (`xUnit`)
 
-### Công nghệ & Quy ước dùng chung
-- **Markdown (GitHub Flavored Markdown):** Tài liệu kỹ thuật viết theo quy trình *Design Spec → Implementation Plan* trước khi lập trình các màn hình lớn, đặt tên theo chuẩn `YYYY-MM-DD-<tên-chức-năng>-design.md` và `YYYY-MM-DD-<tên-chức-năng>.md`.
+### Công nghệ & Thư viện dùng chung
+- **`xUnit 2.9.3` + `Microsoft.NET.Test.Sdk 17.14.1` + `xunit.runner.visualstudio 3.1.1`:** Bộ khung kiểm thử chuẩn .NET chạy trực tiếp qua `dotnet test CinemaManageProject.slnx` và Visual Studio Test Explorer.
+- **Cô lập dữ liệu bằng `ICollectionFixture<CinemaDatabaseFixture>`:** Lưu bản sao `cinema.seed.bak` trong thư mục chạy của project test, xả connection pool (`SqliteConnection.ClearAllPools()`) và khôi phục nguyên trạng `cinema.db` trước mỗi test — đảm bảo `dotnet test` chạy lặp lại ổn định và không làm bẩn CSDL nguồn của ứng dụng.
 
 ### Tổng quát thư mục
-Lưu trữ hồ sơ thiết kế và kế hoạch từng bước cho 6 hạng mục giao diện/nghiệp vụ trọng tâm, giúp theo dõi rõ lý do quyết định kiến trúc và tiêu chí nghiệm thu của từng module.
+Chứa **18 ca kiểm thử tích hợp thực tế trên SQLite** (tập trung vào 3 luồng rủi ro cao nhất: xác thực/đăng ký, giao dịch đặt ghế và hủy vé hoàn điểm).
 
 ### Chi tiết từng file
+- **[CinemaManageProject.Tests.csproj](CinemaManageProject.Tests/CinemaManageProject.Tests.csproj)**: Khai báo project test `net10.0-windows` (`UseWPF=true`), tham chiếu `CinemaManageProject` và 3 gói `xUnit`.
+- **[CinemaDatabaseFixture.cs](CinemaManageProject.Tests/CinemaDatabaseFixture.cs)**: Định nghĩa `[CollectionDefinition("CinemaDatabase")]` chạy tuần tự tránh xung đột ghi SQLite và cung cấp `ResetDatabase()`.
+- **[AuthTests.cs](CinemaManageProject.Tests/AuthTests.cs)** *(8 ca kiểm thử)*: Đăng nhập thành công cho cả 3 vai trò `admin`/`staff1`/`khach1` kèm kiểm tra xóa hash khỏi `User.Password` & nạp `CustomerProfile`; chặn sai mật khẩu; chặn tài khoản bị khóa; đăng ký khách mới lưu hash `PBKDF2`; chặn trùng `Username`/`Phone`; kiểm tra cơ chế tự nâng cấp mật khẩu plain-text cũ lên `PBKDF2`.
+- **[BookingTests.cs](CinemaManageProject.Tests/BookingTests.cs)** *(6 ca kiểm thử)*: Đặt vé quầy `Counter` kèm đổi điểm/tiền thối & kiểm chứng cộng điểm/chi tiêu; đặt vé `SelfService` (`StaffUserId = NULL`); chặn ghế bảo trì (`B1`); chặn đặt trùng ghế đã `Booked`; chặn `SelfService` trả tiền mặt; chặn vượt quá giới hạn `10` ghế/đơn.
+- **[CancelTicketTests.cs](CinemaManageProject.Tests/CancelTicketTests.cs)** *(4 ca kiểm thử)*: Hủy một phần (`PartiallyRefunded`, giải phóng ghế ngay lập tức) rồi hủy hết (`Cancelled`, khôi phục `TotalSpent` & `Tier`); chặn hủy vé đã `CheckedIn`; chặn khách khác hủy nhầm vé không thuộc quyền sở hữu; chặn hủy lặp lại vé đã hủy.
+
+---
+
+## 11. Thư mục `docs/` — Sơ đồ Use Case, ERD, Ảnh Demo & Đặc tả Thiết kế
+
+### Công nghệ & Quy ước dùng chung
+- **Markdown + Mermaid (`flowchart LR`, `erDiagram`):** Biểu diễn trực quan sơ đồ Use Case và ERD hiển thị trực tiếp trên GitHub.
+- **PNG Screenshots:** Ảnh chụp kết xuất trực tiếp từ giao diện WPF thực tế chạy trên `cinema.db` mẫu.
+- **Quy trình Design Spec → Implementation Plan:** Lưu lại hồ sơ thiết kế và kế hoạch triển khai theo từng mốc ngày.
+
+### Chi tiết từng thư mục con & file
+- **Thư mục con `docs/diagrams/` (2 sơ đồ kiến trúc):**
+  - [use-case.md](docs/diagrams/use-case.md): Sơ đồ Use Case đầy đủ cho 3 tác nhân (`Admin`, `Staff`, `Customer`) + khách chưa đăng nhập và bảng ánh xạ màn hình.
+  - [erd.md](docs/diagrams/erd.md): Sơ đồ ERD trọn bộ 10 bảng SQLite và bảng mô tả 13 ràng buộc khóa ngoại (`CASCADE` / `RESTRICT` / `SET NULL`).
+- **Thư mục con `docs/screenshots/` (6 ảnh demo màn hình thực tế):**
+  - [01-login.png](docs/screenshots/01-login.png), [02-admin-dashboard.png](docs/screenshots/02-admin-dashboard.png), [03-admin-rooms.png](docs/screenshots/03-admin-rooms.png), [04-staff-pos.png](docs/screenshots/04-staff-pos.png), [05-customer-dashboard.png](docs/screenshots/05-customer-dashboard.png), [06-customer-browse.png](docs/screenshots/06-customer-browse.png).
 - **Thư mục con `docs/superpowers/specs/` (6 tệp đặc tả thiết kế):**
   - [2026-11-19-admin-movies-design.md](docs/superpowers/specs/2026-11-19-admin-movies-design.md) *(54 dòng)*: Đặc tả màn hình Quản lý Phim, thể loại và tải poster.
   - [2026-11-19-admin-rooms-design.md](docs/superpowers/specs/2026-11-19-admin-rooms-design.md) *(40 dòng)*: Đặc tả màn hình Phòng chiếu cố định & bảo trì sơ đồ ghế.
@@ -365,3 +390,47 @@ Lưu trữ hồ sơ thiết kế và kế hoạch từng bước cho 6 hạng m�
   - [2026-11-20-customer-poster-strip.md](docs/superpowers/plans/2026-11-20-customer-poster-strip.md) *(124 dòng)*: Kế hoạch nâng cấp `CustomerDashboardView` với dải poster và spotlight.
   - [2026-11-21-admin-orders.md](docs/superpowers/plans/2026-11-21-admin-orders.md) *(90 dòng)*: Kế hoạch xây dựng `AdminOrdersView` & `OrderData`.
   - [2026-11-21-admin-users.md](docs/superpowers/plans/2026-11-21-admin-users.md) *(95 dòng)*: Kế hoạch xây dựng `AdminUsersView` & `UserData`.
+
+---
+
+## 12. Phân tích Chuyên sâu: Giao dịch Đặt ghế, Ràng buộc Khóa ngoại & Phân quyền
+
+### 12.1. Giao dịch Đặt ghế & Hủy vé (`SqliteTransaction` trong `BookingData.cs`)
+Để ngăn chặn tuyệt đối tình trạng **đặt trùng ghế (double-booking)**, sai lệch tiền hoặc rò rỉ điểm thưởng khi nhiều bước ghi diễn ra liên tiếp, cả hai nghiệp vụ cốt lõi đều được bọc trọn trong một giao dịch nguyên tử `using SqliteTransaction tx = conn.BeginTransaction();`:
+
+1. **Luồng đặt ghế (`BookingData.CreateOrder`):**
+   - **Kiểm tra đầu vào trước giao dịch:** danh sách ghế không rỗng (loại trùng `Distinct()`), tối đa `10` ghế/đơn; kiểm tra hợp lệ kênh (`Counter` bắt buộc có `StaffUserId`; `SelfService` bắt buộc có `CustomerId` và cấm PTTT `Cash`).
+   - **Kiểm tra lại trạng thái thực tế trong transaction:**
+     - Suất chiếu tồn tại, `Showtimes.Status = 'OpenForSale'` và `Rooms.IsActive = 1`.
+     - Toàn bộ `SeatId` được chọn phải thuộc đúng `Showtime.RoomId` và có `Seats.IsActive = 1` (chặn ghế bảo trì như ghế `B1` ở Phòng 1).
+     - Truy vấn trực tiếp bảng `Tickets`: nếu **bất kỳ ghế nào** đã tồn tại vé ở trạng thái `Booked` hoặc `CheckedIn` cho cùng `ShowtimeId` → trả về lỗi ngay và rollback toàn bộ giao dịch.
+   - **Tự tính lại giá vé & điểm thưởng ở tầng Data (không tin số liệu tính từ UI):**
+     - `UnitPrice = Math.Round((Showtime.BaseTicketPrice + Room.BasePriceSurcharge) * Seat.PriceMultiplier, 0)`.
+     - Giới hạn điểm đổi: `0 ≤ PointsUsed ≤ min(Customer.LoyaltyPoints, floor(SubTotal * 50% / 1.000đ))`.
+     - Kiểm tra tiền khách đưa (`CashReceived ≥ TotalAmount` nếu trả tiền mặt `Cash`), tính `ChangeAmount` và điểm tích lũy `EarnedPoints = floor(TotalAmount / 10.000đ)`.
+   - **Ghi nguyên tử & Commit:** `INSERT INTO Orders` → nhận `OrderId` sinh mã `HD-yyyyMMdd-xxxx` → `INSERT INTO Tickets` với từng mã vé `VE-yyMMdd-xxxx-SeatCode` → `UPDATE Customers` cập nhật `LoyaltyPoints`, `TotalSpent` và nâng hạng `Tier` → `tx.Commit()`. Mọi ngoại lệ hoặc lỗi ràng buộc đều tự động rollback.
+
+2. **Luồng hủy vé (`BookingData.CancelCustomerTicket`):**
+   - Trong `SqliteTransaction`, xác minh đúng quyền sở hữu (`Orders.CustomerId == customerId`), vé đang ở trạng thái `Booked` (chặn vé đã `CheckedIn` hoặc `Cancelled`), hóa đơn chưa hủy và suất chiếu chưa kết thúc (`OpenForSale` / `Scheduled`).
+   - Đánh dấu `Tickets.Status = 'Cancelled'` (giải phóng ghế ngay lập tức cho người khác đặt).
+   - Nếu đơn vẫn còn vé hiệu lực → chuyển `Orders.Status = 'PartiallyRefunded'` và giảm `Orders.TotalAmount` theo tỷ lệ; nếu hủy hết toàn bộ vé → chuyển `Orders.Status = 'Cancelled'`, `TotalAmount = 0`.
+   - Hoàn điều chỉnh `LoyaltyPoints`, trừ lại `TotalSpent` và tính lại hạng thẻ `Tier` tương ứng rồi `tx.Commit()`.
+
+### 12.2. Ràng buộc Khóa ngoại & Toàn vẹn Dữ liệu SQLite (`PRAGMA foreign_keys = ON`)
+Mặc định SQLite tắt kiểm tra khóa ngoại trên mỗi kết nối mới. Vì vậy [DatabaseHelper.OpenConnection()](CinemaManageProject/Helpers/DatabaseHelper.cs) **luôn thực thi `PRAGMA foreign_keys = ON;`** ngay khi mở kết nối, cưỡng chế nghiêm ngặt toàn bộ **13 khóa ngoại** trong [CinemaManageDB.sql](CinemaManageProject/Database/CinemaManageDB.sql) (chi tiết sơ đồ xem tại [docs/diagrams/erd.md](docs/diagrams/erd.md)):
+- **Nhóm `ON DELETE RESTRICT` (7 khóa ngoại — bảo vệ lịch sử vận hành & kế toán):** `Showtimes` (`MovieId`, `RoomId`, `CreatedByUserId`), `Orders.StaffUserId`, `Tickets` (`ShowtimeId`, `SeatId`, `CheckedInByUserId`). Nhờ đó CSDL tự chặn ở tầng thấp nhất mọi thao tác xóa phim/phòng/suất/ghế/nhân viên đã phát sinh giao dịch.
+- **Nhóm `ON DELETE CASCADE` (4 khóa ngoại — thành phần phụ thuộc chặt):** `MovieGenres` (`MovieId`, `GenreId`), `Seats.RoomId`, `Tickets.OrderId` — tự động dọn dữ liệu phụ thuộc khi bản ghi cha hợp lệ bị xóa.
+- **Nhóm `ON DELETE SET NULL` (2 khóa ngoại — giữ nguyên hồ sơ độc lập):** `Customers.UserId` (cho phép hội viên quầy không có tài khoản App) và `Orders.CustomerId` (cho phép khách vãng lai & không làm mất doanh thu kế toán).
+
+### 12.3. Phân quyền theo 3 Vai trò (`Admin`, `Staff`, `Customer`) & Bảo mật
+Phiên đăng nhập được lưu qua `App.CurrentUser` (`UserRole`), mọi mật khẩu lưu DB đều băm một chiều bằng `PBKDF2-HMAC-SHA256` (100.000 vòng lặp, salt 16 byte) và bị xóa khỏi `User.Password` trong RAM ngay sau khi đăng nhập. Lưu ý: toàn bộ tài khoản demo trong `SeedData.sql` **chỉ dùng cho mục đích học tập và trình diễn đồ án**.
+
+| Chức năng / Tài nguyên | `Admin` | `Staff` | `Customer` | Cơ chế thực thi trong mã nguồn |
+| :--- | :---: | :---: | :---: | :--- |
+| **Điều hướng Sidebar** | 6 màn hình quản trị | 4 màn hình quầy | 3 màn hình hội viên | `MainViewModel.BuildSidebar(UserRole)` chỉ nạp đúng các `SidebarMenuItem` của vai trò đang đăng nhập. |
+| **Quản lý Phim, Phòng, Lịch chiếu, Hóa đơn** | Toàn quyền | Không truy cập | Không truy cập | Cô lập hoàn toàn trong nhánh `Admin` của `MainViewModel`; `ShowtimeData` khóa sửa suất đã có vé, `RoomData` chặn bảo trì ghế đang có vé. |
+| **Quản trị Tài khoản (`UserData`)** | Quản lý `Staff`/`Customer` | Không truy cập | Chỉ tự đăng ký mới | `UserData` chặn gán/sửa/khóa/xóa tài khoản `Admin` gốc và chặn tự khóa/tự xóa chính mình (`currentAdminUserId`). |
+| **Bán vé tại quầy (`Counter`)** | Không dùng | Toàn quyền (4 PTTT + tiền mặt) | Không truy cập | `BookingData.CreateOrder` bắt buộc `StaffUserId > 0` khi `BookingChannel == "Counter"`. |
+| **Soát vé Check-in (`CheckInData`)** | Không dùng | Xác nhận `CheckedIn` | Không truy cập | Ghi vết `CheckedInAt` & `CheckedInByUserId`; chặn check-in trùng hoặc vé/đơn/suất đã hủy. |
+| **Đặt vé trực tuyến (`SelfService`)** | Không dùng | Không dùng | Đặt bằng tài khoản của mình | `BookingData.CreateOrder` bắt buộc `CustomerId > 0`, cấm trả tiền mặt `Cash` (`SelfService` chỉ chấp nhận `BankTransfer`/`EWallet`/`Card`). |
+| **Xem & Hủy vé (`CustomerMyTickets`)** | Xem qua Hóa đơn | Xem qua Check-in | Chỉ xem & hủy vé của chính mình | `LoadMyTickets`/`LoadMyOrders` lọc theo `CustomerId`; `CancelCustomerTicket` xác minh `Orders.CustomerId == customerId` trong transaction. |

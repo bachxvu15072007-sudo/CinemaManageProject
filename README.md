@@ -10,14 +10,32 @@ Views (WPF XAML / WPF-UI) <── Binding / Click ──> ViewModels (CommunityT
                                                     Database (SQLite 3)
 ```
 
-Hệ thống vận hành theo 3 vai trò (`Admin`, `Staff`, `Customer`) với trọn bộ **15 màn hình** (2 cửa sổ khung + 13 màn hình chức năng). Xem chi tiết từng tệp mã nguồn tại [REPORT.md](REPORT.md).
+Hệ thống vận hành theo 3 vai trò (`Admin`, `Staff`, `Customer`) với trọn bộ **15 màn hình** (2 cửa sổ khung + 13 màn hình chức năng).
+- Chi tiết từng tệp mã nguồn, giao dịch đặt ghế, khóa ngoại & phân quyền: xem [REPORT.md](REPORT.md).
+- Sơ đồ kiến trúc hệ thống: [Sơ đồ Use Case](docs/diagrams/use-case.md) • [Sơ đồ ERD (10 bảng & 13 khóa ngoại)](docs/diagrams/erd.md).
+
+---
+
+## Ảnh Màn hình Demo
+
+| Đăng nhập & Đăng ký | Dashboard Quản trị (Admin) |
+| :---: | :---: |
+| ![Màn hình Đăng nhập](docs/screenshots/01-login.png) | ![Dashboard Quản trị](docs/screenshots/02-admin-dashboard.png) |
+
+| Phòng chiếu & Sơ đồ Ghế (Admin) | Bán vé tại Quầy POS (Staff) |
+| :---: | :---: |
+| ![Phòng & Sơ đồ ghế](docs/screenshots/03-admin-rooms.png) | ![Bán vé tại quầy POS](docs/screenshots/04-staff-pos.png) |
+
+| Trang chủ Hội viên (Customer) | Phim & Lịch chiếu — Tự đặt vé (Customer) |
+| :---: | :---: |
+| ![Trang chủ Hội viên](docs/screenshots/05-customer-dashboard.png) | ![Tự đặt vé trực tuyến](docs/screenshots/06-customer-browse.png) |
 
 ---
 
 ## Kiến trúc Tổng quát 6 Thư mục Chính (`CinemaManageProject/`)
 
 ### 1. `Database/` — Cơ sở dữ liệu SQLite
-- **Công nghệ:** SQLite 3, bật `PRAGMA foreign_keys = ON;`, ràng buộc khóa ngoại (`CASCADE` / `RESTRICT` / `SET NULL`) và `CHECK (...)` dạng chuỗi.
+- **Công nghệ:** SQLite 3, bật `PRAGMA foreign_keys = ON;`, 13 ràng buộc khóa ngoại (`CASCADE` / `RESTRICT` / `SET NULL`) và `CHECK (...)` dạng chuỗi.
 - **Tổng quát:** Gồm kịch bản lược đồ `CinemaManageDB.sql` (10 bảng chuẩn hóa: `Users`, `Customers`, `Genres`, `Movies`, `MovieGenres`, `Rooms`, `Seats`, `Showtimes`, `Orders`, `Tickets`), dữ liệu mẫu `SeedData.sql` và tệp chạy thực tế `cinema.db` (29 tài khoản đã băm `PBKDF2`, 25 hội viên với 95 cặp khách–phim, 15 phim, 10 thể loại, 4 phòng / 354 ghế, 28 suất chiếu, 98 hóa đơn, 160 vé).
 
 ### 2. `Models/` — Thực thể Dữ liệu & Enum
@@ -52,16 +70,57 @@ Hệ thống vận hành theo 3 vai trò (`Admin`, `Staff`, `Customer`) với tr
 
 ---
 
-## Hướng dẫn Chạy & Tài khoản Demo
+## Yêu cầu Môi trường, Chạy ứng dụng & Kiểm thử
 
-### Yêu cầu & Khởi chạy
-- **Môi trường:** Windows + **.NET 10 SDK (`net10.0-windows`)**
+> [!IMPORTANT]
+> **Yêu cầu bắt buộc:**
+> - **Hệ điều hành:** **Chỉ hỗ trợ Windows (Windows 10 / Windows 11)** do ứng dụng sử dụng **WPF (`net10.0-windows`)** và Win32 DWM (`dwmapi.dll`); không hỗ trợ macOS hoặc Linux.
+> - **SDK:** Bắt buộc cài **.NET 10 SDK** (`net10.0-windows`).
+
+### Build, Chạy ứng dụng & Chạy kiểm thử tự động (`xUnit`)
 ```powershell
 dotnet build CinemaManageProject.slnx
+dotnet test CinemaManageProject.slnx
 dotnet run --project CinemaManageProject\CinemaManageProject.csproj
 ```
+- Bộ kiểm thử tự động [CinemaManageProject.Tests](CinemaManageProject.Tests/) (`xUnit`) gồm **18 test** bao phủ đầy đủ các luồng **Đăng nhập / Đăng ký / Băm PBKDF2** (`AuthTests`), **Đặt vé & Chống đặt trùng ghế** (`BookingTests`) và **Hủy vé & Hoàn điều chỉnh điểm** (`CancelTicketTests`), tự cô lập và khôi phục bản sao `cinema.db` sau mỗi lần chạy.
 
-### Tài khoản mẫu (`Database/SeedData.sql`)
+---
+
+## Hướng dẫn Xóa Database Demo trước khi Chạy Dữ liệu Mới
+
+Khi chạy ứng dụng, tệp CSDL gốc `CinemaManageProject\Database\cinema.db` được sao chép sang thư mục thực thi `CinemaManageProject\bin\Debug\net10.0-windows\Database\cinema.db`.
+
+1. **Làm mới lại dữ liệu demo ban đầu (sau khi thử đặt/hủy vé):**
+   ```powershell
+   # Đóng ứng dụng trước, sau đó xóa bản copy runtime và build/chạy lại
+   Remove-Item -Force CinemaManageProject\bin\Debug\net10.0-windows\Database\cinema.db
+   dotnet run --project CinemaManageProject\CinemaManageProject.csproj
+   ```
+
+2. **Xóa sạch hoàn toàn dữ liệu demo để khởi tạo CSDL trắng chạy dữ liệu mới:**
+   ```powershell
+   # Bước 1: Đóng ứng dụng và xóa tệp cinema.db demo (cả bản gốc lẫn bản runtime)
+   Remove-Item -Force CinemaManageProject\Database\cinema.db -ErrorAction SilentlyContinue
+   Remove-Item -Force CinemaManageProject\bin\Debug\net10.0-windows\Database\cinema.db -ErrorAction SilentlyContinue
+
+   # Bước 2: Khởi tạo lại cinema.db trống chỉ có lược đồ 10 bảng từ CinemaManageDB.sql (cần sqlite3 CLI)
+   Get-Content -Raw CinemaManageProject\Database\CinemaManageDB.sql | sqlite3 CinemaManageProject\Database\cinema.db
+   ```
+   - **Lưu ý sau khi tạo DB trống:**
+     - Bạn có thể tự chèn 1 tài khoản `Admin` ban đầu (mật khẩu lưu theo định dạng `PBKDF2` từ `PasswordHelper.HashPassword(...)` hoặc chuỗi plain-text tạm để hệ thống tự nâng cấp sang `PBKDF2` ở lần đăng nhập đầu tiên) và cấu hình bảng `Rooms`/`Seats`, hoặc đăng ký tài khoản hội viên mới trực tiếp tại `LoginWindow`.
+     - Nếu muốn khôi phục lại bộ dữ liệu mẫu đầy đủ bất kỳ lúc nào:
+       ```powershell
+       Get-Content -Raw CinemaManageProject\Database\SeedData.sql | sqlite3 CinemaManageProject\Database\cinema.db
+       ```
+
+---
+
+## Tài khoản Demo (`Database/SeedData.sql`)
+
+> [!NOTE]
+> **Lưu ý quan trọng:** Toàn bộ tài khoản và mật khẩu demo dưới đây **chỉ dùng cho mục đích học tập, kiểm thử nội bộ và trình diễn đồ án** — tuyệt đối không sử dụng lại mật khẩu mẫu trong môi trường triển khai thực tế.
+
 | Vai trò | Tên đăng nhập | Mật khẩu | Ghi chú |
 | :--- | :--- | :--- | :--- |
 | **Admin** | `admin` | `Admin@123` | Quản trị toàn rạp & xem KPI doanh thu |
