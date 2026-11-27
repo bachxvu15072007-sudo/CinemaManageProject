@@ -5,41 +5,49 @@ using Xunit;
 namespace CinemaManageProject.Tests;
 
 /// <summary>
-/// Fixture cô lập dữ liệu SQLite cho toàn bộ bộ test: lưu bản gốc cinema.db và khôi phục sạch trước mỗi test
-/// để không làm thay đổi dữ liệu nguồn của dự án và tránh xung đột song song.
+/// Fixture cô lập dữ liệu SQLite cho toàn bộ bộ test: khôi phục sạch cinema.db từ bản gốc bất biến cinema.seed.db
+/// trước mỗi test để không làm thay đổi dữ liệu nguồn của dự án và đảm bảo mọi lần chạy lặp lại đều ổn định.
 /// </summary>
 public sealed class CinemaDatabaseFixture : IDisposable
 {
     private readonly string _runtimeDbPath;
-    private readonly string _seedBackupPath;
+    private readonly string _seedDbPath;
 
     public CinemaDatabaseFixture()
     {
-        _runtimeDbPath = Path.Combine(AppContext.BaseDirectory, "Database", "cinema.db");
-        _seedBackupPath = Path.Combine(AppContext.BaseDirectory, "Database", "cinema.seed.bak");
+        var dbDirectory = Path.Combine(AppContext.BaseDirectory, "Database");
+        Directory.CreateDirectory(dbDirectory);
 
-        if (!File.Exists(_runtimeDbPath))
+        _runtimeDbPath = Path.Combine(dbDirectory, "cinema.db");
+        _seedDbPath = Path.Combine(dbDirectory, "cinema.seed.db");
+
+        if (!File.Exists(_seedDbPath))
         {
-            throw new FileNotFoundException("Không tìm thấy tệp cinema.db trong thư mục chạy kiểm thử.", _runtimeDbPath);
+            throw new FileNotFoundException("Không tìm thấy bản gốc bất biến cinema.seed.db trong thư mục chạy kiểm thử.", _seedDbPath);
         }
 
-        SqliteConnection.ClearAllPools();
-        File.Copy(_runtimeDbPath, _seedBackupPath, overwrite: true);
+        ResetDatabase();
     }
 
     public void ResetDatabase()
     {
         SqliteConnection.ClearAllPools();
-        File.Copy(_seedBackupPath, _runtimeDbPath, overwrite: true);
+
+        foreach (var suffix in new[] { "-wal", "-shm", "-journal" })
+        {
+            var sidecarPath = _runtimeDbPath + suffix;
+            if (File.Exists(sidecarPath))
+            {
+                File.Delete(sidecarPath);
+            }
+        }
+
+        File.Copy(_seedDbPath, _runtimeDbPath, overwrite: true);
     }
 
     public void Dispose()
     {
         ResetDatabase();
-        if (File.Exists(_seedBackupPath))
-        {
-            File.Delete(_seedBackupPath);
-        }
     }
 }
 

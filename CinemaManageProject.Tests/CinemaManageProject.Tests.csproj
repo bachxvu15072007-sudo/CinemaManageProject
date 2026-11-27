@@ -22,4 +22,11 @@
     <ProjectReference Include="..\CinemaManageProject\CinemaManageProject.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Include="..\CinemaManageProject\Database\cinema.db">
+      <Link>Database\cinema.seed.db</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>
