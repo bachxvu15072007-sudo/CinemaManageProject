@@ -83,7 +83,7 @@ dotnet build CinemaManageProject.slnx
 dotnet test CinemaManageProject.slnx
 dotnet run --project CinemaManageProject\CinemaManageProject.csproj
 ```
-- Bộ kiểm thử tự động [CinemaManageProject.Tests](CinemaManageProject.Tests/) (`xUnit`) gồm **18 test** bao phủ đầy đủ các luồng **Đăng nhập / Đăng ký / Băm PBKDF2** (`AuthTests`), **Đặt vé & Chống đặt trùng ghế** (`BookingTests`) và **Hủy vé & Hoàn điều chỉnh điểm** (`CancelTicketTests`), tự cô lập và khôi phục bản sao `cinema.db` sau mỗi lần chạy.
+- Bộ kiểm thử tự động [CinemaManageProject.Tests](CinemaManageProject.Tests/) (`xUnit`) gồm **93 test trên 10 lớp kiểm thử** bao phủ đầy đủ **Đăng nhập & PBKDF2** (`AuthTests`), **Đặt vé & Chống đặt trùng ghế** (`BookingTests`), **Hủy vé & Hoàn điểm** (`CancelTicketTests`), **Soát vé Check-in** (`CheckInTests`), **CRUD Phim/Thể loại** (`MovieCrudTests`), **Phòng & Bảo trì ghế** (`RoomTests`), **Lịch chiếu & Trùng giờ `+15p`** (`ShowtimeTests`), **CRUD Người dùng/Khách hàng & Validation đầu vào** (`UserAndCustomerTests`), **Phân quyền theo vai trò & Báo cáo** (`RoleAccessAndReportingTests`) và **Lỗi/Rollback Transaction & Khóa ngoại** (`TransactionFailureTests`). Tự cô lập và khôi phục bản sao `cinema.db` sạch trước mỗi test.
 
 ---
 
