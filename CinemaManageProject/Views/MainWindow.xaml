@@ -181,7 +181,12 @@
             </ui:SymbolIcon>
 
             <!-- DASHBOARD THEO VAI TRÒ -->
-            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="24">
+            <ScrollViewer x:Name="MainScrollViewer"
+                          Grid.Row="1"
+                          Background="Transparent"
+                          VerticalScrollBarVisibility="Auto"
+                          Padding="24"
+                          PreviewMouseWheel="OnMainScrollPreviewMouseWheel">
                 <ContentControl x:Name="DashboardHost" />
             </ScrollViewer>
         </Grid>

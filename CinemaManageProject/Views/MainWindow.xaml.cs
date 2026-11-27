@@ -1,5 +1,7 @@
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Media;
 using CinemaManageProject.ViewModels;
 using CinemaManageProject.ViewModels.Admin;
 using CinemaManageProject.ViewModels.Customer;
@@ -71,4 +73,74 @@ public partial class MainWindow : Window
 
     private void OnLogoutClick(object sender, RoutedEventArgs e)
         => _viewModel.Logout();
+
+    private void OnMainScrollPreviewMouseWheel(object sender, MouseWheelEventArgs e)
+    {
+        if (Keyboard.Modifiers == ModifierKeys.Shift)
+        {
+            return;
+        }
+
+        ScrollViewer? inner = FindInnerScrollViewer(e.OriginalSource as DependencyObject);
+        if (inner is null)
+        {
+            return;
+        }
+
+        bool canScrollUp = e.Delta > 0 && inner.VerticalOffset > 0.001d;
+        bool canScrollDown = e.Delta < 0 && inner.VerticalOffset + 0.001d < inner.ScrollableHeight;
+        if (inner.ScrollableHeight > 0d && (canScrollUp || canScrollDown))
+        {
+            return;
+        }
+
+        e.Handled = true;
+        double nextOffset = Math.Clamp(
+            MainScrollViewer.VerticalOffset - (e.Delta * 0.45d),
+            0d,
+            MainScrollViewer.ScrollableHeight);
+        MainScrollViewer.ScrollToVerticalOffset(nextOffset);
+    }
+
+    private ScrollViewer? FindInnerScrollViewer(DependencyObject? current)
+    {
+        while (current is not null && !ReferenceEquals(current, MainScrollViewer))
+        {
+            if (current is ScrollViewer sv)
+            {
+                return sv;
+            }
+
+            if (current is ListBox or DataGrid)
+            {
+                return FindChildScrollViewer(current);
+            }
+
+            current = current is Visual
+                ? VisualTreeHelper.GetParent(current)
+                : LogicalTreeHelper.GetParent(current);
+        }
+
+        return null;
+    }
+
+    private static ScrollViewer? FindChildScrollViewer(DependencyObject root)
+    {
+        int count = VisualTreeHelper.GetChildrenCount(root);
+        for (int i = 0; i < count; i++)
+        {
+            DependencyObject child = VisualTreeHelper.GetChild(root, i);
+            if (child is ScrollViewer sv)
+            {
+                return sv;
+            }
+
+            if (FindChildScrollViewer(child) is ScrollViewer nested)
+            {
+                return nested;
+            }
+        }
+
+        return null;
+    }
 }
