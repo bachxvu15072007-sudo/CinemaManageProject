@@ -1,407 +1,367 @@
-# Báo cáo Tổng hợp Hỏi – Đáp Kỹ thuật & Kiến trúc Dự án CINEVERSE CINEMA
+# Báo cáo Kiến trúc & Mã nguồn theo Thư mục — CINEVERSE CINEMA (`CinemaManageProject`)
 
-Tài liệu này tổng hợp đầy đủ các câu hỏi và phần giải thích chi tiết về **WPF, MVVM, XAML, C#, SQLite và kiến trúc mã nguồn** của dự án `CinemaManageProject`, giúp bạn nắm vững luồng chạy và có thể tự tin giải thích hoặc mở rộng tính năng về sau.
+Tài liệu này mô tả toàn bộ mã nguồn của dự án **CINEVERSE CINEMA** theo cấu trúc **từng thư mục thực tế** trên nhánh `main`: mỗi phần trình bày **công nghệ & thư viện dùng chung**, **tổng quát kiến trúc thư mục**, rồi đi xuống **chi tiết từng tệp tin**.
 
----
-
-## Mục lục
-1. [Cách đọc hiểu dự án WPF/MVVM và các khái niệm cốt lõi](#1-cách-đọc-hiểu-dự-án-wpfmvvm-và-các-khái-niệm-cốt-lõi)
-2. [Giao diện & XAML: `StaticResource` vs `DynamicResource`, gộp `Controls.xaml`](#2-giao-diện--xaml-staticresource-vs-dynamicresource-gộp-controlsxaml)
-3. [Cấu trúc `ControlTemplate`, `TemplateBinding`, `BoxBorder`, `PART_ContentHost` và `BoolToVis`](#3-cấu-trúc-controltemplate-templatebinding-boxborder-part_contenthost-và-booltovis)
-4. [`ViewModelBase`, `INotifyPropertyChanged`, `OnPropertyChanged` và `CinemaHelper`](#4-viewmodelbase-inotifypropertychanged-onpropertychanged-và-cinemahelper)
-5. [`DataContext`, Data Binding và `ObservableCollection<SidebarMenuItem>`](#5-datacontext-data-binding-và-observablecollectionsidebarmenuitem)
-6. [Điều hướng Dashboard: `DataTemplate` vs `switch` trong `MainWindow.xaml.cs`](#6-điều-hướng-dashboard-datatemplate-vs-switch-trong-mainwindowxamlcs)
-7. [Phân tích chi tiết vòng đời `App.xaml.cs` và luồng `LoginWindow` / `LoginViewModel`](#7-phân-tích-chi-tiết-vòng-đời-appxamlcs-và-luồng-loginwindow--loginviewmodel)
-8. [Tại sao trong C# hay đặt hàm gọi ở trên và hàm helper ở dưới?](#8-tại-sao-trong-c-hay-đặt-hàm-gọi-ở-trên-và-hàm-helper-ở-dưới)
-9. [Thiết kế CSDL SQLite, truy vấn thuần vs EF Core và tách lớp truy cập dữ liệu](#9-thiết-kế-csdl-sqlite-truy-vấn-thuần-vs-ef-core-và-tách-lớp-truy-cập-dữ-liệu)
-10. [Quá trình tách lớp `Helpers/` – `Data/`, Quản lý Phòng, Quản lý Lịch chiếu và Dữ liệu Khuyến nghị](#10-quá-trình-tách-lớp-helpers--data-quản-lý-phòng-quản-lý-lịch-chiếu-và-dữ-liệu-khuyến-nghị)
-11. [Quản lý ảnh Poster (`PosterHelper`), Dải trượt ngang & `ScrollViewer` lồng nhau](#11-quản-lý-ảnh-poster-posterhelper-dải-trượt-ngang--scrollviewer-lồng-nhau)
-12. [Khai báo Icon Vector (`<Geometry>`), Nền điện ảnh (`DrawingBrush`) và Sidebar đóng/mở](#12-khai-báo-icon-vector-geometry-nền-điện-ảnh-drawingbrush-và-sidebar-đóngmở)
-13. [Hóa đơn & Doanh thu, Nhân sự & Tài khoản, và Chuẩn hóa Kiến trúc `Data/` – `Controls.xaml`](#13-hóa-đơn--doanh-thu-nhân-sự--tài-khoản-và-chuẩn-hóa-kiến-trúc-data--controlsxaml)
-14. [Hoàn thiện phân hệ Staff & Customer (POS, Check-in, Khách hàng, Tự đặt vé & Vé của tôi)](#14-hoàn-thiện-phân-hệ-staff--customer-pos-check-in-khách-hàng-tự-đặt-vé--vé-của-tôi)
-15. [Rút gọn mã nguồn với `CommunityToolkit.Mvvm` & `WPF-UI` (`refactor/mvvm-and-wpfui`)](#15-rút-gọn-mã-nguồn-với-communitytoolkitmvvm--wpf-ui-refactormvvm-and-wpfui)
-
----
-
-## 1. Cách đọc hiểu dự án WPF/MVVM và các khái niệm cốt lõi
-
-### Luồng đi dữ liệu chuẩn của ứng dụng
+### Sơ đồ tổng thể 4 tầng & Công nghệ cốt lõi
 ```text
-[View (.xaml)]  <── Data Binding ──>  [ViewModel (.cs)]  <── SQL / Model ──>  [Database/cinema.db]
-      │                                      ▲
-      └──── Click event (.xaml.cs) ──────────┘
+[Views (.xaml / .xaml.cs)]  <── Data Binding / Click ──>  [ViewModels (CommunityToolkit.Mvvm)]
+        │                                                              │
+   Styles/Icons                                                  Static methods
+        ▼                                                              ▼
+[Themes/Controls.xaml (WPF-UI)]                     [Data (Dapper) + Helpers (PBKDF2/Format)]
+                                                                       │
+                                                              SQL tham số hóa
+                                                                       ▼
+                                                       [Database/cinema.db (SQLite 3)]
 ```
 
-### 5 khái niệm cốt lõi trong MVVM hiện tại của dự án
-1. **`DataContext`**: Là "ngữ cảnh dữ liệu" gắn vào một `Window` hoặc `UserControl`. Khi gán `DataContext = _viewModel;`, mọi `{Binding ...}` trong file `.xaml` tương ứng sẽ tự tìm thuộc tính bên trong `_viewModel`.
-2. **Data Binding (`{Binding ...}`)**: Cơ chế nối trực tiếp UI với dữ liệu trong ViewModel mà không cần tự gán tay kiểu `txtError.Text = ...` mỗi khi dữ liệu thay đổi.
-3. **`INotifyPropertyChanged` (`OnPropertyChanged`)**: Hợp đồng giúp ViewModel "hét lên" báo cho WPF biết một thuộc tính vừa đổi giá trị để giao diện tự vẽ lại.
-4. **Xử lý sự kiện nút bấm (`Click` thay cho `ICommand`)**: Dự án đã bỏ `RelayCommand`/`ICommand` để code gọn dễ đọc. Nút bấm trên `.xaml` gắn `Click="OnLoginClick"`, file `.xaml.cs` chỉ làm đúng 1 việc là chuyển tiếp lời gọi vào hàm public trên ViewModel (ví dụ `_viewModel.Login(LoginPasswordBox.Password)`).
-5. **`ObservableCollection<T>`**: Danh sách đặc biệt của WPF. Khi bạn `Add()`, `Remove()`, `Clear()` phần tử, UI (`ItemsControl`, `DataGrid`) tự cập nhật theo mà không cần gán lại `ItemsSource`.
-
-### Mẹo debug nhanh khi đọc code
-- Đặt breakpoint tại `OnStartup` trong [App.xaml.cs](CinemaManageProject/App.xaml.cs) để xem app khởi tạo DB và mở `LoginWindow`.
-- Đặt breakpoint tại `Login()` trong [LoginViewModel.cs](CinemaManageProject/ViewModels/LoginViewModel.cs) để theo dõi câu SQL kiểm tra tài khoản.
-- Đặt breakpoint tại `ShowCurrentDashboard()` trong [MainWindow.xaml.cs](CinemaManageProject/Views/MainWindow.xaml.cs) để xem màn hình con được chuyển đổi ra sao.
+| Thành phần | Công nghệ / Thư viện | Phiên bản | Vai trò chính |
+| :--- | :--- | :---: | :--- |
+| Nền tảng & UI | `.NET 10 Windows` (`net10.0-windows`), `WPF` | `10.0` | Ứng dụng desktop Windows, giao diện XAML, `Nullable=enable`, `ImplicitUsings=enable` |
+| Giao diện & Icon | `WPF-UI` (`Wpf.Ui`) | `4.3.0` | Dark Theme, style control hiện đại (`ThemesDictionary`, `ControlsDictionary`), icon `ui:SymbolIcon` |
+| Kiến trúc MVVM | `CommunityToolkit.Mvvm` | `8.4.2` | `ObservableObject`, Source Generator `[ObservableProperty]` & `[NotifyPropertyChangedFor]` |
+| CSDL & Micro-ORM | `Microsoft.Data.Sqlite` + `Dapper` | `10.0.15` / `2.1.100` | Lưu trữ cục bộ SQLite, bật `PRAGMA foreign_keys = ON`, SQL tham số hóa & ánh xạ DTO gọn nhẹ |
+| Bảo mật & Hệ thống | `PBKDF2-HMAC-SHA256` + `dwmapi.dll` (DWM) | .NET BCL / Win32 | Băm mật khẩu kèm salt ngẫu nhiên 16 byte; bật thanh tiêu đề tối thuần Windows 10/11 |
 
 ---
 
-## 2. Giao diện & XAML: `StaticResource` vs `DynamicResource`, gộp `Controls.xaml`
-
-| Tiêu chí | `{StaticResource ...}` | `{DynamicResource ...}` |
-| :--- | :--- | :--- |
-| **Thời điểm lấy giá trị** | Lấy **1 lần duy nhất** lúc nạp XAML. | Theo dõi liên tục; tự cập nhật nếu đổi Resource lúc app đang chạy. |
-| **Khi nào dùng** | Màu cố định, `Style`, font chữ, kích thước, Converter (`BoolToVis`). | Khi cần tính năng **đổi theme nóng** (Light ↔ Dark) khi app đang mở. |
-| **Hiệu năng & Độ phức tạp** | Nhanh, nhẹ, dễ kiểm soát lỗi ngay lúc load. | Tốn chi phí theo dõi hơn và dễ rối nếu lạm dụng. |
-
-### Vì sao dự án gộp về một file [Themes/Controls.xaml](CinemaManageProject/Themes/Controls.xaml)?
-- Dự án chỉ sử dụng **một Dark Theme cố định** (bảng màu Zinc + điểm nhấn Indigo `#5E6AD2`), không chuyển đổi Light/Dark lúc runtime.
-- Việc bỏ `DarkTheme.xaml`, `LightTheme.xaml`, `SharedTokens.xaml`, `ThemeManager.cs` giúp [App.xaml](CinemaManageProject/App.xaml) chỉ còn 1 dòng nạp duy nhất `<ResourceDictionary Source="Themes/Controls.xaml" />`, không cần `DynamicResource` và mã màu được viết trực tiếp (ví dụ `#09090B`, `#141516`, `#FAFAFA`, `#23252A`) ngay trong style để dễ đọc.
-
----
-
-## 3. Cấu trúc `ControlTemplate`, `TemplateBinding`, `BoxBorder`, `PART_ContentHost` và `BoolToVis`
-
-### 3.1. `ControlTemplate` trong `ModernPasswordBoxStyle` ([Controls.xaml](CinemaManageProject/Themes/Controls.xaml#L221-L251))
-Mặc định của WPF, `PasswordBox` và `TextBox` có khung viền vuông góc cứng và hiệu ứng focus kiểu Windows cũ, **không có thuộc tính `CornerRadius` để bo góc trực tiếp**. Vì vậy phải viết lại `Template` (bộ xương hiển thị bên trong control):
-
-- **`Setter Property="Template"` / `<ControlTemplate TargetType="PasswordBox">`**: Thay thế diện mạo mặc định của `PasswordBox` bằng giao diện tự thiết kế.
-- **`x:Name="BoxBorder"`**: Đặt tên cho `<Border>` bọc ngoài để các `<Trigger>` bên dưới (như `IsKeyboardFocused="True"` hoặc `IsMouseOver="True"`) có thể đổi màu `BorderBrush` thành `#5E6AD2` hoặc `#3F3F46`.
-- **`{TemplateBinding ...}`**: Ràng buộc thuộc tính của phần tử bên trong template với chính giá trị được gán ở ngoài control (ví dụ `Background="{TemplateBinding Background}"`, `Padding="{TemplateBinding Padding}"`). Nhờ đó `Setter` ở ngoài vẫn có tác dụng lên `Border` bên trong.
-- **`<ScrollViewer x:Name="PART_ContentHost" ... />`**: `PART_ContentHost` là **tên quy ước bắt buộc của WPF**. WPF tìm đúng phần tử có tên `PART_ContentHost` bên trong template để nhét vùng nhập ký tự thật (chữ, dấu chấm mật khẩu `•••`, con trỏ nháy) vào đó. Thiếu tên này sẽ không gõ được vào ô nhập.
-
-### 3.2. Converter `BoolToVis` ([Controls.xaml](CinemaManageProject/Themes/Controls.xaml#L7))
-```xml
-<BooleanToVisibilityConverter x:Key="BoolToVis" />
-```
-- **Bản chất:** Đây là thẻ tự đóng tạo ra một đối tượng `new BooleanToVisibilityConverter()` có sẵn trong WPF và đặt tên khóa là `BoolToVis`.
-- **Vì sao chỉ có mỗi `x:Key`?** Vì class chuẩn này của WPF không cần cấu hình thêm tham số nào — mặc định nó biến `true` → `Visibility.Visible` và `false` → `Visibility.Collapsed`.
-- **Ví dụ sử dụng:**
-  - `Visibility="{Binding HasError, Converter={StaticResource BoolToVis}}"` trong [LoginWindow.xaml](CinemaManageProject/Views/LoginWindow.xaml#L49): có lỗi thì hiện hộp thông báo, hết lỗi thì ẩn hẳn (không chiếm chỗ).
-  - `Visibility="{Binding IsLoginMode, Converter={StaticResource BoolToVis}}"` ([LoginWindow.xaml](CinemaManageProject/Views/LoginWindow.xaml#L63)) và `IsRegisterMode` ([LoginWindow.xaml](CinemaManageProject/Views/LoginWindow.xaml#L145)): bật/tắt luân phiên giữa form Đăng nhập và form Đăng ký.
-  - `Visibility="{Binding HasNoTickets, Converter={StaticResource BoolToVis}}"` trong [CustomerDashboardView.xaml](CinemaManageProject/Views/Customer/CustomerDashboardView.xaml#L152).
+## Mục lục theo Thư mục
+1. [Thư mục Gốc Repository & Khởi chạy Ứng dụng (`/` và `CinemaManageProject/`)](#1-thư-mục-gốc-repository--khởi-chạy-ứng-dụng--và-cinemamanageproject)
+2. [Thư mục `CinemaManageProject/Database/` — Cơ sở dữ liệu SQLite](#2-thư-mục-cinemamanageprojectdatabase--cơ-sở-dữ-liệu-sqlite)
+3. [Thư mục `CinemaManageProject/Models/` — Thực thể Dữ liệu & Enum](#3-thư-mục-cinemamanageprojectmodels--thực-thể-dữ-liệu--enum)
+4. [Thư mục `CinemaManageProject/Helpers/` — Các lớp Phụ trợ Dùng chung](#4-thư-mục-cinemamanageprojecthelpers--các-lớp-phụ-trợ-dùng-chung)
+5. [Thư mục `CinemaManageProject/Data/` — Tầng Truy cập Dữ liệu SQLite (Dapper)](#5-thư-mục-cinemamanageprojectdata--tầng-truy-cập-dữ-liệu-sqlite-dapper)
+6. [Thư mục `CinemaManageProject/Themes/` — Hệ thống Giao diện Dark Theme Zinc](#6-thư-mục-cinemamanageprojectthemes--hệ-thống-giao-diện-dark-theme-zinc)
+7. [Thư mục `CinemaManageProject/Posters/` — Tài nguyên Ảnh Poster Phim](#7-thư-mục-cinemamanageprojectposters--tài-nguyên-ảnh-poster-phim)
+8. [Thư mục `CinemaManageProject/ViewModels/` — Tầng Logic Giao diện (MVVM)](#8-thư-mục-cinemamanageprojectviewmodels--tầng-logic-giao-diện-mvvm)
+9. [Thư mục `CinemaManageProject/Views/` — Tầng Màn hình XAML & Code-behind](#9-thư-mục-cinemamanageprojectviews--tầng-màn-hình-xaml--code-behind)
+10. [Thư mục `docs/superpowers/` — Đặc tả Thiết kế & Kế hoạch Triển khai](#10-thư-mục-docssuperpowers--đặc-tả-thiết-kế--kế-hoạch-triển-khai)
 
 ---
 
-## 4. `ViewModelBase`, `INotifyPropertyChanged`, `OnPropertyChanged` và `CinemaHelper`
+## 1. Thư mục Gốc Repository & Khởi chạy Ứng dụng (`/` và `CinemaManageProject/`)
 
-### 4.1. `ViewModelBase` ([ViewModelBase.cs](CinemaManageProject/ViewModels/ViewModelBase.cs))
-Toàn bộ ViewModel kế thừa `ViewModelBase` (triển khai `INotifyPropertyChanged`):
-- Cài đặt chuẩn `public event PropertyChangedEventHandler? PropertyChanged;`.
-- Hàm `protected void OnPropertyChanged(string propertyName)` gọi `PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));` để thông báo cho WPF cập nhật UI.
-- Hàm `public virtual void LoadData() { }` để các Dashboard con override khi cần tải/làm mới dữ liệu.
+### Công nghệ & Thư viện dùng chung
+- **`.NET 10 SDK` & `MSBuild` (`slnx`, `.csproj`):** Cấu hình solution hiện đại định dạng XML rút gọn `.slnx`, biên dịch `WinExe` WPF trên `net10.0-windows`, quản lý 4 gói NuGet và quy tắc sao chép tài nguyên (`PreserveNewest`).
+- **WPF `Application` (`ShutdownMode="OnExplicitShutdown"`):** Kiểm soát vòng đời cửa sổ chủ động khi chuyển đổi giữa `LoginWindow` và `MainWindow`.
+- **Win32 P/Invoke (`dwmapi.dll` — `DwmSetWindowAttribute`):** Kích hoạt thanh tiêu đề tối gốc Windows 10/11 (attribute `20`, màu caption `35`, màu viền `34`) trên `Window` chuẩn mà không gặp lỗi vẽ lại nền trắng của `WindowChrome`.
 
-### 4.2. Vì sao viết tường minh `_field = value; OnPropertyChanged(...)` thay cho `SetProperty<T>`?
-Trước đây dùng helper generic `SetProperty<T>(ref T field, T value)` để gộp 3 bước so sánh, gán và báo đổi. Sau khi đơn giản hóa:
-- Với các property đơn giản:
-  ```csharp
-  public string Username
-  {
-      get => _username;
-      set { _username = value; OnPropertyChanged(nameof(Username)); }
-  }
-  ```
-- Với các property lọc/chọn có thể tốn công nạp lại dữ liệu khi gán giá trị trùng (ví dụ `SelectedFilter` trong `CustomerDashboardViewModel`), giữ guard kiểm tra trùng:
-  ```csharp
-  if (_selectedFilter == value) return;
-  ```
-Cách viết tường minh giúp người mới đọc code hiểu ngay từng bước "lưu biến private → báo UI đổi" mà không cần nhảy qua hàm generic phụ trợ.
+### Tổng quát thư mục
+Khu vực gốc chịu trách nhiệm khai báo cấu hình build, danh sách gói phụ thuộc, tài liệu vận hành/quy chuẩn phát triển và điểm vào khởi chạy ứng dụng (`App`). Mọi màn hình giao diện đều đã được gom vào `Views/`, giúp thư mục gốc gọn và rõ vai trò điều phối.
 
-### 4.3. Tại sao tách các hàm dùng chung ra `CinemaHelper.cs`?
-[CinemaHelper.cs](CinemaManageProject/ViewModels/CinemaHelper.cs) gom các hàm tiện ích dùng lặp lại ở nhiều ViewModel:
-- Định dạng tiền/ngày/trạng thái: `FormatVnd`, `ReadDecimal`, `FormatSqlDateTime`, `FormatPaymentMethod`, `FormatStatusLabel`.
-- Đọc hồ sơ khách hàng từ DB: `LoadCustomerProfile` (được gọi cả khi đăng nhập ở `LoginViewModel` và lúc tải trang khách hàng ở `CustomerDashboardViewModel`).
-
-Nhờ tách về một chỗ:
-- Sửa 1 nơi là toàn app đồng bộ (tránh copy-paste lặp code giữa các ViewModel).
-- Giữ được file nhẹ ngay trong thư mục `ViewModels/` thay vì tạo thêm nhiều lớp Service/Repository phức tạp.
+### Chi tiết từng file
+- **[CinemaManageProject.slnx](CinemaManageProject.slnx)** *(3 dòng)*: Tệp solution định dạng mới của .NET 10, liên kết trực tiếp tới `CinemaManageProject/CinemaManageProject.csproj`.
+- **[CinemaManageProject/CinemaManageProject.csproj](CinemaManageProject/CinemaManageProject.csproj)** *(33 dòng)*: Khai báo `TargetFramework=net10.0-windows`, `UseWPF=true`, `Nullable=enable`, `ImplicitUsings=enable`; tham chiếu 4 gói NuGet (`CommunityToolkit.Mvvm 8.4.2`, `Dapper 2.1.100`, `Microsoft.Data.Sqlite 10.0.15`, `WPF-UI 4.3.0`) và cấu hình `CopyToOutputDirectory=PreserveNewest` cho `Database\cinema.db`, `CinemaManageDB.sql`, `SeedData.sql` cùng toàn bộ `Posters\*`.
+- **[CinemaManageProject/App.xaml](CinemaManageProject/App.xaml)** *(8 dòng)*: Khai báo `ShutdownMode="OnExplicitShutdown"` (không tự tắt ứng dụng khi đóng cửa sổ tạm) và nạp duy nhất một từ điển tài nguyên dùng chung `<ResourceDictionary Source="Themes/Controls.xaml" />`.
+- **[CinemaManageProject/App.xaml.cs](CinemaManageProject/App.xaml.cs)** *(107 dòng)*:
+  - Giữ phiên người dùng đang đăng nhập qua `public static User? CurrentUser`.
+  - Điều phối vòng đời 2 cửa sổ bằng `OnStartup()`, `ShowLoginWindow()`, `CompleteLogin()`, `Logout()` kèm cờ `_isSwitching` để đóng cửa sổ cũ mà không thoát nhầm tiến trình.
+  - Cung cấp `ApplyDarkTitleBar(Window)` gọi `DwmSetWindowAttribute` (`#0F1011` nền caption, `#23252A` viền) cho cả `LoginWindow` và `MainWindow`.
+- **[CinemaManageProject/AssemblyInfo.cs](CinemaManageProject/AssemblyInfo.cs)** *(10 dòng)*: Khai báo `[assembly: ThemeInfo(ResourceDictionaryLocation.None, ResourceDictionaryLocation.SourceAssembly)]` chuẩn của WPF.
+- **[.gitignore](.gitignore)** *(59 dòng)*: Loại trừ thư mục build (`bin/`, `obj/`, `.vs/`), file tạm `*_wpftmp.csproj` và dữ liệu phát sinh không đưa lên Git.
+- **[AGENTS.md](AGENTS.md)** *(51 dòng)*: Quy tắc kiến trúc bắt buộc cho lập trình viên và AI agent (công nghệ đã duyệt, quy tắc chủ động đề xuất thư viện trước khi làm tính năng mới, chuẩn MVVM gọn nhẹ, quy tắc Dark Theme Zinc, quy ước nghiệp vụ và kiểm chứng build/Git).
+- **[README.md](README.md)** *(92 dòng)*: Tài liệu giới thiệu dự án, tóm tắt 13 màn hình theo 3 vai trò, hướng dẫn build/chạy, bảng tài khoản demo và lộ trình mở rộng (hệ khuyến nghị phim).
+- **[REPORT.md](REPORT.md)**: Tài liệu báo cáo tổng quan và chi tiết kiến trúc mã nguồn theo từng thư mục (chính tệp này).
 
 ---
 
-## 5. `DataContext`, Data Binding và `ObservableCollection<SidebarMenuItem>`
+## 2. Thư mục `CinemaManageProject/Database/` — Cơ sở dữ liệu SQLite
 
-### 5.1. Những chỗ gán `DataContext` trong dự án
-1. [LoginWindow.xaml.cs](CinemaManageProject/Views/LoginWindow.xaml.cs#L23): `DataContext = _viewModel;` — gắn toàn bộ cửa sổ đăng nhập với `LoginViewModel`.
-2. [MainWindow.xaml.cs](CinemaManageProject/Views/MainWindow.xaml.cs#L27): `DataContext = _viewModel;` — gắn khung cửa sổ chính (sidebar, tiêu đề, nút đăng xuất) với `MainViewModel`.
-3. [MainWindow.xaml.cs](CinemaManageProject/Views/MainWindow.xaml.cs#L39): `view.DataContext = _viewModel.CurrentDashboard;` — gắn từng trang Dashboard con (`AdminDashboardView`, `StaffDashboardView`, `CustomerDashboardView`) với ViewModel tương ứng của trang đó.
+### Công nghệ & Thư viện dùng chung
+- **SQLite 3** (`PRAGMA foreign_keys = ON;`): Cơ sở dữ liệu quan hệ nhúng dạng tệp đơn, không cần cài server ngoài.
+- **Ràng buộc toàn vẹn mức CSDL:** `PRIMARY KEY AUTOINCREMENT`, khóa ghép `PRIMARY KEY (MovieId, GenreId)`, `UNIQUE`, `CHECK (...)` cho toàn bộ giá trị enum dạng chuỗi, khóa ngoại với đủ 3 chính sách `ON DELETE CASCADE`, `ON DELETE RESTRICT` và `ON DELETE SET NULL`.
+- **Biểu thức thời gian SQLite:** `datetime('now', 'localtime', ...)` và `date('now', 'localtime', ...)` đảm bảo dữ liệu mẫu luôn khớp ngày hiện tại khi khởi tạo.
+- **Mật khẩu băm `PBKDF2-HMAC-SHA256`:** Lưu sẵn chuỗi băm có salt riêng cho từng tài khoản trong dữ liệu mẫu.
 
-### 5.2. Cơ chế nối `ErrorMessage` và `ToggleMode` trên màn hình Login
-- Trong [LoginWindow.xaml](CinemaManageProject/Views/LoginWindow.xaml#L56): `<TextBlock Text="{Binding ErrorMessage}" ... />`.
-- WPF tự đọc `DataContext` (`LoginViewModel`) và lấy giá trị từ property `ErrorMessage`.
-- Khi `ErrorMessage` được gán giá trị mới trong `LoginViewModel`:
-  ```csharp
-  ErrorMessage = null;
-  ```
-  setter của `ErrorMessage` gọi `OnPropertyChanged(nameof(ErrorMessage))` **và** `OnPropertyChanged(nameof(HasError))` → hộp lỗi lập tức cập nhật chữ hoặc tự ẩn đi qua `BoolToVis`.
+### Tổng quát thư mục
+Chứa kịch bản tạo lược đồ 10 bảng chuẩn hóa cho 6 miền nghiệp vụ cốt lõi (Tài khoản/Khách hàng, Phim/Thể loại, Phòng/Ghế, Suất chiếu, Hóa đơn, Vé), kịch bản nạp dữ liệu mẫu phong phú (đã thiết kế sẵn cụm sở thích xem phim cho bài toán khuyến nghị) và tệp CSDL chạy thực tế `cinema.db`.
 
-### 5.3. Giải thích dòng `public ObservableCollection<SidebarMenuItem> MenuItems { get; } = [];` ([MainViewModel.cs](CinemaManageProject/ViewModels/MainViewModel.cs#L79))
-- **`ObservableCollection<SidebarMenuItem>`**: Danh sách các mục menu bên trái (`ItemsSource="{Binding MenuItems}"` ở [MainWindow.xaml](CinemaManageProject/Views/MainWindow.xaml#L75)). Khi `BuildSidebar()` chạy `MenuItems.Clear()` rồi `MenuItems.Add(...)`, giao diện sidebar tự động sinh/xóa nút tương ứng.
-- **`{ get; }`**: Property chỉ có `get` (read-only property) — bên ngoài chỉ được phép đọc danh sách hoặc gọi `.Add()`/`.Clear()` trên chính list đó, **không thể gán đè** `MenuItems = new ...` làm đứt dây Binding của WPF.
-- **`= [];`** (C# 12 Collection Expression): Khởi tạo sẵn một danh sách rỗng ngay khi tạo `MainViewModel` (tương đương `= new ObservableCollection<SidebarMenuItem>();`), đảm bảo `MenuItems` không bao giờ bị `null`.
-
----
-
-## 6. Điều hướng Dashboard: `DataTemplate` vs `switch` trong `MainWindow.xaml.cs`
-
-Trước đây dự án dùng `<Window.Resources>` chứa `<DataTemplate DataType="...">` trong `MainWindow.xaml`. Hiện tại đã chuyển sang dùng `ContentControl x:Name="DashboardHost"` và hàm `ShowCurrentDashboard()` trong [MainWindow.xaml.cs](CinemaManageProject/Views/MainWindow.xaml.cs#L31-L41):
-
-```csharp
-UserControl? view = _viewModel.CurrentDashboard switch
-{
-    AdminDashboardViewModel => new AdminDashboardView(),
-    StaffDashboardViewModel => new StaffDashboardView(),
-    CustomerDashboardViewModel => new CustomerDashboardView(),
-    _ => null
-};
-if (view is not null)
-    view.DataContext = _viewModel.CurrentDashboard;
-DashboardHost.Content = view;
-```
-
-### So sánh 3 cách làm
-| Cách tiếp cận | Đặc điểm | Đánh giá trong dự án |
-| :--- | :--- | :--- |
-| **`DataTemplate` trong `MainWindow.xaml`** | WPF tự ánh xạ `ViewModel -> View` qua `<Window.Resources>`. | Ít code C# hơn nhưng hơi "ma thuật" với người mới đọc XAML. |
-| **`switch` ở `MainWindow.xaml.cs` (Đang dùng)** | Thấy rõ ràng loại ViewModel nào tạo ra View nào và gán `DataContext` trực tiếp. | Rõ ràng, dễ debug, giữ đúng nguyên tắc ViewModel **không biết** đến UI (`UserControl`). |
-| **Đặt `switch` tạo View ngay trong `MainViewModel`** | ViewModel tự `new AdminDashboardView()`. | **Không nên**, vì phá vỡ tách lớp MVVM (tầng logic lại giữ trực tiếp control giao diện). |
+### Chi tiết từng file
+- **[CinemaManageDB.sql](CinemaManageProject/Database/CinemaManageDB.sql)** *(129 dòng)*: Định nghĩa trọn bộ 10 bảng:
+  1. `Users`: tài khoản đăng nhập (`Admin`, `Staff`, `Customer`), trạng thái khóa `IsActive`, `LastLoginAt`.
+  2. `Customers`: hồ sơ hội viên (`UserId` nullable unique cho phép cả khách App lẫn hội viên mở tại quầy), `Phone` unique, `LoyaltyPoints`, `TotalSpent`, `Tier` (`Member`/`Silver`/`Gold`/`Platinum`).
+  3. `Genres` & 4. `Movies` & 5. `MovieGenres`: danh mục phim (`AgeRating` `P`/`K`/`T13`/`T16`/`T18`, `Status` `ComingSoon`/`NowShowing`/`Ended`) và quan hệ nhiều-nhiều với thể loại (`ON DELETE CASCADE`).
+  6. `Rooms` & 7. `Seats`: 4 loại phòng (`Standard2D`/`Standard3D`/`IMAX`/`VIP`), phụ thu `BasePriceSurcharge`, sơ đồ ghế (`Standard`/`VIP`/`Couple`, hệ số `PriceMultiplier`, tọa độ `RowIndex`/`ColIndex`, cờ bảo trì `IsActive`).
+  8. `Showtimes`: lịch chiếu (`StartTime`, `EndTime`, `BaseTicketPrice`, `Format`, `Status` `Scheduled`/`OpenForSale`/`Completed`/`Cancelled`, `CreatedByUserId`).
+  9. `Orders`: hóa đơn (`OrderCode` unique, `BookingChannel` `Counter`/`SelfService`, `PaymentMethod` `Cash`/`BankTransfer`/`Card`/`EWallet`, điểm đổi thưởng, tiền khách đưa/tiền thối, trạng thái `Paid`/`Cancelled`/`PartiallyRefunded`).
+  10. `Tickets`: từng vé (`TicketCode` unique, `UnitPrice`, `Status` `Booked`/`CheckedIn`/`Cancelled`, `CheckedInAt`, `CheckedInByUserId`).
+- **[SeedData.sql](CinemaManageProject/Database/SeedData.sql)** *(515 dòng)*: Nạp bộ dữ liệu mẫu đồng nhất trong 1 transaction:
+  - **29 tài khoản** (`admin`, `staff1..3`, `khach1..25`) đều đã băm `PBKDF2$100000$...` với salt riêng biệt (mật khẩu demo: `Admin@123`, `Staff@123`, `Khach@123`).
+  - **25 hồ sơ hội viên** với lịch sử chi tiêu và cụm sở thích xem phim rõ rệt (`95` cặp khách–phim riêng biệt).
+  - **10 thể loại & 15 phim** (`10` phim `NowShowing`, `5` phim `ComingSoon`), gán đầy đủ poster trong `Posters/`.
+  - **4 phòng chiếu & 354 ghế** (hàng cuối là ghế đôi `Couple` hệ số `2.00` nên số lượng bằng 1/2 hàng thường; ghế `B1` Phòng 1 đặt bảo trì `IsActive = 0` để kiểm thử).
+  - **28 suất chiếu** (`18` mở bán + `10` đã chiếu quá khứ, giá gốc đồng nhất `80.000đ`, đã cộng `+15` phút dọn phòng), **98 hóa đơn** và **160 vé mẫu** đủ 3 trạng thái `Booked`, `CheckedIn`, `Cancelled`.
+- **[cinema.db](CinemaManageProject/Database/cinema.db)** *(168 KB)*: Tệp SQLite nhị phân dựng sẵn từ `CinemaManageDB.sql` + `SeedData.sql`, tự động copy vào thư mục chạy để ứng dụng hoạt động ngay.
 
 ---
 
-## 7. Phân tích chi tiết vòng đời `App.xaml.cs` và luồng `LoginWindow` / `LoginViewModel`
+## 3. Thư mục `CinemaManageProject/Models/` — Thực thể Dữ liệu & Enum
 
-### 7.1. Vì sao [App.xaml](CinemaManageProject/App.xaml) và [App.xaml.cs](CinemaManageProject/App.xaml.cs) quản lý cửa sổ & kết nối DB?
-Trong WPF, `App` là **điểm vào toàn cục** của cả ứng dụng:
-1. **`ShutdownMode="OnExplicitShutdown"` ([App.xaml](CinemaManageProject/App.xaml#L5))**: Mặc định WPF sẽ tự thoát app ngay khi cửa sổ đầu tiên (`LoginWindow`) đóng lại. Bật chế độ này giúp app chỉ thoát khi code gọi `Shutdown()` một cách có chủ đích (dùng cờ `_isSwitching` để phân biệt giữa "đóng cửa sổ để chuyển màn hình" và "người dùng bấm dấu X thoát hẳn app").
-2. **Các hàm điều phối vòng đời:**
-   - `OnStartup`: Chạy đầu tiên khi mở app, gọi `ShowLoginWindow()`.
-   - `ShowLoginWindow()`: Đóng `MainWindow` cũ (nếu có), mở `LoginWindow` mới.
-   - `CompleteLogin()`: Đóng `LoginWindow` (với `_isSwitching = true`), khởi tạo `MainWindow` cho `CurrentUser`.
-   - `Logout()`: Đặt `CurrentUser = null` và quay lại `ShowLoginWindow()`.
-3. **Trạng thái và DB dùng chung:** `public static User? CurrentUser { get; set; }` giữ phiên người dùng đăng nhập hiện tại; `OpenDbConnection()` trả về `SqliteConnection` đã mở sẵn và bật `PRAGMA foreign_keys = ON;`.
+### Công nghệ & Thư viện dùng chung
+- **C# thuần (.NET 10, `Nullable=enable`):** Các POCO class gọn nhẹ, khởi tạo giá trị mặc định rõ ràng (`string.Empty`, `DateTime.Now`, danh sách khởi tạo `[]`).
+- **`System.ComponentModel.DataAnnotations`:** Sử dụng `[Key]`, `[Required]`, `[MaxLength]` mô tả khóa chính và ràng buộc độ dài khớp lược đồ SQLite.
+- **Navigation Properties:** Khai báo đầy đủ tham chiếu quan hệ (`1-1`, `1-N`, `N-N`) phục vụ cả lưu phiên làm việc (`User.CustomerProfile`) lẫn mở rộng ORM sau này.
 
-### 7.2. Constructor `LoginWindow()` ([LoginWindow.xaml.cs](CinemaManageProject/Views/LoginWindow.xaml.cs#L15-L26))
-```csharp
-public LoginWindow()
-{
-    InitializeComponent();
+### Tổng quát thư mục
+Định nghĩa ngôn ngữ miền (Domain Model) của toàn hệ thống rạp phim: 1 tệp chứa 11 `enum` chuẩn hóa trạng thái/phân loại và 10 lớp Entity ánh xạ 1-1 với 10 bảng trong `CinemaManageDB.sql`.
 
-    _viewModel = new LoginViewModel();
-    _viewModel.LoginSucceeded += OnLoginSucceeded;
-    _viewModel.DemoPasswordRequested += pass => LoginPasswordBox.Password = pass;
-    _viewModel.ModeSwitched += ClearPasswords;
-    DataContext = _viewModel;
-
-    Loaded += (_, _) => UsernameTextBox.Focus();
-}
-```
-- `InitializeComponent();`: Nạp và dựng toàn bộ cây giao diện từ `LoginWindow.xaml`.
-- `_viewModel = new LoginViewModel();`: Tạo bộ não xử lý cho màn hình Login.
-- Đăng ký 3 sự kiện từ ViewModel (vì ViewModel không trực tiếp đóng cửa sổ hay đụng `PasswordBox`):
-  - `LoginSucceeded`: Gọi `OnLoginSucceeded` để chuyển sang `MainWindow`.
-  - `DemoPasswordRequested`: Điền nhanh mật khẩu mẫu vào `LoginPasswordBox.Password`.
-  - `ModeSwitched`: Gọi `ClearPasswords()` khi đổi qua lại giữa Đăng nhập và Đăng ký.
-- `DataContext = _viewModel;`: Nối giao diện với ViewModel.
-- `Loaded += (_, _) => UsernameTextBox.Focus();`: Khi cửa sổ vừa hiện xong, tự động đặt con trỏ gõ vào ô tên đăng nhập.
-
-### 7.3. Backing fields, `IsRegisterMode` vs `IsLoginMode`, `ToggleMode()` và `ClearPasswords()`
-- **Các biến backing field (`_isRegisterMode`, `_username`, `_regFullName`, `_regPhone`, `_regUsername`, `_regEmail`, `_errorMessage`):** Lưu giá trị thật bên trong RAM. Property public bên ngoài chỉ là "cửa giao tiếp" vừa trả về biến này, vừa gọi `OnPropertyChanged` khi có thay đổi.
-- **Tại sao dùng 1 biến `_isRegisterMode` và suy ra `public bool IsLoginMode => !IsRegisterMode;`?**
-  - Đây là nguyên tắc **Single Source of Truth (Một nguồn sự thật duy nhất)**. Nếu tách làm 2 biến độc lập `_isLoginMode` và `_isRegisterMode`, chỉ cần quên cập nhật 1 biến là hai form sẽ cùng hiện hoặc cùng biến mất!
-  - Nếu trong tương lai lỡ sửa `IsLoginMode` cùng dính trạng thái đang login (hoặc thêm chế độ thứ 3 như Quên mật khẩu), lúc đó nên dùng `enum AuthMode { Login, Register, ForgotPassword }` thay cho 1 biến `bool`.
-  - Khi `IsRegisterMode` thay đổi, setter gọi `OnPropertyChanged` cho cả `nameof(IsRegisterMode)` và `nameof(IsLoginMode)` để hai form bật/tắt đồng bộ.
-- **Tại sao `ToggleMode()` gọi `ModeSwitched?.Invoke()` để `ClearPasswords()` xóa ô mật khẩu?**
-  - Khi chuyển chế độ Đăng nhập ↔ Đăng ký, các ô `PasswordBox` không bị hủy khỏi RAM mà chỉ bị **ẩn (`Collapsed`)**. Nếu không xóa, mật khẩu người dùng gõ dở bên form này vẫn còn tồn tại âm thầm khi quay lại; đồng thời khi chuyển sang form Đăng ký cũng tránh lộ/giữ lại mật khẩu cũ hoặc mật khẩu điền sẵn từ nút Demo.
-  - Vì WPF **không cho Binding 2 chiều vào `PasswordBox.Password`** (lý do bảo mật), ViewModel không thể tự gán `Password = ""`, mà phải phát event `ModeSwitched` nhờ code-behind chạy `ClearPasswords()`.
-
-### 7.4. Hai dòng SQLite và vòng đời kết nối
-```csharp
-using SqliteConnection conn = App.OpenDbConnection();
-using SqliteCommand cmd = conn.CreateCommand();
-```
-- **Dòng 1:** Mượn một kết nối đang mở tới file `cinema.db` (đã bật `PRAGMA foreign_keys = ON;`).
-- **Dòng 2:** Tạo đối tượng câu lệnh SQL (`cmd`) gắn với kết nối `conn` đó để gán `cmd.CommandText`, thêm tham số `cmd.Parameters.AddWithValue(...)` và thực thi (`ExecuteReader` / `ExecuteScalar` / `ExecuteNonQuery`).
-- **Từ khóa `using` (C# 8+ using declaration):** Tự động gọi `Dispose()` (đóng câu lệnh và đóng kết nối DB) ngay khi thoát khỏi hàm/scope — kể cả khi có lỗi ném exception — giúp **tránh rò rỉ bộ nhớ và tránh lỗi khóa file SQLite (`database is locked`)**.
-
-### 7.5. Lưu ý các hàm trong `LoginViewModel.cs`
-- **`Login(string password)`**: Kiểm tra dữ liệu nhập, truy vấn bảng `Users`, kiểm tra `IsActive` và mật khẩu, cập nhật `LastLoginAt`, tải `CustomerProfile` qua `CinemaHelper.LoadCustomerProfile`, gán `App.CurrentUser` và phát `LoginSucceeded`.
-- **`Register(...)`**: Mở `SqliteTransaction tx`, dùng `ScalarExists` kiểm tra trùng `Username` và `Phone`, thêm bản ghi vào `Users`, lấy `SELECT last_insert_rowid()` để chèn tiếp vào `Customers`, `tx.Commit()`, tự gán `App.CurrentUser = new User { ... }` để vào thẳng màn hình chính không cần đăng nhập lại.
+### Chi tiết từng file
+- **[CinemaEnums.cs](CinemaManageProject/Models/CinemaEnums.cs)** *(116 dòng)*: Định nghĩa toàn bộ **11 enum** khớp tuyệt đối ràng buộc `CHECK` trong SQLite: `UserRole`, `CustomerTier`, `MovieStatus`, `AgeRating`, `RoomType`, `SeatType`, `ShowtimeStatus`, `OrderStatus`, `PaymentMethod`, `BookingChannel`, `TicketStatus`.
+- **[User.cs](CinemaManageProject/Models/User.cs)** *(47 dòng)*: Thực thể tài khoản hệ thống (`UserId`, `Username`, `Password`, `FullName`, `Email`, `Phone`, `Role`, `IsActive`, `CreatedAt`, `LastLoginAt`) cùng navigation tới `CustomerProfile`, `CreatedShowtimes`, `SoldOrders`, `CheckedInTickets`.
+- **[Customer.cs](CinemaManageProject/Models/Customer.cs)** *(41 dòng)*: Thực thể hội viên (`CustomerId`, `UserId?`, `FullName`, `Phone`, `Email`, `DateOfBirth`, `LoyaltyPoints`, `TotalSpent`, `Tier`, `CreatedAt`) và danh sách `Orders`.
+- **[Genre.cs](CinemaManageProject/Models/Genre.cs)** *(18 dòng)*: Thực thể thể loại phim (`GenreId`, `Name`) và tập `MovieGenres`.
+- **[Movie.cs](CinemaManageProject/Models/Movie.cs)** *(49 dòng)*: Thực thể phim (`MovieId`, `Title`, `OriginalTitle`, `Director`, `Cast`, `DurationMinutes`, `ReleaseDate`, `EndDate`, `AgeRating`, `Language`, `Description`, `PosterPath`, `Status`, `CreatedAt`) cùng `MovieGenres` và `Showtimes`.
+- **[MovieGenre.cs](CinemaManageProject/Models/MovieGenre.cs)** *(13 dòng)*: Bảng nối nhiều-nhiều giữa `Movie` và `Genre` (`MovieId`, `GenreId`, navigation `Movie`, `Genre`).
+- **[Room.cs](CinemaManageProject/Models/Room.cs)** *(31 dòng)*: Thực thể phòng chiếu (`RoomId`, `Name`, `RoomType`, `TotalRows`, `TotalCols`, `BasePriceSurcharge`, `IsActive`, `CreatedAt`) kèm `Seats` và `Showtimes`.
+- **[Seat.cs](CinemaManageProject/Models/Seat.cs)** *(40 dòng)*: Thực thể ghế ngồi (`SeatId`, `RoomId`, `RowLabel`, `SeatNumber`, `SeatCode`, `SeatType`, `PriceMultiplier`, `RowIndex`, `ColIndex`, `IsActive`) kèm `Room` và `Tickets`.
+- **[Showtime.cs](CinemaManageProject/Models/Showtime.cs)** *(39 dòng)*: Thực thể suất chiếu (`ShowtimeId`, `MovieId`, `RoomId`, `StartTime`, `EndTime`, `BaseTicketPrice`, `Format`, `Status`, `CreatedByUserId`, `CreatedAt`) kèm `Movie`, `Room`, `CreatedByUser`, `Tickets`.
+- **[Order.cs](CinemaManageProject/Models/Order.cs)** *(57 dòng)*: Thực thể hóa đơn (`OrderId`, `OrderCode`, `StaffUserId?`, `CustomerId?`, `BookingChannel`, `TotalTickets`, `SubTotalAmount`, `PointsUsed`, `DiscountAmount`, `TotalAmount`, `PaymentMethod`, `CashReceived`, `ChangeAmount`, `Status`, `Note`, `CreatedAt`, `PaidAt`) kèm `Tickets`.
+- **[Ticket.cs](CinemaManageProject/Models/Ticket.cs)** *(34 dòng)*: Thực thể vé (`TicketId`, `TicketCode`, `OrderId`, `ShowtimeId`, `SeatId`, `UnitPrice`, `Status`, `CheckedInAt`, `CheckedInByUserId`) kèm navigation tới `Order`, `Showtime`, `Seat`, `CheckedInByUser`.
 
 ---
 
-## 8. Tại sao trong C# hay đặt hàm gọi ở trên và hàm helper ở dưới?
+## 4. Thư mục `CinemaManageProject/Helpers/` — Các lớp Phụ trợ Dùng chung
 
-Trong **C/C++**, trình biên dịch đọc tuần tự từ trên xuống nên thường bắt buộc khai báo/định nghĩa hàm được gọi ở phía trên (hoặc viết prototype trước).  
-Ngược lại, trong **C#**, trình biên dịch đọc toàn bộ class trước rồi mới biên dịch thân hàm, nên thứ tự trên-dưới không ảnh hưởng tới việc chạy code.
+### Công nghệ & Thư viện dùng chung
+- **`Microsoft.Data.Sqlite` & `Dapper` (`SqlMapper.TypeHandler<decimal>`):** Mở kết nối SQLite chuẩn hóa và xử lý an toàn kiểu động `NUMERIC` của SQLite khi ánh xạ sang `decimal`.
+- **`System.Security.Cryptography`:** `RandomNumberGenerator`, `Rfc2898DeriveBytes.Pbkdf2` (`SHA-256`, `100.000` vòng lặp) và `CryptographicOperations.FixedTimeEquals` (so sánh hằng thời gian chống timing attack).
+- **`System.Globalization` (`vi-VN` / `InvariantCulture`):** Định dạng tiền tệ VNĐ, ngày giờ và dịch nhãn enum tiếng Việt.
+- **`System.Windows.Media.Imaging` (`BitmapImage`):** Nạp ảnh poster với `BitmapCacheOption.OnLoad` và `Freeze()` để không khóa tệp ảnh trên đĩa.
 
-Lý do code C# thường theo quy tắc **Top-Down (Stepdown Rule trong Clean Code)**:
-1. Đưa các phần người ngoài cần dùng lên đầu (`fields/properties`, `constructor`, các hàm `public` chính như `Login`, `Register`, `ToggleMode`).
-2. Các hàm phụ `private` (như `ScalarExists`) đặt xuống dưới để ai muốn xem tổng quan luồng chính có thể đọc lướt từ trên xuống như đọc mục lục báo, còn chi tiết nhỏ chỉ cuộn xuống xem khi cần.
+### Tổng quát thư mục
+Tập hợp 4 lớp tiện ích tĩnh không lưu trạng thái (stateless static helpers), tách rạch ròi theo đúng trách nhiệm kỹ thuật: kết nối CSDL, bảo mật mật khẩu, định dạng hiển thị và xử lý tệp ảnh poster.
 
-*Ghi chú:* Nếu bạn thích kiểu đọc tuần tự từ định nghĩa chi tiết tới chỗ gọi (như C/C++), hoàn toàn có thể đưa hàm `private` lên trên trong cùng một class — hành vi chương trình không hề thay đổi.
-
----
-
-## 9. Thiết kế CSDL SQLite, truy vấn thuần vs EF Core và tách lớp truy cập dữ liệu
-
-### 9.1. Tại sao tách bảng `Users` và `Customers`, còn `Staff` không có bảng riêng?
-Theo thiết kế tại [CinemaManageDB.sql](CinemaManageProject/Database/CinemaManageDB.sql):
-- **`Users`**: Bảng xác thực & phân quyền chung cho mọi tài khoản đăng nhập (`Admin`, `Staff`, `Customer`), lưu `Username`, `PasswordHash`, `Role`, `FullName`, `Phone`, `Email`, `IsActive`, `LastLoginAt`.
-- **`Customers`**: Lưu thông tin nghiệp vụ riêng của khách xem phim (`LoyaltyPoints`, `TotalSpent`, `Tier`). Quan trọng nhất là cột `UserId INTEGER NULL UNIQUE` — cho phép **khách vãng lai mua vé trực tiếp tại quầy** vẫn có hồ sơ khách tích điểm dù chưa tạo tài khoản đăng nhập (`UserId = NULL`).
-- **`Staff`**: Hiện chỉ lưu trong `Users` (`Role = 'Staff'`) và liên kết sang nghiệp vụ qua khóa ngoại `Orders.StaffUserId`, `Tickets.CheckedInByUserId`, `Showtimes.CreatedByUserId`.
-
-**Khi làm hệ thống lớn ngoài thực tế:**
-- Thường tách hẳn Auth (`Users`) khỏi thông tin cá nhân (`Customers` / `Employees`) để tránh trùng lặp dữ liệu `FullName`, `Phone`, `Email` giữa hai bảng; đồng thời tạo thêm bảng `Employees` (mã nhân viên, ca trực, chi nhánh), **băm mật khẩu thật** (BCrypt/PBKDF2 thay cho mật khẩu mẫu plain-text) và thêm bảng Audit Log.
-
-### 9.2. Dùng SQLite thuần (`Microsoft.Data.Sqlite`) vs Entity Framework Core (EF Core)
-- **`Microsoft.Data.Sqlite` (Dự án đang dùng):** Nhẹ, không cần cài thêm package/migration phức tạp, kiểm soát trực tiếp câu SQL và `SqliteTransaction` khi giữ ghế/đặt vé, rất tối ưu cho câu truy vấn thống kê doanh thu.
-- **EF Core:** Viết CRUD nhanh qua LINQ (`db.Movies.Where(...)`), an toàn kiểu dữ liệu khi compile, phù hợp dự án lớn có nhiều màn hình nhập liệu nhưng nặng hơn và cần cẩn thận ở các truy vấn báo cáo phức tạp.
-
-### 9.3. Khi nào nên tách SQL ra thư mục riêng (ví dụ `Data/`)?
-Hiện tại phần lớn SQL nằm rải rác trong một số ViewModel (`LoginViewModel`, `CustomerDashboardViewModel`, `StaffDashboardViewModel`, `AdminDashboardViewModel`) và kết nối tập trung tại `App.OpenDbConnection()`.  
-Khi dự án phát triển thêm các nghiệp vụ nặng như **Đặt vé, Giữ ghế trong Transaction, Lịch chiếu, Quản lý phim/phòng**, nên gom toàn bộ câu SQL sang thư mục `Data/` (hoặc các file helper theo từng nhóm bảng như `BookingData.cs`, `ShowtimeData.cs`) để ViewModel gọn gàng và dễ bảo trì hơn.
+### Chi tiết từng file
+- **[DatabaseHelper.cs](CinemaManageProject/Helpers/DatabaseHelper.cs)** *(47 dòng)*:
+  - Lưu `ConnectionString` trỏ tới `Database/cinema.db` trong `AppContext.BaseDirectory`.
+  - Đăng ký `SqliteDecimalHandler` trong static constructor để Dapper chuyển đổi an toàn mọi giá trị `Int64`/`Double` từ cột `NUMERIC` sang `decimal`.
+  - Cung cấp `OpenConnection()` luôn thực thi `PRAGMA foreign_keys = ON;` trên mỗi kết nối mở ra.
+- **[PasswordHelper.cs](CinemaManageProject/Helpers/PasswordHelper.cs)** *(84 dòng)*:
+  - `HashPassword(plainPassword)`: tạo salt ngẫu nhiên 16 byte, băm 100.000 vòng PBKDF2-HMAC-SHA256 ra khóa 32 byte, trả về chuỗi `PBKDF2$100000$<saltBase64>$<hashBase64>`.
+  - `VerifyPassword(plainPassword, storedPassword, out needsUpgrade)`: kiểm tra mật khẩu bằng `FixedTimeEquals`; hỗ trợ nhận diện chuỗi plain-text cũ hoặc số vòng lặp thấp để bật cờ `needsUpgrade` tự nâng cấp khi đăng nhập đúng.
+  - `IsHashed(storedPassword)`: kiểm tra nhanh tiền tố `PBKDF2$`.
+- **[FormatHelper.cs](CinemaManageProject/Helpers/FormatHelper.cs)** *(78 dòng)*:
+  - `FormatVnd(decimal)`: định dạng tiền Việt có dấu chấm phân cách nghìn (VD: `120.000đ`).
+  - `FormatSqlDateTime(string, format)`: chuyển chuỗi thời gian lưu trong SQLite sang `dd/MM HH:mm`, `dd/MM/yyyy HH:mm`...
+  - `FormatPaymentMethod`, `FormatStatusLabel`, `FormatRoomType`, `FormatSeatType`: dịch mã enum DB sang tiếng Việt thống nhất toàn ứng dụng.
+- **[PosterHelper.cs](CinemaManageProject/Helpers/PosterHelper.cs)** *(39 dòng)*:
+  - `ResolvePosterFullPath(storedPath)`: ghép đường dẫn tương đối `Posters/...` thành đường dẫn tuyệt đối.
+  - `LoadPosterBitmap(fullPath)`: nạp `BitmapImage` với `CacheOption = OnLoad` và `Freeze()` (an toàn khi thay/xóa ảnh lúc app đang chạy).
+  - `SavePosterFile(sourcePath)`: sao chép ảnh người dùng chọn vào `Posters/poster_<timestamp>.<ext>` và trả về đường dẫn tương đối để lưu DB.
 
 ---
 
-## 10. Quá trình tách lớp `Helpers/` – `Data/`, Quản lý Phòng, Quản lý Lịch chiếu và Dữ liệu Khuyến nghị
+## 5. Thư mục `CinemaManageProject/Data/` — Tầng Truy cập Dữ liệu SQLite (Dapper)
 
-### 10.1. Chia tách từ `CinemaHelper` thành `Helpers/` và `Data/`
-Ở các bước mở rộng sau mục 9, file `CinemaHelper.cs` và lời gọi `App.OpenDbConnection()` được tách gọn theo đúng chức năng thành hai tầng rõ ràng:
-- **`CinemaManageProject/Helpers/`**:
-  - [DatabaseHelper.cs](CinemaManageProject/Helpers/DatabaseHelper.cs): Quản lý `ConnectionString` trỏ tới `Database/cinema.db`, mở kết nối kèm `PRAGMA foreign_keys = ON;` (`OpenConnection()`), đọc số thập phân an toàn (`ReadDecimal()`).
-  - [FormatHelper.cs](CinemaManageProject/Helpers/FormatHelper.cs): Định dạng tiền VNĐ (`FormatVnd`), ngày giờ (`FormatSqlDateTime`), nhãn trạng thái/loại phòng/hạng ghế (`FormatStatusLabel`, `FormatRoomType`, `FormatSeatType`).
-  - [PosterHelper.cs](CinemaManageProject/Helpers/PosterHelper.cs): Lưu, phân giải đường dẫn và nạp bitmap poster (`ResolvePosterFullPath`, `LoadPosterBitmap`, `SavePosterFile`).
-- **`CinemaManageProject/Data/`**: Tách riêng truy vấn SQLite có tham số hóa cho từng module (`CustomerData.cs`, `MovieData.cs`, `RoomData.cs`, `ShowtimeData.cs`), giúp ViewModel chỉ lo trạng thái UI, lọc và validation.
+### Công nghệ & Thư viện dùng chung
+- **`Dapper 2.1.100` + `Microsoft.Data.Sqlite 10.0.15`:** Truy vấn SQL thuần tham số hóa (`@param`), kết hợp `conn.Query<T>`, `conn.QueryFirstOrDefault<T>`, `conn.QuerySingle<T>`, `conn.Execute`, `conn.ExecuteScalar<T>`.
+- **`SqliteTransaction`:** Bảo vệ toàn vẹn dữ liệu cho các thao tác nhiều bước (đăng ký tài khoản, lưu phim + thể loại, kiểm tra trùng lịch chiếu, đặt vé chống trùng ghế, soát vé check-in, hủy vé hoàn điểm).
+- **C# `sealed record` DTO:** Định nghĩa ngay cùng file nghiệp vụ các kiểu dữ liệu vào/ra (`*Input`, `*Result`, `*Row`, `*Dto`) gọn nhẹ, bất biến và có sẵn thuộc tính định dạng hiển thị.
 
-### 10.2. Nghiệp vụ Quản lý Phòng & Sơ đồ Ghế ([RoomData.cs](CinemaManageProject/Data/RoomData.cs), [AdminRoomsViewModel.cs](CinemaManageProject/ViewModels/Admin/AdminRoomsViewModel.cs), [AdminRoomsView.xaml](CinemaManageProject/Views/Admin/AdminRoomsView.xaml))
-- **Thông số cố định & trực quan hóa sơ đồ ghế:** Bốn phòng chiếu (`Phòng 1 - 2D`, `Phòng 2 - 2D`, `Phòng 3 - 3D`, `Phòng 4 - IMAX`) có sức chứa vật lý lần lượt `75`, `75`, `90`, `114` ghế. Trong [AdminRoomsViewModel.cs:226-230](CinemaManageProject/ViewModels/Admin/AdminRoomsViewModel.cs#L226-L230), danh sách ghế đọc từ `RoomData.LoadSeatsByRoom(roomId)` được gom nhóm theo `RowIndex` bằng `LINQ` (`GroupBy` → `SeatRowGroup`) để render hai lớp `ItemsControl` lồng nhau theo từng hàng `A, B, C...`.
-- **Ghế đôi (`Couple`) bằng 2 ghế đơn & trạng thái màu qua `DataTrigger`:** Style `SeatCellButtonStyle` ([AdminRoomsView.xaml:12-65](CinemaManageProject/Views/Admin/AdminRoomsView.xaml#L12-L65)) đặt ghế thường kích thước `40×34` (`Margin="3"`), khi `IsCouple == true` tự mở rộng thành `Width="86"` (`40 + 40 + 6` phần margin giữa hai ghế nên hàng cuối thẳng hàng khít với các hàng trên). Màu từng ô đổi tự động theo `VisualState` (`VIP`: tím Indigo `#5E6AD2`, `Couple`: tím đậm `#A855F7`, `Maintenance`: đỏ `#E11D48`) và viền trắng `2px` khi `IsSelected == true`.
-- **Kiểm tra đơn đặt trước khi chuyển ghế sang bảo trì:** Khi bấm một ghế, `SelectSeat(...)` nạp tối đa `20` hóa đơn/vé gắn với ghế đó (`RoomData.LoadSeatOrders(seatId)`). Khi Admin bấm bật/tắt bảo trì (`ToggleSelectedSeatAvailable` tại [AdminRoomsViewModel.cs:192-219](CinemaManageProject/ViewModels/Admin/AdminRoomsViewModel.cs#L192-L219)), nếu đang chuyển từ khả dụng sang bảo trì, hàm gọi `RoomData.CountActiveTicketsForSeat(seatId)` đếm vé `Booked`/`CheckedIn` ở các suất `Scheduled`/`OpenForSale` — nếu còn vé hiệu lực (ví dụ ghế `E5`) sẽ **chặn** ngay trước khi chạy `RoomData.SetSeatActive(...)`.
+### Tổng quát thư mục
+Cô lập **100% câu lệnh SQL** khỏi `ViewModels/` vào 10 lớp tĩnh theo từng phân hệ nghiệp vụ. Toàn bộ tầng này chia sẻ chung quy ước:
+- Giá vé: `UnitPrice = Math.Round((Showtime.BaseTicketPrice + Room.BasePriceSurcharge) * Seat.PriceMultiplier, 0)`.
+- Lịch chiếu: `EndTime = StartTime + Movie.DurationMinutes + 15 phút` dọn phòng; kiểm tra trùng trong cùng `RoomId`.
+- Điểm thưởng & Hạng thẻ: đổi `1 điểm = 1.000đ` (tối đa `50%` tạm tính), tích `1 điểm / 10.000đ` thực trả; mốc hạng `Silver` ≥ 1 triệu, `Gold` ≥ 5 triệu, `Platinum` ≥ 10 triệu.
 
-### 10.3. Nghiệp vụ Quản lý Lịch chiếu & Đồng nhất giá vé ([ShowtimeData.cs](CinemaManageProject/Data/ShowtimeData.cs), [AdminShowtimesViewModel.cs](CinemaManageProject/ViewModels/Admin/AdminShowtimesViewModel.cs), [AdminShowtimesView.xaml](CinemaManageProject/Views/Admin/AdminShowtimesView.xaml))
-- **Đồng nhất giá gốc rạp & xem trước bảng giá:** `ShowtimeData.StandardBaseTicketPrice` ([ShowtimeData.cs:85](CinemaManageProject/Data/ShowtimeData.cs#L85)) cố định ở mức **`80.000đ`** để giá vé không đổi thất thường theo từng phim mà phụ thuộc vào **phụ thu loại phòng** (`BasePriceSurcharge`: 2D `+0đ`, 3D `+20.000đ`, IMAX `+40.000đ`) và **hệ số hạng ghế** (`Standard ×1.00`, `VIP ×1.25`, `Couple ×2.00`). Trong `AdminShowtimesViewModel.UpdatePreviews()` ([lines 533–564](CinemaManageProject/ViewModels/Admin/AdminShowtimesViewModel.cs#L533-L564)), hệ thống tính sẵn giá quy đổi theo 3 hạng ghế và gợi ý định dạng chiếu qua `ShowtimeData.SuggestFormat(roomType, movieLanguage)` khi tạo suất mới.
-- **Quy tắc chống trùng lịch & dọn phòng `+15` phút:** Khi tạo hoặc sửa suất chiếu trong `SqliteTransaction` (`ShowtimeData.SaveShowtime` tại [lines 194–254](CinemaManageProject/Data/ShowtimeData.cs#L194-L254)), giờ kết thúc được tính bằng `StartTime + Movie.DurationMinutes + 15 phút`. Hai suất trong cùng một `RoomId` (trừ trạng thái `Cancelled` và chính suất đang sửa `@sid`) bị coi là trùng khi thỏa mãn `StartTime < @end AND EndTime > @start`. Hai suất nối tiếp chạm đúng mốc `EndTime == StartTime` được phép tạo bình thường.
-- **Bảo vệ suất đã phát sinh vé (`CanEditScheduleCore`):** Nếu suất đang sửa đã có vé `Booked` hoặc `CheckedIn`, cả `AdminShowtimesViewModel.CanEditScheduleCore` ([lines 130–136](CinemaManageProject/ViewModels/Admin/AdminShowtimesViewModel.cs#L130-L136)) lẫn `ShowtimeData.CheckActiveTicketCoreLock` ([lines 293–335](CinemaManageProject/Data/ShowtimeData.cs#L293-L335)) đều khóa không cho đổi Phim, Phòng, Ngày/Giờ hay Giá gốc (chỉ cho phép cập nhật `Status` sang `Completed`/`Cancelled`). Khi xóa, `CountShowtimeTickets` chặn xóa cứng bất kỳ suất nào đã phát sinh dòng trong `Tickets` (`ON DELETE RESTRICT`).
-
-### 10.4. Cấu trúc dữ liệu mẫu cho Hệ khuyến nghị ([SeedData.sql](CinemaManageProject/Database/SeedData.sql))
-Bộ dữ liệu mẫu được mở rộng lên **15 phim** (10 `NowShowing`, 5 `ComingSoon`), **10 thể loại**, **25 khách hàng** (`khach1`–`khach25`), **28 suất chiếu**, **98 hóa đơn** và **160 vé**, tạo ra **95 cặp `(CustomerId, MovieId)` riêng biệt** phân cụm theo gu xem phim (hành động/khoa học viễn tưởng, tâm lý/tình cảm, gia đình/hoạt hình, kinh dị/hài...) sẵn sàng làm đầu vào cho Collaborative Filtering hoặc Content-Based Recommendation.
-
----
-
-## 11. Quản lý ảnh Poster (`PosterHelper`), Dải trượt ngang & `ScrollViewer` lồng nhau
-
-### 11.1. Sao chép ảnh khi Build & Nạp ảnh an toàn ([CinemaManageProject.csproj](CinemaManageProject/CinemaManageProject.csproj), [PosterHelper.cs](CinemaManageProject/Helpers/PosterHelper.cs#L12-L26))
-- Toàn bộ 15 file ảnh `.jpg` đặt tại `CinemaManageProject/Posters/` và được khai báo trong `.csproj`:
-  ```xml
-  <None Update="Posters\*">
-    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-  </None>
-  ```
-  Nhờ đó khi build, thư mục chạy luôn có `Posters/*.jpg` đi kèm để `ResolvePosterFullPath` ghép `AppContext.BaseDirectory + storedPath` đọc được ngay cả ở `bin/Debug` hay bản đóng gói.
-- Trong `PosterHelper.LoadPosterBitmap(string fullPath)`, thuộc tính `BitmapCacheOption.OnLoad` buộc WPF đọc hết dữ liệu ảnh vào RAM rồi đóng file ngay lập tức (tránh lỗi khóa file ảnh khi xóa/ghi đè trên Windows), còn `bitmap.Freeze()` biến đối tượng ảnh thành bất biến giúp bind và hiển thị nhẹ hơn.
-- Với ảnh tỉ lệ không đồng nhất (12 ảnh dọc và 3 ảnh ngang trong bộ 15 poster), khung ảnh trên [CustomerDashboardView.xaml](CinemaManageProject/Views/Customer/CustomerDashboardView.xaml#L164-L181) cố định kích thước (`168px` rộng thẻ, vùng ảnh cao `208px`) kết hợp `Stretch="UniformToFill"` và `ClipToBounds="True"` trên `<Border>` bọc ngoài để mọi thẻ bằng chằn chặn mà ảnh không bị méo tỷ lệ.
-
-### 11.2. Giữ vị trí cuộn ngang & Chuyển tiếp cuộn chuột ([CustomerDashboardViewModel.cs](CinemaManageProject/ViewModels/Customer/CustomerDashboardViewModel.cs#L14-L86), [CustomerDashboardView.xaml.cs](CinemaManageProject/Views/Customer/CustomerDashboardView.xaml.cs#L36-L86))
-- **`CustomerMovieRow : ViewModelBase`:** Thay vì xóa và nạp lại `ObservableCollection<CustomerMovieRow>` mỗi lần người dùng chọn phim (gây giật thanh cuộn về đầu), `CustomerMovieRow` giữ thuộc tính `IsSelected` và `ActiveTag => IsSelected ? "Active" : null`. Khi gọi `SelectMovie(movie)`, chỉ 2 card (cũ và mới) đổi viền sang `#5E6AD2` tại chỗ qua `OnPropertyChanged`.
-- **Xung đột `ScrollViewer` lồng nhau:** Vì `MainWindow` đã dùng một `<ScrollViewer>` cuộn dọc bao ngoài toàn trang ([MainWindow.xaml](CinemaManageProject/Views/MainWindow.xaml#L162)), thanh trượt poster ngang `PosterStripScrollViewer` bên trong mặc định sẽ chặn sự kiện `MouseWheel` khi con trỏ rê lên poster. Hàm `OnPosterStripPreviewMouseWheel` xử lý `Shift + Wheel` để cuộn ngang, còn cuộn chuột thường thì đánh dấu `e.Handled = true` rồi phát lại một `MouseWheelEventArgs` (`RoutedEvent = UIElement.MouseWheelEvent`) lên phần tử cha qua `VisualTreeHelper.GetParent` để trang chính vẫn cuộn dọc trơn tru.
-
----
-
-## 12. Khai báo Icon Vector (`<Geometry>`), Nền điện ảnh (`DrawingBrush`) và Sidebar đóng/mở
-
-### 12.1. Mấy cái icon và họa tiết hình ảnh được khai báo ở đâu?
-Toàn bộ các icon (bảng quay phim Clapperboard, dải phim 35mm, vé rạp, màn chiếu, đồng hồ, hóa đơn, người dùng, ngôi sao...) **không phải file ảnh `.png`/`.svg` rời** mà là **chuỗi đường vector SVG Path (`<Geometry>`) khai báo tập trung tại [Controls.xaml](CinemaManageProject/Themes/Controls.xaml#L69-L88)**:
-- **Style chung `CinemaVectorIconStyle` ([Controls.xaml:71-77](CinemaManageProject/Themes/Controls.xaml#L71-L77)):** Quy định `Stretch="Uniform"`, độ dày nét `StrokeThickness="1.75"`, bo tròn đầu/góc nối nét (`Round`) để các icon đồng bộ độ mảnh và co giãn sắc nét trên mọi độ phân giải DPI mà không cần cài thư viện ngoài.
-- **10 tài nguyên `<Geometry>` ([Controls.xaml:79-88](CinemaManageProject/Themes/Controls.xaml#L79-L88)):** Ví dụ `<Geometry x:Key="FilmClapperIconGeometry">M 20.2,6 L 3,11 ...</Geometry>`. Mỗi chuỗi `M ... L ... H ... V ... Z` chính là dữ liệu thuộc tính `d="..."` chuẩn của vector SVG.
-
-### 12.2. Cách hiển thị lên Sidebar, Logo và Dashboard
-- **Gắn tĩnh trực tiếp bằng XAML (`StaticResource`):** Dùng cho logo trên [LoginWindow.xaml](CinemaManageProject/Views/LoginWindow.xaml#L41-L51), [MainWindow.xaml](CinemaManageProject/Views/MainWindow.xaml#L32-L42), họa tiết dải phim 35mm xoay nghiêng `-14°` làm watermark nền (`Opacity="0.045"`–`"0.06"`, `IsHitTestVisible="False"` để không chặn thao tác chuột), và các icon tiêu đề/hạng thành viên/cuống vé trên [CustomerDashboardView.xaml](CinemaManageProject/Views/Customer/CustomerDashboardView.xaml#L22-L27).
-- **Gắn động cho Sidebar theo vai trò (`TryFindResource`):** Trong [MainViewModel.cs](CinemaManageProject/ViewModels/MainViewModel.cs#L15-L27), `SidebarMenuItem` lưu tên khóa `IconResourceKey` (ví dụ `"ShowtimeClockIconGeometry"`) và tra ra đối tượng `Geometry` qua `Application.Current?.TryFindResource(IconResourceKey) as Geometry`.
-- **Lưu ý "bẫy" `Style TargetType="TextBlock"` trong Sidebar:** Vì [Controls.xaml:97-101](CinemaManageProject/Themes/Controls.xaml#L97-L101) có style ngầm định đặt mọi `TextBlock` thành màu trắng `#FAFAFA`, khi đặt `<TextBlock Text="{Binding Label}" />` vào bên trong nút menu (`NavMenuButtonStyle`) cần viết rõ `Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"` ([MainWindow.xaml:92-94](CinemaManageProject/Views/MainWindow.xaml#L92-L94)). Nhờ vậy cả icon `<Path Stroke="...">` lẫn chữ đều đồng loạt chuyển từ xám `#A1A1AA` → trắng khi hover → tím Indigo `#5E6AD2` khi đang chọn.
-
-### 12.3. Nền điện ảnh (`DrawingBrush`) & Đường rãnh vé rạp
-- **Nền cửa sổ `CinemaWindowBackgroundBrush` ([Controls.xaml:11-67](CinemaManageProject/Themes/Controls.xaml#L11-L67)):** Dùng một `<DrawingBrush Stretch="Fill">` chồng 4 lớp ánh sáng: lớp nền đen than (`#060609` → `#0A0B10` → `#060608`), quầng sáng Indigo từ phía trên (`Center="0.46,0.12"`), quầng đỏ nhung rạp nhẹ ở góc dưới phải (`Center="0.88,0.84"`), và một vệt sáng tán mềm nghiêng `-22°`. Tài nguyên này gắn một lần vào `CinemaWindowStyle`, tự động áp dụng cho cả `LoginWindow` và `MainWindow`.
-- **Thẻ nổi bán trong suốt (`CardBorderStyle`):** Đổi nền từ `#141516` sang `#D8141516` (~85% độ đặc) tại [Controls.xaml:129-135](CinemaManageProject/Themes/Controls.xaml#L129-L135) để ánh sáng nền hắt dịu qua rìa card.
-- **Đường rãnh vé (`StrokeDashArray`):** Phần chân khung giới thiệu phim ([CustomerDashboardView.xaml:347-353](CinemaManageProject/Views/Customer/CustomerDashboardView.xaml#L347-L353)) dùng `<Line X1="0" X2="1" Stretch="Fill" StrokeDashArray="4 3" />` tạo đường đục lỗ cuống vé rạp kéo rộng tự động theo bề ngang khung.
-
-### 12.4. Cơ chế Sidebar đóng/mở ([MainWindow.xaml](CinemaManageProject/Views/MainWindow.xaml#L14-L128), [MainViewModel.cs](CinemaManageProject/ViewModels/MainViewModel.cs#L86-L106))
-- Cột trái của `<Grid>` dùng `Width="Auto"` thay vì cố định `Width="244"`; thẻ `<Border x:Name="SidebarPanel" Width="244">` gắn `Visibility="{Binding IsSidebarOpen, Converter={StaticResource BoolToVis}}"`.
-- Khi bấm nút `SidebarToggleButton` trên Topbar, `_viewModel.ToggleSidebar()` đảo giá trị `IsSidebarOpen` (đồng thời đổi nhãn `‹` ↔ `☰` và tooltip `"Thu gọn thanh bên"` ↔ `"Mở thanh bên"`). Khi `Visibility` về `Collapsed`, cột `Width="Auto"` co về `0px` và vùng `Column 1` (`Width="*"`) tự mở rộng hết chiều ngang cửa sổ (từ 5 lên 6+ poster trên màn hình Khách hàng).
+### Chi tiết từng file
+- **[AuthData.cs](CinemaManageProject/Data/AuthData.cs)** *(161 dòng)*:
+  - DTO: `AuthResult`.
+  - `Authenticate(username, password)`: xác thực qua `PasswordHelper.VerifyPassword`, chặn tài khoản bị khóa (`IsActive = 0`), tự nâng cấp mật khẩu cũ sang `PBKDF2`, cập nhật `LastLoginAt`, xóa chuỗi hash trong RAM (`user.Password = string.Empty`) và nạp `CustomerProfile` nếu là `Customer`.
+  - `RegisterCustomer(...)`: tạo đồng thời bản ghi `Users` (đã băm mật khẩu) và `Customers` trong 1 `SqliteTransaction`, kiểm tra trùng `Username`/`Phone`.
+- **[DashboardData.cs](CinemaManageProject/Data/DashboardData.cs)** *(343 dòng)*:
+  - DTO: `AdminDashboardSnapshot`, `StaffDashboardSnapshot`, `CustomerDashboardSnapshot` cùng các `*ShowtimeDto`, `*OrderDto`, `*MovieDto`, `*TicketDto`.
+  - `LoadAdminDashboard()`: tổng hợp 9 chỉ số KPI toàn rạp, top 12 suất chiếu (tỷ lệ lấp đầy) và 8 hóa đơn gần nhất.
+  - `LoadStaffDashboard(staffId)`: KPI ca cá nhân của thu ngân, 12 suất mở bán còn ghế trống và 8 giao dịch quầy gần nhất.
+  - `LoadCustomerDashboard(userId, fallbackProfile)`: làm mới hồ sơ hội viên (qua `CustomerData.LoadCustomerProfile`), nạp danh sách phim `NowShowing`/`ComingSoon` kèm thể loại (`GROUP_CONCAT`) & giá thấp nhất, và 15 vé gần nhất.
+- **[MovieData.cs](CinemaManageProject/Data/MovieData.cs)** *(230 dòng)*:
+  - DTO: `AdminMovieRow`, `MovieSaveInput`.
+  - `LoadAllGenres`, `InsertGenre`: quản trị danh mục thể loại.
+  - `LoadAllMovies`: đọc danh sách phim kèm chuỗi thể loại và danh sách `GenreIds`, sắp xếp ưu tiên `NowShowing` → `ComingSoon` → `Ended`.
+  - `SaveMovie`, `CountMovieShowtimes`, `DeleteMovie`: thêm/sửa phim và đồng bộ bảng nối `MovieGenres` trong transaction; kiểm tra ràng buộc suất chiếu trước khi xóa.
+- **[RoomData.cs](CinemaManageProject/Data/RoomData.cs)** *(152 dòng)*:
+  - DTO: `AdminRoomRow`, `RoomSeatRow`, `SeatOrderRow`.
+  - `LoadAllRooms`, `LoadSeatsByRoom`: thống kê tổng ghế/khả dụng/bảo trì và phân loại Thường/VIP/Đôi của từng phòng.
+  - `LoadSeatOrders`: truy vết 20 lượt đặt gần nhất của một ghế cụ thể qua 5 bảng.
+  - `CountActiveTicketsForSeat`, `SetSeatActive`: chặn chuyển sang bảo trì nếu ghế đang có vé `Booked`/`CheckedIn` ở suất `Scheduled`/`OpenForSale`.
+- **[ShowtimeData.cs](CinemaManageProject/Data/ShowtimeData.cs)** *(331 dòng)*:
+  - Hằng số `StandardBaseTicketPrice = 80000m`; DTO: `ShowtimeMovieOption`, `ShowtimeRoomOption`, `AdminShowtimeItem`, `ShowtimeSaveInput`, `ShowtimeSaveResult`.
+  - `LoadMovieOptions`, `LoadRoomOptions`, `LoadAllShowtimes`: nạp combobox phim/phòng và danh sách lịch chiếu kèm số vé hoạt động / ghế khả dụng.
+  - `SaveShowtime`: khóa chỉnh sửa phim/phòng/giờ/giá khi suất đã có vé hiệu lực, chặn trùng khung giờ trong cùng phòng chiếu trong `SqliteTransaction`.
+  - `CountShowtimeTickets`, `DeleteShowtime`, `SuggestFormat`: đếm vé trước khi xóa và gợi ý tự động định dạng chiếu (`IMAX Phụ đề`, `2D Tiếng Việt`...).
+- **[OrderData.cs](CinemaManageProject/Data/OrderData.cs)** *(229 dòng)*:
+  - DTO: `AdminOrderSummaryRow`, `OrderTicketDetailRow`.
+  - `LoadAllOrders`: đọc toàn bộ hóa đơn ghép thông tin thu ngân, khách hàng, số vé hiệu lực (`ActiveTicketsCount`) và trạng thái thu tiền.
+  - `LoadAllOrderTickets`: tải toàn bộ chi tiết vé và gom thành `Dictionary<int, IReadOnlyList<OrderTicketDetailRow>>` theo `OrderId` phục vụ xem chi tiết phiếu và tính phân bổ doanh thu theo phim.
+- **[UserData.cs](CinemaManageProject/Data/UserData.cs)** *(457 dòng)*:
+  - DTO: `AdminUserRow`, `UserSaveInput`, `UserSaveResult`, `UserActionResult`.
+  - `LoadAllUsers`: nạp danh sách tài khoản kèm thông tin `Customers` và tổng lượt hoạt động (`StaffActivityCount`, `CustomerOrdersCount`).
+  - `SaveUser`: thêm/sửa `Staff` hoặc `Customer`, băm mật khẩu mới qua `PasswordHelper`, đồng bộ 1-1 `Users` ↔ `Customers`, chặn sửa/gán quyền `Admin`.
+  - `SetUserActive`, `DeleteUser`: bảo vệ tuyệt đối tài khoản `Admin` gốc và chống tự khóa/tự xóa; chỉ cho xóa cứng khi không phát sinh lịch sử suất chiếu/hóa đơn/soát vé.
+- **[BookingData.cs](CinemaManageProject/Data/BookingData.cs)** *(920 dòng)*:
+  - Lõi đặt vé dùng chung cho cả **Staff POS (`Counter`)**, **Customer Browse (`SelfService`)** và **Customer MyTickets**.
+  - DTO: `OpenShowtimeOption`, `ShowtimeSeatRow`, `BookingCustomerSummary`, `BrowseMovieRow`, `BookingCreateInput`, `BookingCreateResult`, `CustomerMyTicketRow`, `CustomerMyOrderRow`, `CancelTicketResult`.
+  - Hàm tính toán dùng chung: `CalculateSeatUnitPrice`, `CalculateMaxRedeemablePoints`, `CalculateEarnedPoints`, `ComputeTier`.
+  - Truy vấn đọc: `LoadOpenShowtimes`, `LoadBrowseMovies`, `LoadGenreNames`, `LoadShowtimeSeatMap`, `FindCustomerByUserId/Phone/Id`, `LoadMyTickets`, `LoadMyOrders`.
+  - Giao dịch cốt lõi: `CreateOrder` (khóa kiểm tra suất chiếu/ghế bảo trì/ghế trùng trong `SqliteTransaction`, sinh mã `HD-yyyyMMdd-xxxx` & `VE-yyMMdd-xxxx-SeatCode`, cập nhật điểm và hạng thẻ) và `CancelCustomerTicket` (hủy vé `Booked`, chuyển hóa đơn sang `PartiallyRefunded` hoặc `Cancelled`, giải phóng ghế và hoàn điều chỉnh điểm/chi tiêu/hạng).
+- **[CheckInData.cs](CinemaManageProject/Data/CheckInData.cs)** *(204 dòng)*:
+  - DTO: `CheckInTicketRow`, `CheckInActionResult`.
+  - `LookupTicketByCode` (không phân biệt hoa/thường), `LoadAllTicketsForCheckIn` (ghép 8 bảng, ưu tiên vé `Booked` chờ soát lên đầu).
+  - `ConfirmCheckIn(ticketId, staffUserId)`: kiểm tra trạng thái vé/hóa đơn/suất chiếu trong transaction, cập nhật `Status = 'CheckedIn'`, `CheckedInAt` và `CheckedInByUserId`.
+- **[CustomerData.cs](CinemaManageProject/Data/CustomerData.cs)** *(255 dòng)*:
+  - DTO: `StaffCustomerRow`, `CustomerOrderHistoryRow`, `CounterCustomerSaveInput`, `CounterCustomerSaveResult`.
+  - `LoadCustomerProfile(conn, userId)`: nạp hồ sơ hội viên trong kết nối dùng chung của `DashboardData`.
+  - `LoadAllCustomers`, `LoadCustomerOrderHistory`: danh sách hội viên sắp theo hạng thẻ & chi tiêu kèm lịch sử 25 hóa đơn gần nhất.
+  - `SaveCounterCustomer`: mở hội viên mới tại quầy (`UserId = NULL`) hoặc cập nhật liên hệ kèm đồng bộ ngược sang `Users` nếu hội viên có liên kết tài khoản App.
 
 ---
 
-## 13. Hóa đơn & Doanh thu, Nhân sự & Tài khoản, và Chuẩn hóa Kiến trúc `Data/` – `Controls.xaml`
+## 6. Thư mục `CinemaManageProject/Themes/` — Hệ thống Giao diện Dark Theme Zinc
 
-### 13.1. Module Hóa đơn & Doanh thu ([OrderData.cs](CinemaManageProject/Data/OrderData.cs), [AdminOrdersViewModel.cs](CinemaManageProject/ViewModels/Admin/AdminOrdersViewModel.cs), [AdminOrdersView.xaml](CinemaManageProject/Views/Admin/AdminOrdersView.xaml))
-- **Tối ưu truy vấn 2 bước (tránh N+1 query):** Thay vì bấm vào mỗi hóa đơn lại mở SQLite truy vấn bảng `Tickets`, `OrderData` chạy đúng 2 câu SQL khi mở màn hình: `LoadAllOrders()` (join `Customers` và `Users`) và `LoadAllOrderTickets()` (join `Showtimes`, `Movies`, `Rooms`, `Seats` rồi gom vào `Dictionary<int, IReadOnlyList<OrderTicketDetailRow>>`). Nhờ đó việc chọn từng hóa đơn và tính tổng hợp doanh thu theo bộ lọc diễn ra tức thì trong RAM.
-- **Quy tắc đối soát doanh thu & phân bổ theo phim:**
-  - Chỉ tính các hóa đơn hiệu lực (`Status != 'Cancelled'`) vào doanh thu lọc (`FilteredRevenue`), hai KPI kênh bán (`Tại quầy` / `Tự đặt`) và bảng cơ cấu 4 phương thức thanh toán (`Tiền mặt`, `Chuyển khoản`, `Thẻ`, `Ví điện tử`). Hóa đơn hủy (`Cancelled`) được tách riêng sang bộ đếm đơn hủy và giá trị hủy để tổng các phân rã luôn khớp 100%.
-  - Khi tính **Doanh thu theo Phim (`MovieRevenueRow`)**, doanh thu thực thu `Orders.TotalAmount` được phân bổ theo tỷ lệ `UnitPrice` của **các vé chưa hủy (`Ticket.Status != 'Cancelled'`)** trong đơn đó (`(ticket.UnitPrice * order.TotalAmount) / activeSub`), đảm bảo khớp tổng tiền ngay cả với hóa đơn có giảm giá (`DiscountAmount > 0`) hoặc hoàn một phần (`PartiallyRefunded`).
-  - Trong phiếu chi tiết bên dưới, dòng `Đã hoàn / điều chỉnh` tự động hiện khi `SubTotalAmount - DiscountAmount > TotalAmount`, còn `Khách đưa` / `Tiền thối` chỉ hiển thị khi thanh toán `Cash`.
+### Công nghệ & Thư viện dùng chung
+- **`WPF-UI 4.3.0` (`Wpf.Ui`):** Nạp `<ui:ThemesDictionary Theme="Dark" />` và `<ui:ControlsDictionary />` ngay trong `MergedDictionaries`, kế thừa style control hiện đại bằng `BasedOn="{StaticResource {x:Type ...}}"` thay cho các `ControlTemplate` vẽ tay.
+- **WPF `ResourceDictionary` & `{StaticResource ...}`:** Không dùng `DynamicResource`, viết mã màu Dark Theme Zinc trực tiếp (`#09090B`, `#0F1011`, `#141516`, `#18181B`, chữ `#FAFAFA` / `#A1A1AA`, nhấn Indigo `#5E6AD2`, viền `#23252A` / `#3F3F46`) để dễ đọc và tải nhanh.
+- **`DrawingBrush` & `RadialGradientBrush`:** Tạo phông nền điện ảnh đa lớp hoàn toàn bằng vector, không tốn tài nguyên ảnh bitmap.
 
-### 13.2. Module Nhân sự & Tài khoản ([UserData.cs](CinemaManageProject/Data/UserData.cs), [AdminUsersViewModel.cs](CinemaManageProject/ViewModels/Admin/AdminUsersViewModel.cs), [AdminUsersView.xaml](CinemaManageProject/Views/Admin/AdminUsersView.xaml))
-- **Bảo vệ tài khoản Admin gốc ở cả 2 tầng (ViewModel + Data):** Hệ thống không cho tạo thêm tài khoản `Admin`, không cho nâng/hạ quyền thành `Admin`, không cho sửa/khóa/xóa tài khoản có `Role == 'Admin'` và không cho tự khóa/tự xóa `App.CurrentUser`. Các kiểm tra này chạy song song trên UI (`IsProtectedAdmin`) lẫn trong `SqliteTransaction` của `UserData.SaveUser`, `SetUserActive`, `DeleteUser`.
-- **Đồng bộ 1-1 giữa `Users` và `Customers`:** Khi Admin tạo mới hoặc cập nhật tài khoản `Customer`, `UserData.SaveUser` kiểm tra trùng `Username` (không phân biệt hoa/thường `LOWER(Username)`) và trùng `Customers.Phone` (`UNIQUE`), đồng bộ `FullName`, `Phone`, `Email`, `DateOfBirth` giữa 2 bảng trong cùng một `SqliteTransaction` nhưng giữ `Tier`, `LoyaltyPoints`, `TotalSpent` ở chế độ chỉ đọc để không sai lệch đối soát hóa đơn.
-- **Chặn xóa cứng tài khoản có lịch sử & Xóa sạch `PasswordBox`:** Trước khi `DELETE`, `UserData.DeleteUser` đếm các liên kết lịch sử (`Showtimes.CreatedByUserId`, `Orders.StaffUserId`, `Tickets.CheckedInByUserId`, `Orders.CustomerId`). Tài khoản đã phát sinh giao dịch sẽ bị chặn xóa và hướng dẫn dùng nút **Khóa tài khoản (`IsActive = 0`)**. Mật khẩu nhập qua `PasswordBox` được xóa trắng tự động qua sự kiện `PasswordClearRequested` mỗi khi đổi dòng chọn, bấm Thêm mới/Làm mới hoặc Lưu xong (bỏ trống khi sửa = giữ mật khẩu cũ).
+### Tổng quát thư mục
+Tập trung 100% tài nguyên giao diện dùng chung về duy nhất 1 tệp `Controls.xaml` (được nạp tại `App.xaml`), bảo đảm cả 15 màn hình đồng nhất tuyệt đối về màu sắc, kiểu chữ, nút bấm, bảng dữ liệu và ô ghế.
 
-### 13.3. Chuẩn hóa tầng `Data/` và tài nguyên `Themes/Controls.xaml`
-- **Tách sạch 100% SQLite khỏi thư mục `ViewModels/`:** Toàn bộ truy vấn đăng nhập/đăng ký của [LoginViewModel.cs](CinemaManageProject/ViewModels/LoginViewModel.cs) được chuyển sang [AuthData.cs](CinemaManageProject/Data/AuthData.cs), còn truy vấn tổng hợp 3 màn hình Dashboard (`Admin`, `Staff`, `Customer`) được gom về [DashboardData.cs](CinemaManageProject/Data/DashboardData.cs). Từ đây không còn bất kỳ `ViewModel` nào import trực tiếp `Microsoft.Data.Sqlite` — mọi truy cập DB đi qua 8 lớp tĩnh trong `CinemaManageProject/Data/` (`AuthData`, `CustomerData`, `DashboardData`, `MovieData`, `OrderData`, `RoomData`, `ShowtimeData`, `UserData`).
-- **Tập trung Style `DataGrid` dùng chung về [Controls.xaml](CinemaManageProject/Themes/Controls.xaml):** Đưa `CompactDataGridStyle` (`FontSize="12"`, giữ highlight chọn dòng `#265E6AD2`, `ScrollViewer.HorizontalScrollBarVisibility="Auto"`) và `EllipsisCellTextStyle` (trước đây lặp lại ở cả `AdminOrdersView.xaml` và `AdminUsersView.xaml`) cùng `WrappingCellTextStyle` (từ `AdminOrdersView.xaml`) về một nơi duy nhất trong `Themes/Controls.xaml` để dùng chung toàn dự án.
-- **Chuẩn hóa truy vấn tầng `Data/` bằng micro-ORM `Dapper`:** Cài thêm gói `Dapper` (`2.1.100`) vào [CinemaManageProject.csproj](CinemaManageProject/CinemaManageProject.csproj) theo yêu cầu người dùng và viết lại toàn bộ 8 lớp trong `CinemaManageProject/Data/` bằng `Query<T>`, `QuerySingle<T>`, `QueryFirstOrDefault<T>`, `Execute`, `ExecuteScalar<T>`. Cách này giữ nguyên 100% SQL thuần tham số hóa (`@param`), transaction SQLite và kiểm soát khóa ngoại `PRAGMA foreign_keys = ON;`, đồng thời loại bỏ toàn bộ mã lặp `cmd.Parameters.AddWithValue(...)` và đọc chỉ số cột thủ công `r.GetString(0)...`.
-- **Ý nghĩa `PRAGMA foreign_keys = ON;`:** Mặc định SQLite tắt kiểm tra khóa ngoại trên mỗi kết nối mới; lệnh `PRAGMA` trong [DatabaseHelper.cs](CinemaManageProject/Helpers/DatabaseHelper.cs#L22) buộc SQLite thực thi nghiêm ngặt mọi ràng buộc `REFERENCES`, `ON DELETE RESTRICT` và `ON DELETE CASCADE` trong schema [CinemaManageDB.sql](CinemaManageProject/Database/CinemaManageDB.sql).
-
----
-
-## 14. Hoàn thiện phân hệ Staff & Customer (POS, Check-in, Khách hàng, Tự đặt vé & Vé của tôi)
-
-### 14.1. Lõi đặt vé & sơ đồ ghế dùng chung ([BookingData.cs](CinemaManageProject/Data/BookingData.cs), [BookingSeatItems.cs](CinemaManageProject/ViewModels/BookingSeatItems.cs), [Controls.xaml](CinemaManageProject/Themes/Controls.xaml))
-- **Tái sử dụng 100% giữa Staff POS (`Counter`) và Customer Self-Booking (`SelfService`):** Cả hai màn hình dùng chung style `BookingSeatButtonStyle` (6 trạng thái trực quan: `Standard`, `VIP`, `Couple` rộng `86px`, `Selected`, `Booked`, `Maintenance`), lớp `BookingSeatCellItem` / `BookingSeatRowGroup` và hàm `BookingData.CreateOrder(...)`.
-- **An toàn giao dịch chống đặt trùng ghế (`SqliteTransaction`):** Bên trong transaction của `BookingData.CreateOrder`, hệ thống kiểm tra lại suất chiếu (`OpenForSale` và phòng `IsActive = 1`), xác minh ghế thuộc đúng phòng, chặn ghế bảo trì (`IsActive = 0`) và ghế đã có vé `Booked`/`CheckedIn`, tự tính lại giá vé `UnitPrice = (BaseTicketPrice + BasePriceSurcharge) * PriceMultiplier`, sinh mã hóa đơn `HD-yyyyMMdd-xxxx` và mã vé `VE-yyMMdd-xxxx-SeatCode` duy nhất.
-- **Quy ước tích/đổi điểm & nâng hạng khớp `SeedData.sql`:** Tích `1 điểm / 10.000đ` thực trả; đổi `1 điểm = 1.000đ` (tối đa `50%` tổng tạm tính và không vượt điểm hiện có); mốc nâng hạng tự động: `Member` (< 1 triệu), `Silver` (≥ 1 triệu), `Gold` (≥ 5 triệu), `Platinum` (≥ 10 triệu).
-
-### 14.2. Trọn bộ 3 màn hình Staff (`feat/staff-pos`, `feat/staff-checkin`, `feat/staff-customers`)
-- **Bán vé tại quầy ([StaffPosView.xaml](CinemaManageProject/Views/Staff/StaffPosView.xaml), [StaffPosViewModel.cs](CinemaManageProject/ViewModels/Staff/StaffPosViewModel.cs)):** Chọn suất mở bán, chọn tối đa 10 ghế, gắn hội viên theo SĐT (hoặc khách vãng lai), đổi điểm thưởng, hỗ trợ 4 PTTT (`Cash` có tính tiền khách đưa/tiền thối nhanh, `BankTransfer`, `Card`, `EWallet`) và hiển thị phiếu xác nhận ngay sau khi phát hành.
-- **Soát vé Check-in ([CheckInData.cs](CinemaManageProject/Data/CheckInData.cs), [StaffCheckInView.xaml](CinemaManageProject/Views/Staff/StaffCheckInView.xaml)):** Quét/nhập `TicketCode` (hỗ trợ nhấn `Enter`, không phân biệt hoa/thường) hoặc chọn trực tiếp từ danh sách vé `Booked` chờ soát; chặn vé đã check-in / vé hủy / đơn hủy / suất hủy trong transaction và ghi `CheckedInAt`, `CheckedInByUserId`.
-- **Tra cứu & đăng ký Khách hàng ([CustomerData.cs](CinemaManageProject/Data/CustomerData.cs), [StaffCustomersView.xaml](CinemaManageProject/Views/Staff/StaffCustomersView.xaml)):** Lọc hội viên theo hạng thẻ/từ khóa, xem lịch sử hóa đơn, cập nhật liên hệ (tự đồng bộ ngược sang `Users` nếu có liên kết tài khoản app) và mở hồ sơ hội viên trực tiếp tại quầy (`UserId = NULL`).
-
-### 14.3. Trọn bộ 2 màn hình Customer (`feat/customer-browse`, `feat/customer-mytickets`)
-- **Phim & Lịch chiếu — Tự đặt vé ([CustomerBrowseView.xaml](CinemaManageProject/Views/Customer/CustomerBrowseView.xaml), [CustomerBrowseViewModel.cs](CinemaManageProject/ViewModels/Customer/CustomerBrowseViewModel.cs)):** Duyệt phim Đang chiếu / Sắp chiếu theo thể loại & từ khóa (chưa gồm hệ khuyến nghị phim), chọn suất chiếu mở bán, chọn ghế và thanh toán trực tuyến (`SelfService` chỉ cho phép Chuyển khoản / Ví điện tử / Thẻ, tự đồng bộ `App.CurrentUser.CustomerProfile`).
-- **Vé của tôi & Hủy vé ([CustomerMyTicketsView.xaml](CinemaManageProject/Views/Customer/CustomerMyTicketsView.xaml), [CustomerMyTicketsViewModel.cs](CinemaManageProject/ViewModels/Customer/CustomerMyTicketsViewModel.cs)):** Xem cuống vé điện tử có `TicketCode` check-in và lịch sử toàn bộ hóa đơn; hỗ trợ hủy vé `Booked` của suất chưa kết thúc — nếu đơn còn vé hiệu lực thì chuyển `Orders.Status = 'PartiallyRefunded'` và giảm `TotalAmount` theo tỷ lệ, nếu hủy hết vé thì chuyển `Orders.Status = 'Cancelled'`, giải phóng ghế ngay lập tức và hoàn điều chỉnh điểm/tổng chi tiêu/hạng thẻ trong cùng một `SqliteTransaction`.
-
-### 14.4. Bảo mật mật khẩu bằng `PBKDF2-HMAC-SHA256` (`feat/password-hashing`)
-- **[PasswordHelper.cs](CinemaManageProject/Helpers/PasswordHelper.cs):** Băm mật khẩu một chiều bằng `Rfc2898DeriveBytes.Pbkdf2` (`SHA-256`, `100.000` vòng lặp, salt ngẫu nhiên `16 byte`, khóa đầu ra `32 byte`), lưu ở định dạng `PBKDF2$100000$<saltBase64>$<hashBase64>` (~83 ký tự) và so sánh hằng thời gian bằng `CryptographicOperations.FixedTimeEquals`.
-- **Tích hợp & tự nâng cấp tài khoản cũ:** Áp dụng tại [AuthData.cs](CinemaManageProject/Data/AuthData.cs) (`Authenticate` xóa chuỗi hash khỏi `User.Password` trong RAM và tự nâng cấp tài khoản plain-text cũ khi đăng nhập đúng; `RegisterCustomer` băm trước khi ghi DB) và [UserData.cs](CinemaManageProject/Data/UserData.cs) (`SaveUser` băm khi tạo mới hoặc đặt lại mật khẩu). Toàn bộ 29 tài khoản mẫu trong [SeedData.sql](CinemaManageProject/Database/SeedData.sql) và `cinema.db` đều đã được băm với salt riêng biệt.
+### Chi tiết từng file
+- **[Controls.xaml](CinemaManageProject/Themes/Controls.xaml)** *(498 dòng, 27 resource key)*:
+  - **Converter (1 key):** `BoolToVis` (`BooleanToVisibilityConverter`).
+  - **Nền điện ảnh & Cửa sổ (2 key):** `CinemaWindowBackgroundBrush` (nền tối phối ánh sáng Indigo & Crimson nhẹ), `CinemaWindowStyle` (`Segoe UI`, `14px`, `#FAFAFA`).
+  - **Typography (4 key):** `PageTitleTextStyle`, `SectionTitleTextStyle`, `MutedCaptionTextStyle`, `FieldLabelTextStyle`.
+  - **Bề mặt & Huy hiệu (2 key):** `CardBorderStyle` (thẻ bo góc `12px`, nền `#141516`, viền `#23252A`), `BadgeBorderStyle` (nhãn bo tròn `999px`).
+  - **Nút bấm & Thẻ tương tác (9 key):** `BaseButtonStyle` (kế thừa WPF-UI), `PrimaryButtonStyle` (Indigo `#5E6AD2`), `SecondaryButtonStyle`, `DangerButtonStyle`, `GhostButtonStyle`, `NavMenuButtonStyle` (Sidebar với trạng thái `Tag="Active"`), `FilterChipButtonStyle`, `PosterCardButtonStyle` (thẻ poster có viền sáng khi chọn), `ShowtimeCardItemStyle` (`ListBoxItem` chọn suất chiếu ở POS và Browse).
+  - **Ô nhập liệu (4 key kế thừa WPF-UI):** `ModernTextBoxStyle`, `ModernPasswordBoxStyle`, `ModernCheckBoxStyle`, `ModernComboBoxStyle`.
+  - **Bảng dữ liệu (4 key):** `ModernDataGridStyle`, `CompactDataGridStyle` (bảng gọn không tràn cột), `EllipsisCellTextStyle`, `WrappingCellTextStyle`.
+  - **Sơ đồ ghế dùng chung (1 key):** `BookingSeatButtonStyle` với `DataTrigger` cho đủ 6 trạng thái trực quan (`Standard`, `VIP`, `Couple` rộng `86px`, `Selected`, `Booked`, `Maintenance`), dùng chung giữa `StaffPosView` và `CustomerBrowseView`.
 
 ---
 
-## 15. Rút gọn mã nguồn với `CommunityToolkit.Mvvm` & `WPF-UI` (`refactor/mvvm-and-wpfui`)
+## 7. Thư mục `CinemaManageProject/Posters/` — Tài nguyên Ảnh Poster Phim
 
-Nhằm giảm tối đa mã lặp (`INotifyPropertyChanged` viết tay trong ViewModel, `ControlTemplate` và chuỗi SVG `<Geometry>` viết tay trong XAML) nhưng vẫn giữ kiến trúc gọn nhẹ và giao diện Dark Zinc nhất quán, dự án đã tích hợp thêm 2 thư viện chuẩn của hệ sinh thái .NET / WPF trên nhánh `refactor/mvvm-and-wpfui`.
+### Công nghệ & Cơ chế sử dụng
+- **Định dạng JPEG tĩnh (`CopyToOutputDirectory=PreserveNewest`):** Được đóng gói tự động vào thư mục chạy của ứng dụng theo cấu hình trong `.csproj`.
+- **Ánh xạ mềm qua DB:** Cột `Movies.PosterPath` lưu đường dẫn tương đối `Posters/<ten-file>.jpg`; mọi ViewModel đều nạp thông qua `PosterHelper.LoadPosterBitmap(...)` (`BitmapCacheOption.OnLoad` + `Freeze()`) và có khung fallback `"Chưa có poster"` nếu tệp không tồn tại.
 
-### 15.1. Thư viện 1 — `CommunityToolkit.Mvvm` (`8.4.2`) cho toàn bộ `ViewModels/`
-- **Cơ chế Source Generator:** Khác với các framework nặng dùng reflection lúc chạy, `CommunityToolkit.Mvvm` tự sinh mã C# ngay lúc biên dịch từ các attribute khai báo trên field.
-- **[ViewModelBase.cs](CinemaManageProject/ViewModels/ViewModelBase.cs):** Đổi sang kế thừa trực tiếp `ObservableObject` (bỏ khai báo thủ công `event PropertyChanged` và hàm gọi sự kiện).
-- **Chuyển đổi đồng bộ 17/17 file ViewModel:**
-  - Chuyển các lớp ViewModel sang `partial class`, dùng `[ObservableProperty]` để sinh tự động property `get`/`set` + `SetProperty`, dùng `[NotifyPropertyChangedFor(nameof(...))]` cho các thuộc tính phụ thuộc (như `HasError`, `HasSuccess`, `IsLoginMode`, `CanCheckout`, `VisualState`...) và dùng hook `partial void OnXxxChanged(...)` / `OnXxxChanging(...)` cho logic lọc, nạp lại form hoặc tính tổng tiền.
-  - Xử lý triệt để 100% cảnh báo phân tích tĩnh `MVVMTK0034` (luôn đọc/gán qua property sinh tự động kèm cờ chặn đệ quy gọn nhẹ khi reset bộ lọc, không tham chiếu trực tiếp backing field ngoài constructor).
-  - **Lưu ý thực tế về `EqualityComparer<T>.Default`:** Vì `SetProperty` bỏ qua `OnXxxChanged` nếu giá trị mới bằng giá trị cũ, các thuộc tính cần nạp lại form ngay cả khi người dùng bấm chọn lại chính dòng hiện tại (`AdminShowtimesViewModel.SelectedShowtime`, `AdminMoviesViewModel.SelectedMovie`) và các đoạn reload dữ liệu từ DB (`AdminRoomsViewModel.LoadData`) được gọi tường minh để bảo toàn 100% hành vi ban đầu.
-  - Giữ nguyên cơ chế code-behind tối giản (`Click` event gọi method public trên ViewModel) nên không phá vỡ XAML hay các kịch bản kiểm thử hiện có.
+### Tổng quát thư mục
+Chứa trọn bộ **15 tệp ảnh poster thực tế** (tổng dung lượng ~1,5 MB) tương ứng chính xác 15 phim mẫu trong `SeedData.sql` (`10` phim đang chiếu và `5` phim sắp chiếu).
 
-### 15.2. Thư viện 2 — `WPF-UI` (`4.3.0`) cho `Themes/Controls.xaml` & Icon giao diện
-- **Tích hợp tập trung tại [Themes/Controls.xaml](CinemaManageProject/Themes/Controls.xaml):**
-  - Nạp sẵn `<ui:ThemesDictionary Theme="Dark" />` và `<ui:ControlsDictionary />` ngay trong `ResourceDictionary.MergedDictionaries` của `Controls.xaml` (nên cả `App.xaml` lẫn mọi harness kiểm thử nạp `Controls.xaml` đều tự có đủ tài nguyên `WPF-UI`).
-  - Kế thừa trực tiếp style control mặc định hiện đại của `WPF-UI` bằng `BasedOn="{StaticResource {x:Type ...}}"` cho `BaseButtonStyle`, `ModernTextBoxStyle`, `ModernPasswordBoxStyle`, `ModernCheckBoxStyle` và `ModernComboBoxStyle`. Nhờ đó **xóa bỏ hoàn toàn 5 `ControlTemplate` viết tay** (border, caret, dropdown popup, toggle button, checkmark) mà vẫn giữ nguyên bảng màu Dark Theme Zinc (`#09090B` / `#141516` / `#18181B` / `#23252A`) và điểm nhấn Indigo `#5E6AD2`.
-- **Thay toàn bộ icon SVG viết tay bằng `ui:SymbolIcon` (`SymbolRegular`):**
-  - Xóa 10 chuỗi `<Geometry>` SVG thủ công và `CinemaVectorIconStyle` khỏi `Controls.xaml`.
-  - Đổi `SidebarMenuItem` trong [MainViewModel.cs](CinemaManageProject/ViewModels/MainViewModel.cs) từ `IconResourceKey` / `TryFindResource(...)` sang enum kiểu an toàn `Wpf.Ui.Controls.SymbolRegular IconSymbol`.
-  - Cập nhật `<ui:SymbolIcon Symbol="..." />` trên 5 màn hình: [LoginWindow.xaml](CinemaManageProject/Views/LoginWindow.xaml), [MainWindow.xaml](CinemaManageProject/Views/MainWindow.xaml), [CustomerDashboardView.xaml](CinemaManageProject/Views/Customer/CustomerDashboardView.xaml), [AdminOrdersView.xaml](CinemaManageProject/Views/Admin/AdminOrdersView.xaml) và [AdminUsersView.xaml](CinemaManageProject/Views/Admin/AdminUsersView.xaml).
+### Chi tiết từng file
+| STT | Tệp tin trong `CinemaManageProject/Posters/` | Dung lượng | Phim tương ứng (`Movies.MovieId`) | Trạng thái mẫu |
+| :-: | :--- | :---: | :--- | :---: |
+| 1 | [dune-part-two.jpg](CinemaManageProject/Posters/dune-part-two.jpg) | 92,1 KB | Dune: Hành Tinh Cát - Phần 2 (`#1`) | Đang chiếu |
+| 2 | [mai.jpg](CinemaManageProject/Posters/mai.jpg) | 47,4 KB | Mai (`#2`) | Đang chiếu |
+| 3 | [kung-fu-panda-4.jpg](CinemaManageProject/Posters/kung-fu-panda-4.jpg) | 80,1 KB | Kung Fu Panda 4 (`#3`) | Đang chiếu |
+| 4 | [exhuma.jpg](CinemaManageProject/Posters/exhuma.jpg) | 80,2 KB | Quật Mộ Trùng Ma (`#4`) | Đang chiếu |
+| 5 | [godzilla-x-kong.jpg](CinemaManageProject/Posters/godzilla-x-kong.jpg) | 70,5 KB | Godzilla x Kong: Đế Chế Mới (`#5`) | Đang chiếu |
+| 6 | [lat-mat-7.jpg](CinemaManageProject/Posters/lat-mat-7.jpg) | 71,7 KB | Lật Mặt 7: Một Điều Ước (`#6`) | Đang chiếu |
+| 7 | [the-fall-guy.jpg](CinemaManageProject/Posters/the-fall-guy.jpg) | 105,5 KB | Kẻ Thế Thân (`#7`) | Đang chiếu |
+| 8 | [kingdom-planet-apes.jpg](CinemaManageProject/Posters/kingdom-planet-apes.jpg) | 161,6 KB | Hành Tinh Khỉ: Vương Quốc Mới (`#8`) | Đang chiếu |
+| 9 | [thanh-xuan-18x2.jpg](CinemaManageProject/Posters/thanh-xuan-18x2.jpg) | 46,8 KB | Thanh Xuân 18x2 (`#9`) | Đang chiếu |
+| 10 | [pee-nak-4.jpg](CinemaManageProject/Posters/pee-nak-4.jpg) | 462,0 KB | Ngôi Đền Kỳ Quái 4 (`#10`) | Đang chiếu |
+| 11 | [spider-man-spider-verse.jpg](CinemaManageProject/Posters/spider-man-spider-verse.jpg) | 107,2 KB | Người Nhện: Du Hành Vũ Trụ Mới (`#11`) | Sắp chiếu |
+| 12 | [ghostbusters-frozen.jpg](CinemaManageProject/Posters/ghostbusters-frozen.jpg) | 30,7 KB | Biệt Đội Săn Ma: Kỷ Nguyên Băng Giá (`#12`) | Sắp chiếu |
+| 13 | [a-quiet-place-day-one.jpg](CinemaManageProject/Posters/a-quiet-place-day-one.jpg) | 50,7 KB | Vùng Đất Câm Lặng: Ngày Một (`#13`) | Sắp chiếu |
+| 14 | [inside-out-2.jpg](CinemaManageProject/Posters/inside-out-2.jpg) | 48,9 KB | Những Mảnh Ghép Cảm Xúc 2 (`#14`) | Sắp chiếu |
+| 15 | [ngay-xua-chuyen-tinh.jpg](CinemaManageProject/Posters/ngay-xua-chuyen-tinh.jpg) | 80,1 KB | Ngày Xưa Có Một Chuyện Tình (`#15`) | Sắp chiếu |
 
-### 15.3. Kết quả đo đạc thực tế & Cập nhật quy tắc `AGENTS.md`
-| Khu vực mã nguồn | Trước refactor | Sau refactor | Thay đổi |
-| :--- | :---: | :---: | :---: |
-| `CinemaManageProject/ViewModels/` (17 file) | 5.773 dòng | 4.988 dòng | **-785 dòng (-13,6%)** |
-| `CinemaManageProject/Themes/Controls.xaml` (1 file) | 698 dòng | 466 dòng | **-232 dòng (-33,2%)** |
-| `CinemaManageProject/Views/` (30 file) | 5.416 dòng | 5.403 dòng | **-13 dòng** |
-| **Tổng cộng phần bị tác động** | **11.887 dòng** | **10.857 dòng** | **-1.030 dòng mã lặp/template** |
+---
 
-- **Kiểm chứng:** `dotnet build CinemaManageProject.slnx -p:UseSharedCompilation=false` đạt `0 Warning(s), 0 Error(s)`, `0` câu SQL trực tiếp trong `ViewModels/`, `0` tài nguyên SVG cũ còn sót, và toàn bộ **14/14 bộ kiểm thử hồi quy** (bao gồm render trực quan giao diện `WPF-UI`) đều đạt.
-- **Cập nhật [AGENTS.md](AGENTS.md):** Bổ sung danh sách thư viện đã duyệt (`Dapper`, `CommunityToolkit.Mvvm`, `WPF-UI`) và thêm **quy tắc bắt buộc**: *mỗi khi lên ý tưởng, thiết kế hoặc chuẩn bị viết tính năng/module mới, AI agent phải chủ động đề xuất các thư viện phù hợp (kèm công dụng, ưu/nhược điểm và mức độ rút gọn code) để người dùng lựa chọn trước khi triển khai.*
+## 8. Thư mục `CinemaManageProject/ViewModels/` — Tầng Logic Giao diện (MVVM)
+
+### Công nghệ & Thư viện dùng chung
+- **`CommunityToolkit.Mvvm 8.4.2`:** Toàn bộ 17 tệp ViewModel kế thừa `ViewModelBase` (`ObservableObject`), khai báo `partial class` và dùng Source Generator lúc biên dịch (`[ObservableProperty]`, `[NotifyPropertyChangedFor]`, `partial void OnXxxChanged/Changing`) để tự động hóa `INotifyPropertyChanged`.
+- **`ObservableCollection<T>` & LINQ:** Quản lý danh sách ràng buộc dữ liệu hai chiều lên `DataGrid`, `ListBox`, `ItemsControl`, `ComboBox`.
+- **`WPF-UI` (`Wpf.Ui.Controls.SymbolRegular`):** Khai báo biểu tượng Sidebar kiểu an toàn trực tiếp trong `MainViewModel`.
+- **Tách biệt sạch với CSDL:** `0` câu SQL trực tiếp trong toàn bộ thư mục `ViewModels/` — mọi truy cập DB đều đi qua các lớp tĩnh trong `Data/`. Không dùng `ICommand`/`RelayCommand` rườm rà mà cung cấp các method `public` gọn rõ để code-behind gọi trực tiếp.
+
+### Tổng quát thư mục
+Gồm **17 tệp tin** chia làm 4 nhóm: 4 tệp lõi dùng chung tại gốc `ViewModels/` và 3 thư mục con theo đúng 3 vai trò (`Admin/` 6 tệp, `Staff/` 4 tệp, `Customer/` 3 tệp).
+
+### 8.1. Nhóm Dùng chung (`CinemaManageProject/ViewModels/`)
+- **[ViewModelBase.cs](CinemaManageProject/ViewModels/ViewModelBase.cs)** *(11 dòng)*: Lớp trừu tượng kế thừa `ObservableObject`, định nghĩa cổng `public virtual void LoadData()` giúp `MainViewModel` làm mới đồng nhất mọi màn hình con.
+- **[LoginViewModel.cs](CinemaManageProject/ViewModels/LoginViewModel.cs)** *(126 dòng)*: Quản lý trạng thái chuyển đổi Đăng nhập ↔ Đăng ký hội viên (`ToggleMode`), xác thực (`Login`), tạo tài khoản mới (`Register`), điền nhanh 3 tài khoản mẫu (`FillDemo`) và phát các sự kiện `LoginSucceeded`, `DemoPasswordRequested`, `ModeSwitched`.
+- **[MainViewModel.cs](CinemaManageProject/ViewModels/MainViewModel.cs)** *(188 dòng)*: Chứa `SidebarMenuItem` (kèm `SymbolRegular IconSymbol`) và điều phối Shell chính: xây dựng menu Sidebar tự động theo `App.CurrentUser.Role` (`BuildSidebar`), đóng/mở Sidebar (`ToggleSidebar`), nạp/chuyển màn hình (`SelectMenu`, `SwitchOrReload`), làm mới (`RefreshCurrentDashboard`) và đăng xuất (`Logout`).
+- **[BookingSeatItems.cs](CinemaManageProject/ViewModels/BookingSeatItems.cs)** *(76 dòng)*: Chứa `BookingSeatRowGroup` và `BookingSeatCellItem` (với thuộc tính `VisualState`, `IsCouple`, `IsSelectable`, `ToolTipText`) dùng chung 100% cho sơ đồ chọn ghế của `StaffPosViewModel` và `CustomerBrowseViewModel`.
+
+### 8.2. Phân hệ Admin (`CinemaManageProject/ViewModels/Admin/`)
+- **[AdminDashboardViewModel.cs](CinemaManageProject/ViewModels/Admin/AdminDashboardViewModel.cs)** *(86 dòng)*: Nạp 4 thẻ KPI toàn rạp (doanh thu, vé bán/check-in, phim đang/sắp chiếu, phòng/ghế bảo trì), bảng *Lịch chiếu & Tỷ lệ lấp đầy* (`AdminShowtimeRow`) và *Hóa đơn gần đây* (`AdminOrderRow`).
+- **[AdminMoviesViewModel.cs](CinemaManageProject/ViewModels/Admin/AdminMoviesViewModel.cs)** *(534 dòng)*: Quản trị phim trọn vòng đời: bộ lọc đa tiêu chí (trạng thái, thể loại, độ tuổi, từ khóa + `ResetFilters`), chọn nhiều thể loại (`GenreSelectionItem`), thêm nhanh thể loại mới (`AddGenre`), chọn/xóa ảnh poster (`SetPosterFromFile`, `ClearPoster`), lưu (`SaveMovie`) và kiểm tra/xóa (`CanDeleteSelectedMovie`, `DeleteSelectedMovie`).
+- **[AdminRoomsViewModel.cs](CinemaManageProject/ViewModels/Admin/AdminRoomsViewModel.cs)** *(255 dòng)*: Quản lý 4 phòng chiếu cố định và sơ đồ ghế trực quan (`SeatRowGroup`, `SeatCellItem`), xem lịch sử đơn đặt khi chọn từng ghế (`SelectSeat`) và bật/tắt trạng thái bảo trì có kiểm tra vé hiệu lực (`ToggleSelectedSeatAvailable`).
+- **[AdminShowtimesViewModel.cs](CinemaManageProject/ViewModels/Admin/AdminShowtimesViewModel.cs)** *(560 dòng)*: Lên lịch chiếu tự động tính giờ kết thúc `+15 phút` dọn phòng, xem trước bảng giá vé 3 hạng ghế (Thường/VIP/Đôi), bộ lọc theo ngày/phòng/trạng thái/từ khóa, khóa sửa thông số cốt lõi khi suất đã có vé, lưu (`SaveShowtime`) và xóa (`DeleteSelectedShowtime`).
+- **[AdminOrdersViewModel.cs](CinemaManageProject/ViewModels/Admin/AdminOrdersViewModel.cs)** *(537 dòng)*: Phân tích hóa đơn & doanh thu: 4 thẻ KPI động theo bộ lọc (ngày, kênh, PTTT, trạng thái, từ khóa), bảng cơ cấu 4 phương thức thanh toán (`PaymentBreakdownRow`), bảng phân bổ doanh thu theo từng phim theo tỷ lệ `activeSub` (`MovieRevenueRow`) và chi tiết phiếu tính tiền/danh sách vé.
+- **[AdminUsersViewModel.cs](CinemaManageProject/ViewModels/Admin/AdminUsersViewModel.cs)** *(576 dòng)*: Quản trị tài khoản `Staff` & `Customer`: lọc theo vai trò/trạng thái/từ khóa, thêm/sửa/đặt lại mật khẩu (`SaveUser`), khóa/mở khóa (`ToggleSelectedUserActive`), kiểm tra điều kiện xóa cứng (`CanDeleteSelectedUser`, `DeleteSelectedUser`), hiển thị huy hiệu khóa bảo vệ đối với tài khoản `Admin` gốc.
+
+### 8.3. Phân hệ Staff (`CinemaManageProject/ViewModels/Staff/`)
+- **[StaffDashboardViewModel.cs](CinemaManageProject/ViewModels/Staff/StaffDashboardViewModel.cs)** *(81 dòng)*: Nạp 4 KPI ca quầy cá nhân (vé đã bán, doanh thu ca, suất mở bán, vé chờ check-in), danh sách suất chiếu mở bán (`StaffShowtimeRow`) và giao dịch quầy gần nhất (`StaffOrderRow`).
+- **[StaffPosViewModel.cs](CinemaManageProject/ViewModels/Staff/StaffPosViewModel.cs)** *(649 dòng)*: Bán vé tại quầy (`Counter`): dải poster phim lọc suất (`PosMoviePosterItem`, `SelectMovie`, `ShowAllMovies`), chọn suất & chọn nhiều ghế (`ToggleSeat`, `ClearSelectedSeats`), tra cứu/bỏ gắn hội viên theo SĐT (`LookupCustomer`, `ClearCustomer`), đổi điểm thưởng (`ApplyMaxPoints`), chọn 4 PTTT + tính tiền thối nhanh (`SetExactCash`, `SetQuickCash`) và phát hành hóa đơn (`CompleteSale`).
+- **[StaffCheckInViewModel.cs](CinemaManageProject/ViewModels/Staff/StaffCheckInViewModel.cs)** *(209 dòng)*: Soát vé Check-in: tra cứu mã vé (`LookupTicket`), lọc hàng chờ theo trạng thái (`SetStatusFilter`) và từ khóa, hiển thị trạng thái hợp lệ (`Valid`/`AlreadyCheckedIn`/`Blocked`), xác nhận check-in (`ConfirmCurrentTicketCheckIn`) và làm sạch khung quét (`ClearLookup`).
+- **[StaffCustomersViewModel.cs](CinemaManageProject/ViewModels/Staff/StaffCustomersViewModel.cs)** *(240 dòng)*: Tra cứu hội viên theo hạng thẻ (`SetTierFilter`) và từ khóa, xem lịch sử hóa đơn của khách đang chọn, cập nhật liên hệ và đăng ký hội viên mới tại quầy (`StartNewCustomer`, `SaveCustomer`).
+
+### 8.4. Phân hệ Customer (`CinemaManageProject/ViewModels/Customer/`)
+- **[CustomerDashboardViewModel.cs](CinemaManageProject/ViewModels/Customer/CustomerDashboardViewModel.cs)** *(247 dòng)*: Thẻ hội viên (hạng thẻ, điểm, tổng chi tiêu, số vé chờ chiếu), dải poster trượt ngang kèm khung spotlight chi tiết (`CustomerMovieRow`, `SetFilter`, `SelectMovie`) và bảng *Vé của tôi* (`CustomerTicketRow`).
+- **[CustomerBrowseViewModel.cs](CinemaManageProject/ViewModels/Customer/CustomerBrowseViewModel.cs)** *(596 dòng)*: Duyệt phim Đang chiếu/Sắp chiếu (`BrowseMovieCardItem`) theo trạng thái/thể loại/từ khóa, chọn suất mở bán, chọn ghế trên sơ đồ dùng chung (`ToggleSeat`, `ClearSelectedSeats`), đổi điểm thưởng (`ApplyMaxPoints`), thanh toán trực tuyến 3 kênh (`OnlinePaymentOption`: Chuyển khoản/Ví điện tử/Thẻ) và xác nhận đặt vé (`ConfirmBooking`) kèm đồng bộ `App.CurrentUser.CustomerProfile`.
+- **[CustomerMyTicketsViewModel.cs](CinemaManageProject/ViewModels/Customer/CustomerMyTicketsViewModel.cs)** *(202 dòng)*: Quản lý toàn bộ vé và lịch sử hóa đơn của hội viên, lọc vé theo trạng thái (`SetStatusFilter`), xem cuống vé điện tử có `TicketCode` check-in và hủy vé `Booked` của suất chưa chiếu (`CancelSelectedTicket`).
+
+---
+
+## 9. Thư mục `CinemaManageProject/Views/` — Tầng Màn hình XAML & Code-behind
+
+### Công nghệ & Thư viện dùng chung
+- **WPF XAML + Data Binding (`{Binding ...}`, `Mode=TwoWay`, `UpdateSourceTrigger=PropertyChanged`):** Kết nối trực tiếp giao diện với ViewModel, ẩn/hiện động bằng `{StaticResource BoolToVis}` và `DataTrigger`.
+- **`WPF-UI 4.3.0` (`xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"`):** Dùng `<ui:SymbolIcon Symbol="..." />` thay hoàn toàn icon SVG vẽ tay và dùng các `Style` kế thừa từ `Themes/Controls.xaml`.
+- **Code-behind tối giản (`.xaml.cs`):** Chỉ làm 4 việc chuẩn mực: gọi `InitializeComponent()`, chuyển tiếp sự kiện `Click`/`KeyDown` sang method ViewModel, chuyển tiếp `PasswordBox.Password` / `OpenFileDialog` / hộp thoại xác nhận `MessageBox`, và xử lý cuộn ngang/dọc mượt mà (`PreviewMouseWheel`).
+
+### Tổng quát thư mục
+Chứa trọn bộ **15 màn hình hoàn chỉnh** (30 tệp `.xaml` và `.xaml.cs`): 2 cửa sổ khung (`LoginWindow`, `MainWindow`) và 13 `UserControl` phân đúng 3 thư mục con (`Admin/` 6 màn hình, `Staff/` 4 màn hình, `Customer/` 3 màn hình).
+
+### 9.1. Cửa sổ Khung chính (`CinemaManageProject/Views/`)
+- **[LoginWindow.xaml](CinemaManageProject/Views/LoginWindow.xaml) & [LoginWindow.xaml.cs](CinemaManageProject/Views/LoginWindow.xaml.cs)** *(223 / 71 dòng)*: Cửa sổ đăng nhập & đăng ký hội viên (áp dụng `App.ApplyDarkTitleBar(this)`), hỗ trợ nhấn `Enter` ở `PasswordBox`, 3 nút điền nhanh tài khoản mẫu `Admin`/`Staff`/`Customer` và gọi `App.CompleteLogin()` khi xác thực thành công.
+- **[MainWindow.xaml](CinemaManageProject/Views/MainWindow.xaml) & [MainWindow.xaml.cs](CinemaManageProject/Views/MainWindow.xaml.cs)** *(194 / 146 dòng)*: Khung Shell gồm Sidebar đóng/mở gọn (`PanelLeftContract24` / `PanelLeftExpand24`), Topbar làm mới & đăng xuất, `ScrollViewer` chính (`MainScrollViewer`) và `ContentControl` (`DashboardHost`) chọn động 13 màn hình con bằng `switch`. Tích hợp cơ chế `OnMainScrollPreviewMouseWheel` chuyển tiếp cuộn chuột mượt mà khi con trỏ nằm trên `DataGrid`, `ListBox` hoặc `ScrollViewer` lồng nhau.
+
+### 9.2. Phân hệ Admin (`CinemaManageProject/Views/Admin/`)
+- **[AdminDashboardView.xaml](CinemaManageProject/Views/Admin/AdminDashboardView.xaml) & [.xaml.cs](CinemaManageProject/Views/Admin/AdminDashboardView.xaml.cs)** *(148 / 11 dòng)*: 4 thẻ KPI toàn rạp và 2 bảng *Lịch chiếu & Tỷ lệ lấp đầy*, *Hóa đơn gần đây* (binding thuần, code-behind chỉ gọi `InitializeComponent()`).
+- **[AdminMoviesView.xaml](CinemaManageProject/Views/Admin/AdminMoviesView.xaml) & [.xaml.cs](CinemaManageProject/Views/Admin/AdminMoviesView.xaml.cs)** *(408 / 70 dòng)*: Thanh lọc phim, bảng danh mục phim bên trái và form thêm/sửa phim bên phải (chọn ảnh poster qua `OpenFileDialog`, gán nhiều thể loại, thêm thể loại mới, xác nhận `MessageBox` trước khi xóa).
+- **[AdminRoomsView.xaml](CinemaManageProject/Views/Admin/AdminRoomsView.xaml) & [.xaml.cs](CinemaManageProject/Views/Admin/AdminRoomsView.xaml.cs)** *(410 / 29 dòng)*: Danh sách 4 phòng chiếu, bản đồ ghế trực quan (ghế đôi rộng gấp đôi), bảng thông tin ghế đang chọn + lịch sử đơn đặt và nút bật/tắt bảo trì ghế.
+- **[AdminShowtimesView.xaml](CinemaManageProject/Views/Admin/AdminShowtimesView.xaml) & [.xaml.cs](CinemaManageProject/Views/Admin/AdminShowtimesView.xaml.cs)** *(339 / 49 dòng)*: Bộ lọc ngày/phòng/trạng thái, danh sách suất chiếu, form lập/cập nhật suất hiển thị xem trước giờ kết thúc (`+15p`) cùng bảng giá 3 hạng ghế và nút xóa có xác nhận.
+- **[AdminOrdersView.xaml](CinemaManageProject/Views/Admin/AdminOrdersView.xaml) & [.xaml.cs](CinemaManageProject/Views/Admin/AdminOrdersView.xaml.cs)** *(652 / 24 dòng)*: 4 thẻ KPI doanh thu, thanh lọc 5 tiêu chí, bảng hóa đơn, 2 thẻ phân tích cơ cấu PTTT & doanh thu theo phim, cùng panel chi tiết phiếu tính tiền và danh sách vé của hóa đơn đang chọn.
+- **[AdminUsersView.xaml](CinemaManageProject/Views/Admin/AdminUsersView.xaml) & [.xaml.cs](CinemaManageProject/Views/Admin/AdminUsersView.xaml.cs)** *(449 / 73 dòng)*: Bộ lọc tài khoản, bảng nhân sự & hội viên, form thêm/sửa tài khoản kèm `PasswordBox` đặt/đổi mật khẩu (tự xóa trống qua sự kiện `PasswordResetRequested`), nút khóa/mở khóa và xóa có xác nhận.
+
+### 9.3. Phân hệ Staff (`CinemaManageProject/Views/Staff/`)
+- **[StaffDashboardView.xaml](CinemaManageProject/Views/Staff/StaffDashboardView.xaml) & [.xaml.cs](CinemaManageProject/Views/Staff/StaffDashboardView.xaml.cs)** *(144 / 11 dòng)*: 4 thẻ KPI ca làm việc và 2 bảng *Suất chiếu mở bán & Ghế trống*, *Giao dịch quầy gần đây*.
+- **[StaffPosView.xaml](CinemaManageProject/Views/Staff/StaffPosView.xaml) & [.xaml.cs](CinemaManageProject/Views/Staff/StaffPosView.xaml.cs)** *(515 / 107 dòng)*: Bố cục 2 tầng thống nhất với Customer Browse — phía trên là dải poster phim trượt ngang có nút chevron trái/phải; phía dưới chia cột trái danh sách suất mở bán (`ShowtimeCardItemStyle`) và cột phải gồm sơ đồ ghế (`BookingSeatButtonStyle`) ở trên + khung thanh toán 2 cột (tra cứu hội viên, đổi điểm, nút chọn tiền mặt nhanh, xuất phiếu) ở dưới.
+- **[StaffCheckInView.xaml](CinemaManageProject/Views/Staff/StaffCheckInView.xaml) & [.xaml.cs](CinemaManageProject/Views/Staff/StaffCheckInView.xaml.cs)** *(248 / 33 dòng)*: Ô quét/nhập mã vé hỗ trợ phím `Enter`, thẻ đối chiếu thông tin vé/ghế/suất chiếu có mã màu trạng thái, nút xác nhận `CheckedIn` và bảng hàng chờ vé bên dưới.
+- **[StaffCustomersView.xaml](CinemaManageProject/Views/Staff/StaffCustomersView.xaml) & [.xaml.cs](CinemaManageProject/Views/Staff/StaffCustomersView.xaml.cs)** *(212 / 23 dòng)*: Chip lọc 4 hạng thẻ + ô tìm kiếm, danh sách hội viên, bảng lịch sử hóa đơn và form đăng ký hội viên tại quầy / cập nhật thông tin liên hệ.
+
+### 9.4. Phân hệ Customer (`CinemaManageProject/Views/Customer/`)
+- **[CustomerDashboardView.xaml](CinemaManageProject/Views/Customer/CustomerDashboardView.xaml) & [.xaml.cs](CinemaManageProject/Views/Customer/CustomerDashboardView.xaml.cs)** *(409 / 87 dòng)*: Thẻ hội viên đầu trang, dải poster phim trượt ngang (hỗ trợ nút chevron & `Shift + Cuộn chuột`), khung spotlight giới thiệu phim chi tiết và bảng *Vé của tôi*.
+- **[CustomerBrowseView.xaml](CinemaManageProject/Views/Customer/CustomerBrowseView.xaml) & [.xaml.cs](CinemaManageProject/Views/Customer/CustomerBrowseView.xaml.cs)** *(441 / 98 dòng)*: Bộ lọc trạng thái/thể loại/từ khóa + dải poster phim trượt ngang, tóm tắt phim đang chọn, danh sách suất mở bán bên trái, sơ đồ chọn ghế và khung thanh toán trực tuyến (`SelfService` — đổi điểm thưởng, 3 PTTT online) bên phải.
+- **[CustomerMyTicketsView.xaml](CinemaManageProject/Views/Customer/CustomerMyTicketsView.xaml) & [.xaml.cs](CinemaManageProject/Views/Customer/CustomerMyTicketsView.xaml.cs)** *(233 / 39 dòng)*: Bộ lọc trạng thái vé, danh sách vé kèm cuống vé điện tử hiển thị `TicketCode` check-in, nút hủy vé có hộp thoại xác nhận `MessageBox` và bảng lịch sử toàn bộ hóa đơn.
+
+---
+
+## 10. Thư mục `docs/superpowers/` — Đặc tả Thiết kế & Kế hoạch Triển khai
+
+### Công nghệ & Quy ước dùng chung
+- **Markdown (GitHub Flavored Markdown):** Tài liệu kỹ thuật viết theo quy trình *Design Spec → Implementation Plan* trước khi lập trình các màn hình lớn, đặt tên theo chuẩn `YYYY-MM-DD-<tên-chức-năng>-design.md` và `YYYY-MM-DD-<tên-chức-năng>.md`.
+
+### Tổng quát thư mục
+Lưu trữ hồ sơ thiết kế và kế hoạch từng bước cho 6 hạng mục giao diện/nghiệp vụ trọng tâm, giúp theo dõi rõ lý do quyết định kiến trúc và tiêu chí nghiệm thu của từng module.
+
+### Chi tiết từng file
+- **Thư mục con `docs/superpowers/specs/` (6 tệp đặc tả thiết kế):**
+  - [2026-11-19-admin-movies-design.md](docs/superpowers/specs/2026-11-19-admin-movies-design.md) *(54 dòng)*: Đặc tả màn hình Quản lý Phim, thể loại và tải poster.
+  - [2026-11-19-admin-rooms-design.md](docs/superpowers/specs/2026-11-19-admin-rooms-design.md) *(40 dòng)*: Đặc tả màn hình Phòng chiếu cố định & bảo trì sơ đồ ghế.
+  - [2026-11-20-admin-showtimes-design.md](docs/superpowers/specs/2026-11-20-admin-showtimes-design.md) *(29 dòng)*: Đặc tả màn hình Quản lý Lịch chiếu (`+15 phút`, kiểm tra trùng phòng, giá thống nhất).
+  - [2026-11-20-customer-poster-strip-design.md](docs/superpowers/specs/2026-11-20-customer-poster-strip-design.md) *(31 dòng)*: Đặc tả dải trượt ngang poster & khung spotlight chi tiết trên Dashboard Khách hàng.
+  - [2026-11-21-admin-orders-design.md](docs/superpowers/specs/2026-11-21-admin-orders-design.md) *(63 dòng)*: Đặc tả màn hình Hóa đơn & phân tích Doanh thu Admin.
+  - [2026-11-21-admin-users-design.md](docs/superpowers/specs/2026-11-21-admin-users-design.md) *(55 dòng)*: Đặc tả màn hình Quản trị Nhân sự & Tài khoản, đồng bộ `Users` ↔ `Customers` và bảo vệ `Admin`.
+- **Thư mục con `docs/superpowers/plans/` (6 tệp kế hoạch triển khai):**
+  - [2026-11-19-admin-movies-view.md](docs/superpowers/plans/2026-11-19-admin-movies-view.md) *(31 dòng)*: Kế hoạch từng bước xây dựng `AdminMoviesView` & `MovieData`.
+  - [2026-11-19-admin-rooms.md](docs/superpowers/plans/2026-11-19-admin-rooms.md) *(47 dòng)*: Kế hoạch xây dựng `AdminRoomsView` & `RoomData`.
+  - [2026-11-20-admin-showtimes.md](docs/superpowers/plans/2026-11-20-admin-showtimes.md) *(64 dòng)*: Kế hoạch xây dựng `AdminShowtimesView` & `ShowtimeData`.
+  - [2026-11-20-customer-poster-strip.md](docs/superpowers/plans/2026-11-20-customer-poster-strip.md) *(124 dòng)*: Kế hoạch nâng cấp `CustomerDashboardView` với dải poster và spotlight.
+  - [2026-11-21-admin-orders.md](docs/superpowers/plans/2026-11-21-admin-orders.md) *(90 dòng)*: Kế hoạch xây dựng `AdminOrdersView` & `OrderData`.
+  - [2026-11-21-admin-users.md](docs/superpowers/plans/2026-11-21-admin-users.md) *(95 dòng)*: Kế hoạch xây dựng `AdminUsersView` & `UserData`.
